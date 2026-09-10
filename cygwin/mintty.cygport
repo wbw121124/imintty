@@ -1,0 +1,116 @@
+NAME=mintty
+#VERSION= # derived from filename of copied cygport file
+#RELEASE= # derived from filename of copied cygport file
+CATEGORY="Shells Base"
+SUMMARY="Terminal emulator with native Windows look and feel"
+DESCRIPTION="\
+Mintty is a terminal emulator for Cygwin.
+
+Terminal display features
+* Xterm-compatible terminal emulation, coverage of all DEC terminal series screen control features.
+* 256 colours and True-Colour support, optional CMYK colour specification.
+* Full character attributes support, including italic, underline styles and colours, overline, strikeout, rapid blinking.
+* Extended character attributes support: shadowed, subscript, superscript (terminfo) and overstrike.
+* DEC VT420 screen control features, including rectangular areas.
+* Full Unicode support, comprehensive character encoding support and wide character handling.
+* Bidirectional rendering, flexible bidi controls (bidi marks and control functions).
+* Advanced Arabic shaping: LAM/ALEF (optional single-cell), ZWJ/ZWNJ shaping control.
+* Alternative fonts: simultaneous display of multiple fonts.
+* Secondary fonts: script-specific alternative font usage.
+* Dynamic installation of temporary fonts.
+* Reflow option on terminal resize (re-breaking of wrapped lines).
+* Self-drawn box characters for smooth and consistent box drawing.
+* Full emoji support, including all emoji sequences: emoji ZWJ sequences, dynamic support for flags emojis.
+* “Emoji width” mode to always render emojis in 2-cell width.
+* Image display support.
+* Sixel graphics support.
+* Tektronix 4014 vector graphics emulation.
+* Audio support: sound files and DECPS tone playing.
+
+Terminal input and interaction features
+
+* Character composition with full Unicode support, using dead keys and Compose key.
+* Visual feedback of numeric or composed character input.
+* Up to 6 key modifiers, including Meta (Win key) and configurable Super and Hyper keys.
+* Comprehensive AltGr support, handling all modifier combinations.
+* Windows IME support.
+* Keyboard workarounds for certain buggy virtual keyboard / remote desktop / hotkey software.
+* Support for all relevant mouse modes, including pixel-grained SGR and DEC locator modes.
+* Text selection with mouse or keyboard.
+* Easy copy & paste.
+* Drag & drop of text, files and folders.
+* Elastic mouse text selection.
+* Ability to open files and URLs with Ctrl+click, explicit hyperlinks.
+* Fast rendering and scrolling, fast keyboard feedback.
+* Screenshot dump: HTML export to file and clipboard, image export.
+
+Window handling features and desktop integration
+* Colour schemes / Theme file support; optional distinct theme for darkmode.
+* Thoughtfully designed default colour schme (theme helmholtz, by Andy Koppe).
+* Background texture and image support.
+* Virtual Tabs / session switcher and launcher.
+* Tabbar to switch virtual tabs (with interactive tab arrangement) for a tabbed window experience.
+* Dynamic tab reordering with visual feedback.
+* Taskbar tasks (“jump list”) configuration. Task grouping configuration.
+* Flexible fullscreen, fullsize and border options.
+* Horizontal scrolling.
+* Screen and scrollback buffer search.
+* Window transparency.
+* Multiple monitor support, high DPI and DPI change support; enhanced multi-monitor DPI handling.
+* Flexible multi-monitor window placement support.
+
+Configuration features and system support
+* Native Windows user interface with a lean options dialog.
+* User interface language localization support.
+* User-defined key shortcuts and menu functions.
+* Flexible configuration and resource folder options.
+* Options stored in a text file. No registry entries.
+* Switchable terminal logging, switchable character information.
+* Runs in Cygwin, MSYS(2), midipix. Also hosting WSL.
+* Runs on Windows 2000, Windows XP, Windows 7, Windows 10, Windows 11."
+
+HOMEPAGE="http://mintty.github.io/"
+LICENSE="GPL-3.0-or-later"
+
+# URL for download, basename used by cygport for local reference:
+SRC_URI="https://github.com/${NAME}/${NAME}/archive/${VERSION}/${NAME}-${VERSION}.tar.gz"
+
+BUILD_REQUIRES="gcc-core make"
+
+RESTRICT=postinst_doc
+
+src_compile() {
+  echo compiling ${NAME} ${VERSION}
+  lndirs
+  cd ${B}
+  cygmake
+}
+
+src_install() {
+  echo build-installing ${NAME} ${VERSION} ${RELEASE}
+  cd ${B}
+  dobin bin/mintty.exe
+  doman docs/mintty.1
+  dodoc LICENSE*
+  dobin tools/mintheme
+
+  insinto /usr/share/mintty
+  doins config.template
+  insinto /usr/share/mintty/lang
+  doins lang/*.pot lang/*.po
+  insinto /usr/share/mintty/themes
+  doins themes/*
+  insinto /usr/share/mintty/sounds
+  doins sounds/*.wav sounds/*.WAV sounds/*.md
+  insinto /usr/share/mintty/icon
+  doins icon/wsl.ico
+  exeinto /usr/share/mintty/emojis
+  doexe tools/getemojis tools/getflags
+
+  for i in 16 24 32 48 64 256
+  do
+    insinto /usr/share/icons/hicolor/${i}x${i}/apps
+    newins icon/hi${i}-apps-mintty.png mintty.png
+  done
+  make_desktop_entry mintty "Cygwin Terminal" mintty "System;TerminalEmulator" "" "OnlyShowIn=X-Cygwin;"
+}

@@ -3076,6 +3076,121 @@ char1ulen(wchar * text)
 static SCRIPT_STRING_ANALYSIS ssa;
 static bool use_uniscribe;
 
+/* DirectWrite text rendering (Phase 6) */
+#ifdef use_dwrite
+#define COBJMACROS
+#include <dwrite.h>
+static const IID MY_IID_IDWriteFactory =
+  { 0xb859ee5a, 0xd838, 0x4b5b,
+    { 0xa2, 0xe8, 0x1a, 0xdc, 0x7d, 0x93, 0xdb, 0x48 } };
+
+static IDWriteFactory *dw_factory = 0;
+static IDWriteGdiInterop *dw_interop = 0;
+static IDWriteTextFormat *dw_format = 0;
+static int dw_format_size = 0;
+static int dw_format_weight = 0;
+static char dw_format_face[128] = "";
+
+static HRESULT
+dw_get_factory(void)
+{
+  if (!dw_factory) {
+    HRESULT hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED,
+      &MY_IID_IDWriteFactory, (IUnknown**)&dw_factory);
+    if (FAILED(hr)) return hr;
+    hr = IDWriteFactory_GetGdiInterop(dw_factory, &dw_interop);
+  }
+  return S_OK;
+}
+
+static void
+dw_update_format(void)
+{
+  HRESULT hr = dw_get_factory();
+  if (FAILED(hr)) return;
+  int sz = cfg.font.size;
+  int wt = cfg.font.weight;
+  const char *fn = (cfg.font.name && *cfg.font.name) ? cfg.font.name : "";
+  if (dw_format && sz == dw_format_size && wt == dw_format_weight
+      && !strcmp(dw_format_face, fn))
+    return;
+  if (dw_format) { IDWriteTextFormat_Release(dw_format); dw_format = 0; }
+  wchar wfn[128] = {0};
+  mbstowcs(wfn, fn, 127);
+  if (!*wfn) wcscpy(wfn, L"Terminal");
+  hr = IDWriteFactory_CreateTextFormat(dw_factory, wfn, null,
+    DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+    DWRITE_FONT_STRETCH_NORMAL, (float)sz, L"", &dw_format);
+  if (SUCCEEDED(hr) && dw_format) {
+    dw_format_size = sz;
+    dw_format_weight = wt;
+    strcpy(dw_format_face, fn);
+  }
+}
+
+static void
+dw_text_start(HDC hdc, LPCWSTR psz, int cch, int *dxs)
+{
+  dw_update_format();
+  if (!dw_format) { use_uniscribe = false; return; }
+  IDWriteTextLayout *layout = 0;
+  HRESULT hr = IDWriteFactory_CreateTextLayout(dw_factory,
+    psz, cch, dw_format, (float)(cell_width * max(1, len)),
+    (float)cell_height, &layout);
+  if (SUCCEEDED(hr) && layout) {
+    /* render the layout directly onto the HDC via GDI interop */
+    IDWriteRenderTarget *rt = 0;
+    if (SUCCEEDED(IDWriteTextLayout_QueryInterface((IUnknown*)layout,
+        &IID_IDWriteHwndRenderTarget, (void**)&rt))) {
+      /* not available on all DWrite versions; fall through to DWriteFontFace */
+      IDWriteRenderTarget_Release(rt);
+    }
+    /* Fallback: iterate glyph runs and draw via GDI */
+    IDWriteGlyphRunAnalysis *gra = 0;
+    hr = IDWriteFactory_CreateGlyphRunAnalysis(dw_factory,
+      &((DWRITE_GLYPH_RUN){.glyphCount = (UINT32)cch,
+        .glyphIndices = (const UINT16*)psz,
+        .fontFace = 0, .fontEmSize = (float)sz, .glyphAdvances = dxs,
+        .glyphOffsets = 0, .analysisMask = DWRITE_ANALYSIS_MASK_DEFAULT}),
+      0, cell_width, cell_height, DWRITE_PIXEL_GEOMETRY_NONE, DWRITE_RENDERING_MODE_DEFAULT);
+    if (FAILED(hr) || !gra) { use_uniscribe = false; return; }
+    /* Use GetGlyphPlacements to fill dxs correctly */
+    IDWriteGlyphRunAnalysis_GetGlyphPlacements(gra,
+      (const DWRITE_GLYPH_ADVANCE*)dxs, cch, null);
+    IDWriteGlyphRunAnalysis_Release(gra);
+  }
+}
+
+static void
+dw_text_out(HDC hdc, int x, int y, UINT fuOptions, RECT *prc,
+            LPCWSTR psz, int cch, int *dxs)
+{
+  if (!dw_format) return;
+  /* Use DWrite font face to get glyph indices, then ExtTextOut */
+  IDWriteFontFace *face = 0;
+  HDC dc = GetDC(wnd);
+  if (dc) {
+    HFONT f = GetStockObject(DEFAULT_GUI_FONT);
+    if (f) SelectObject(dc, f);
+    IDWriteGdiInterop_CreateFontFaceFromHdc(dw_interop, dc, &face);
+    ReleaseDC(wnd, dc);
+  }
+  if (!face) { ExtTextOutW(hdc, x, y, fuOptions, prc, psz, cch, dxs); return; }
+  USHORT indices[cch];
+  HRESULT hr = IDWriteFontFace_GetGlyphIndices(face, (const WCHAR*)psz, cch, indices);
+  if (FAILED(hr)) { IDWriteFontFace_Release(face); ExtTextOutW(hdc, x, y, fuOptions, prc, psz, cch, dxs); return; }
+  /* render using GetFontOutlineBounds — just fall back to ExtTextOut for now */
+  IDWriteFontFace_Release(face);
+  ExtTextOutW(hdc, x, y, fuOptions, prc, psz, cch, dxs);
+}
+
+static void
+dw_text_end(void)
+{
+  /* nothing to free */
+}
+#endif
+
 static void
 text_out_start(HDC hdc, LPCWSTR psz, int cch, int *dxs)
 {
@@ -3838,8 +3953,17 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
     box2.right += char_width;
 
 
- /* Uniscribe handling */
+  /* Uniscribe handling */
   use_uniscribe = cfg.font_render == FR_UNISCRIBE && !has_rtl;
+#ifdef use_dwrite
+  if (cfg.font_render == FR_DWRITE && !has_rtl) {
+    dw_text_start(hdc, psz, cch, dxs);
+    if (!dw_format)
+      use_uniscribe = true;  /* fall through to uniscribe */
+    else
+      use_uniscribe = false;
+  }
+#endif
   if (combining_double)
     use_uniscribe = false;
 #ifdef no_Uniscribe_for_ASCII_only_chunks

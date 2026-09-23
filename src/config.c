@@ -824,6 +824,7 @@ static opt_val * const opt_vals[] = {
   [OPT_FONTRENDER] = (opt_val[]) {
     {"textout", FR_TEXTOUT},
     {"uniscribe", FR_UNISCRIBE},
+    {"dwrite", FR_DWRITE},
     {0, 0}
   },
   [OPT_MIDDLECLICK] = (opt_val[]) {
@@ -4834,9 +4835,22 @@ setup_config_box(controlbox * b)
     )->column = 1;
   }
 
- /*
-  * The Keys panel.
-  */
+  // Render pipeline selection
+  s = ctrl_new_set(b, _("Text"), null, null);
+  ctrl_columns(s, 2, 50, 50);
+  ctrl_radiobuttons(
+    //__ Options - Text: render pipeline
+    s, _("Font render"), 3,
+    dlg_stdradiobutton_handler, &new_cfg.font_render,
+    _("T&extOut"), FR_TEXTOUT,
+    _("&Uniscribe"), FR_UNISCRIBE,
+    _("D&Write"), FR_DWRITE,
+    null
+  );
+
+  /*
+   * The Keys panel.
+   */
   //__ Options - Keys: treeview label
   s = ctrl_new_set(b, _("Keys"), 
   //__ Options - Keys: panel title

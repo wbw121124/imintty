@@ -15,7 +15,7 @@ enum { FS_DEFAULT, FS_PARTIAL, FS_NONE, FS_FULL };
 // smooth = fade, phase = sine wave, expand = grow/shrink
 enum { ANIM_NONE = 0, ANIM_DEFAULT = 1, ANIM_SMOOTH = 2,
        ANIM_PHASE = 3, ANIM_EXPAND = 4 };
-enum { FR_TEXTOUT, FR_UNISCRIBE };
+enum { FR_TEXTOUT, FR_UNISCRIBE, FR_DWRITE };
 enum { MC_VOID, MC_PASTE, MC_EXTEND, MC_ENTER };
 enum { RC_MENU, RC_PASTE, RC_EXTEND, RC_ENTER };
 enum { BORDER_NORMAL, BORDER_FRAME, BORDER_VOID };

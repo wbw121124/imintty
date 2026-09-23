@@ -736,14 +736,18 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
           ((LPNMHDR) lParam)->code == TVN_SELCHANGED) {
         debug("WM_NOTIFY");
         HTREEITEM i = TreeView_GetSelection(((LPNMHDR) lParam)->hwndFrom);
+        if (!i)
+          return 0;
         debug("WM_NOTIFY: GetSelection");
 
         TVITEM item;
         item.hItem = i;
         item.mask = TVIF_PARAM;
         (void)TreeView_GetItem(((LPNMHDR) lParam)->hwndFrom, &item);
+        if (!item.lParam)
+          return 0;
 
-       /* Destroy all controls in the currently visible panel. */
+        /* Destroy all controls in the currently visible panel. */
         for (winctrl *c = ctrls_panel.first; c; c = c->next) {
           for (int k = 0; k < c->num_ids; k++) {
             HWND item = GetDlgItem(wnd, c->base_id + k);

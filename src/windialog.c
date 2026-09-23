@@ -95,8 +95,44 @@ enum {
   IDCX_TVSTATIC = 1001,
   IDCX_TREEVIEW,
   IDCX_STDBASE,
-  IDCX_PANELBASE = IDCX_STDBASE + 32
+  IDCX_PANELBASE = IDCX_STDBASE + 32,
+  IDCX_BUTTONPANEL
 };
+
+/* Bottom button-row host strip: sits under About/Save/Cancel/Apply so the
+ * panel ScrollWindow path never moves them; also a clean invalidate target. */
+static HWND button_hwnd;
+
+static LRESULT CALLBACK
+button_panel_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+                  UINT_PTR uId, DWORD_PTR dwRefData)
+{
+  (void)uId; (void)dwRefData;
+  switch (msg) {
+    when WM_ERASEBKGND:
+      return 1;  // dialog paints the row; avoid panel-local flicker
+  }
+  return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
+static void
+create_button_panel(HWND wnd)
+{
+  RECT r = {0, DIALOG_HEIGHT - 17 - 2, DIALOG_WIDTH, DIALOG_HEIGHT};
+  MapDialogRect(wnd, &r);
+  r.top = scale_dialog(r.top);
+  r.bottom = scale_dialog(r.bottom);
+  RECT cr;
+  GetClientRect(wnd, &cr);
+  button_hwnd = CreateWindowExA(0, WC_STATICA, "",
+    WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN,
+    0, r.top, cr.right, r.bottom - r.top,
+    wnd, (HMENU)(INT_PTR)IDCX_BUTTONPANEL, inst, null);
+  SetWindowSubclass(button_hwnd, button_panel_proc, 1, 0);
+  // keep the strip under the buttons (created later) and out of Tab order
+  SetWindowPos(button_hwnd, HWND_BOTTOM, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+}
 
 typedef struct {
   HWND treeview;
@@ -253,9 +289,19 @@ scroll_panel(HWND wnd, int new_pos)
   int dpx = scale_dialog(mr.bottom);
   int dy = delta > 0 ? -dpx : dpx;
   RECT clip = panel_clip(wnd);
-  ScrollWindow(wnd, 0, dy, null, &clip);
+  // lpScrollRect = clip: only panel children move; button row untouched
+  ScrollWindow(wnd, 0, dy, &clip, &clip);
   update_panel_visibility(wnd);
+  // clear residue under/around the button row (strip + dialog)
+  RECT cr;
+  GetClientRect(wnd, &cr);
+  RECT brow = {0, clip.bottom, cr.right, cr.bottom};
+  InvalidateRect(wnd, &brow, true);
+  if (button_hwnd)
+    InvalidateRect(button_hwnd, null, true);
   UpdateWindow(wnd);
+  if (button_hwnd)
+    UpdateWindow(button_hwnd);
 }
 
 static void
@@ -610,7 +656,9 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       * Create the actual GUI widgets.
       */
       // here we need the correct DIALOG_HEIGHT already
-      create_controls(wnd, "");        /* Open and Cancel buttons etc */
+      create_button_panel(wnd);        // underlay first so buttons stay on top
+      create_controls(wnd, "");        /* About/Save/Cancel/Apply etc */
+      win_dark_mode(button_hwnd);
 
       SendMessage(wnd, WM_SETICON, (WPARAM) ICON_BIG,
                   (LPARAM) LoadIcon(inst, MAKEINTRESOURCE(IDI_MAINICON)));
@@ -743,6 +791,11 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
       DestroyWindow(wnd);
 
     when WM_DESTROY:
+      if (button_hwnd) {
+        RemoveWindowSubclass(button_hwnd, button_panel_proc, 1);
+        DestroyWindow(button_hwnd);
+        button_hwnd = 0;
+      }
       winctrl_cleanup(&ctrls_base);
       winctrl_cleanup(&ctrls_panel);
       ctrl_free_box(ctrlbox);
@@ -980,6 +1033,8 @@ win_open_config(void)
 
   // Apply dark mode to dialog title
   win_dark_mode(config_wnd);
+  if (button_hwnd)
+    win_dark_mode(button_hwnd);
 
   ShowWindow(config_wnd, SW_SHOW);
 

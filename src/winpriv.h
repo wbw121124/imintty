@@ -132,6 +132,7 @@ extern void * load_library_func(string lib, string func);
 extern void update_available_version(bool ok);
 extern void set_dpi_auto_scaling(bool on);
 extern void win_update_transparency(int transparency, bool opaque);
+extern void win_dynamic_blur_pulse(void);
 extern void win_prefix_title(const wstring);
 extern void win_unprefix_title(const wstring);
 extern void strip_title(wchar * title);

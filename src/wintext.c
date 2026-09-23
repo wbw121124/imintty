@@ -1346,11 +1346,11 @@ draw_cursor_overlay(void)
     if (cy < term.scroll_anim_top || cy >= term.scroll_anim_bot)
       return;
   }
-  else if (!term.curs_animate || !cfg.smooth_cursor)
+  else if (!term.curs_animate || cfg.smooth_cursor != ANIM_SMOOTH)
     return;
 
   int x, y;
-  if (term.curs_animate && cfg.smooth_cursor) {
+  if (term.curs_animate && cfg.smooth_cursor == ANIM_SMOOTH) {
     int dur = cfg.smooth_cursor_duration;
     if (dur < 10)
       dur = 10;
@@ -1383,7 +1383,7 @@ draw_cursor_overlay(void)
 
   colour bg = win_get_colour(BG_COLOUR_I);
   colour cc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
-  if (cfg.smooth_blink_cursor && term_cursor_blinks() && term.has_focus
+  if (cfg.smooth_blink_cursor == ANIM_SMOOTH && term_cursor_blinks() && term.has_focus
       && term.cblink_alpha < 255)
     cc = blend_colour(bg, cc, term.cblink_alpha);
 
@@ -3504,7 +3504,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   // ATTR_BOLD is now set if and only if we need further thickening.
 
   // Smooth blink: fade blinking text toward the cell background
-  if (cfg.smooth_blink_attr && term.blink_is_real && term.has_focus
+  if (cfg.smooth_blink_attr == ANIM_SMOOTH && term.blink_is_real && term.has_focus
       && (attr.attr & (ATTR_BLINK | ATTR_BLINK2))
       && !(attr.attr & ATTR_INVISIBLE)
       && !(term.enable_blink_colour && colours[BLINK_COLOUR_I] != (colour)-1)
@@ -3573,7 +3573,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
       if (too_close && colour_dist(cursor_colour, fg) < mindist)
         fg = cell_bg;
       bg = cursor_colour;
-      if (cfg.smooth_blink_cursor && term_cursor_blinks()
+      if (cfg.smooth_blink_cursor == ANIM_SMOOTH && term_cursor_blinks()
           && term.cblink_alpha < 255)
       {
         fg = blend_colour(cell_fg, fg, term.cblink_alpha);
@@ -5006,7 +5006,7 @@ skip_drawing:;
     if (layer)
       _cc = ((_cc & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
     // Smooth cursor blink: fade line/box cursor toward the cell background
-    if (cfg.smooth_blink_cursor && term_cursor_blinks()
+    if (cfg.smooth_blink_cursor == ANIM_SMOOTH && term_cursor_blinks()
         && (attr.attr & TATTR_ACTCURS) && term.cblink_alpha < 255)
       _cc = blend_colour(bg, _cc, term.cblink_alpha);
 #if defined(debug_cursor) && debug_cursor > 1

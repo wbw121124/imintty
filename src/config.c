@@ -100,15 +100,16 @@ const config default_cfg = {
   .bold_as_font = true,
   .bold_as_colour = true,
   .allow_blinking = false,
-  .smooth_blink_attr = false,
-  .smooth_blink_cursor = true,
+  .smooth_blink_attr = ANIM_DEFAULT,
+  .smooth_blink_cursor = ANIM_SMOOTH,
   .smooth_blink_bell = true,
   .smooth_blink_duration = 100,
-  .smooth_cursor = true,
+  .smooth_cursor = ANIM_SMOOTH,
   .smooth_cursor_duration = 50,
-  .smooth_scroll = true,
+  .smooth_scroll = ANIM_SMOOTH,
   .smooth_scroll_duration = 100,
   .smooth_scroll_lines = 8,
+  .dynamic_blur = 0,
   .locale = "",
   .charset = "",
   .charwidth = 0,
@@ -348,7 +349,7 @@ config cfg, new_cfg, file_cfg;
 typedef enum {
   OPT_BOOL, OPT_MOD, OPT_TRANS, OPT_CURSOR, OPT_FONTSMOOTH, OPT_FONTRENDER,
   OPT_MIDDLECLICK, OPT_RIGHTCLICK, OPT_SCROLLBAR, OPT_BORDER, OPT_WINDOW,
-  OPT_HOLD,
+  OPT_HOLD, OPT_ANIM,
   OPT_INT, OPT_COLOUR, OPT_COLOUR_PAIR, OPT_STRING, OPT_WSTRING,
   OPT_CHARWIDTH, OPT_EMOJIS, OPT_EMOJI_PLACEMENT,
   OPT_COMPOSE_KEY,
@@ -424,15 +425,16 @@ options[] = {
   {"BoldAsFont", OPT_BOOL, offcfg(bold_as_font)},
   {"BoldAsColour", OPT_BOOL, offcfg(bold_as_colour)},
   {"AllowBlinking", OPT_BOOL, offcfg(allow_blinking)},
-  {"SmoothBlinkAttr", OPT_BOOL, offcfg(smooth_blink_attr)},
-  {"SmoothBlinkCursor", OPT_BOOL, offcfg(smooth_blink_cursor)},
+  {"SmoothBlinkAttr", OPT_ANIM, offcfg(smooth_blink_attr)},
+  {"SmoothBlinkCursor", OPT_ANIM, offcfg(smooth_blink_cursor)},
   {"SmoothBlinkBell", OPT_BOOL, offcfg(smooth_blink_bell)},
   {"SmoothBlinkDuration", OPT_INT, offcfg(smooth_blink_duration)},
-  {"SmoothCursor", OPT_BOOL, offcfg(smooth_cursor)},
+  {"SmoothCursor", OPT_ANIM, offcfg(smooth_cursor)},
   {"SmoothCursorDuration", OPT_INT, offcfg(smooth_cursor_duration)},
-  {"SmoothScroll", OPT_BOOL, offcfg(smooth_scroll)},
+  {"SmoothScroll", OPT_ANIM, offcfg(smooth_scroll)},
   {"SmoothScrollDuration", OPT_INT, offcfg(smooth_scroll_duration)},
   {"SmoothScrollLines", OPT_INT, offcfg(smooth_scroll_lines)},
+  {"DynamicBlur", OPT_INT, offcfg(dynamic_blur)},
   {"Locale", OPT_STRING, offcfg(locale)},
   {"Charset", OPT_STRING, offcfg(charset)},
   {"Charwidth", OPT_CHARWIDTH, offcfg(charwidth)},
@@ -794,6 +796,19 @@ static opt_val * const opt_vals[] = {
     {"none", FS_NONE},
     {"partial", FS_PARTIAL},
     {"full", FS_FULL},
+    {0, 0}
+  },
+  [OPT_ANIM] = (opt_val[]) {
+    {"none", ANIM_NONE},
+    {"default", ANIM_DEFAULT},
+    {"smooth", ANIM_SMOOTH},
+    // legacy Smooth*=yes/no mapping
+    {"no", ANIM_DEFAULT},
+    {"yes", ANIM_SMOOTH},
+    {"false", ANIM_DEFAULT},
+    {"true", ANIM_SMOOTH},
+    {"off", ANIM_DEFAULT},
+    {"on", ANIM_SMOOTH},
     {0, 0}
   },
   [OPT_FONTRENDER] = (opt_val[]) {
@@ -1903,6 +1918,9 @@ fix_config(void)
 
   cfg.smooth_scroll_duration = max(40, min(500, cfg.smooth_scroll_duration));
   cfg.smooth_scroll_lines = max(1, min(cfg.rows, cfg.smooth_scroll_lines));
+  cfg.smooth_cursor_duration = max(0, min(500, cfg.smooth_cursor_duration));
+  cfg.smooth_blink_duration = max(40, min(1000, cfg.smooth_blink_duration));
+  cfg.dynamic_blur = max(0, min(5000, cfg.dynamic_blur));
 }
 
 /*
@@ -4484,24 +4502,52 @@ setup_config_box(controlbox * b)
   s = ctrl_new_set(b, _("Looks"), null,
   //__ Options - Looks: section title
                       _("Animation"));
-  ctrl_columns(s, 2, 50, 50);
-  ctrl_checkbox(
-    //__ Options - Looks: animation feature
-    s, _("Smooth &cursor"), dlg_stdcheckbox_handler, &new_cfg.smooth_cursor
-  )->column = 0;
-  ctrl_checkbox(
-    //__ Options - Looks: animation feature
-    s, _("Smooth &scroll"), dlg_stdcheckbox_handler, &new_cfg.smooth_scroll
-  )->column = 1;
-  ctrl_checkbox(
-    //__ Options - Looks: animation feature
-    s, _("Smooth cursor blin&k"),
-    dlg_stdcheckbox_handler, &new_cfg.smooth_blink_cursor
-  )->column = 0;
+  ctrl_columns(s, 1, 100);
+  //__ Options - Looks: animation - cursor blink mode
+  ctrl_radiobuttons(
+    s, _("Cursor blink"), 3,
+    dlg_stdradiobutton_handler, &new_cfg.smooth_blink_cursor,
+    _("&Smooth"), ANIM_SMOOTH,
+    _("&Default"), ANIM_DEFAULT,
+    _("&None"), ANIM_NONE,
+    null
+  );
+  //__ Options - Looks: animation - text (SGR 5) blink mode
+  ctrl_radiobuttons(
+    s, _("Text blink"), 3,
+    dlg_stdradiobutton_handler, &new_cfg.smooth_blink_attr,
+    _("&Smooth"), ANIM_SMOOTH,
+    _("&Default"), ANIM_DEFAULT,
+    _("&None"), ANIM_NONE,
+    null
+  );
+  //__ Options - Looks: animation - scroll mode
+  ctrl_radiobuttons(
+    s, _("Scroll"), 3,
+    dlg_stdradiobutton_handler, &new_cfg.smooth_scroll,
+    _("&Smooth"), ANIM_SMOOTH,
+    _("&Default"), ANIM_DEFAULT,
+    _("&None"), ANIM_NONE,
+    null
+  );
+  //__ Options - Looks: animation - cursor motion mode
+  ctrl_radiobuttons(
+    s, _("Cursor move"), 3,
+    dlg_stdradiobutton_handler, &new_cfg.smooth_cursor,
+    _("&Smooth"), ANIM_SMOOTH,
+    _("&Default"), ANIM_DEFAULT,
+    _("&None"), ANIM_NONE,
+    null
+  );
+  ctrl_columns(s, 2, 60, 40);
   ctrl_checkbox(
     //__ Options - Looks: animation feature
     s, _("Smooth &bell flash"),
     dlg_stdcheckbox_handler, &new_cfg.smooth_blink_bell
+  )->column = 0;
+  ctrl_editbox(
+    //__ Options - Looks: dynamic blur duration in milliseconds, 0 = none
+    s, _("Dynamic blur ms"), 40, dlg_stdintbox_handler, &new_cfg.dynamic_blur
   )->column = 1;
   ctrl_columns(s, 1, 100);
   ctrl_columns(s, 4, 22, 28, 22, 28);

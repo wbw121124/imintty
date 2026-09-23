@@ -15,20 +15,22 @@
 # cursor type: block (default), line, underscore
 #CursorType=block
 
-# smooth animations (fade transitions for blink effects)
-#SmoothBlinkCursor=yes
+# animation modes: smooth, default, none
+# cursor/text blink (none = no blink; default = hard on/off; smooth = fade)
+#SmoothBlinkCursor=smooth
+#SmoothBlinkAttr=smooth
 #SmoothBlinkBell=yes
-#SmoothBlinkAttr=no
 #SmoothBlinkDuration=100
 
-# smooth cursor motion between cells (pixel interpolation)
-#SmoothCursor=yes
+# cursor motion / scroll (smooth = animate; default/none = instant)
+#SmoothCursor=smooth
 #SmoothCursorDuration=50
-
-# smooth screen scrolling (pixel interpolation; Lines = max lines to animate)
-#SmoothScroll=yes
+#SmoothScroll=smooth
 #SmoothScrollDuration=100
 #SmoothScrollLines=8
+
+# dynamic blur pulse during animation (ms; 0 = none)
+#DynamicBlur=0
 
 # enable a VT320 status line
 #StatusLine=yes

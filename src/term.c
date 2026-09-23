@@ -6,6 +6,7 @@
 #include "termpriv.h"
 
 #include "win.h"
+#include "winpriv.h"  // win_dynamic_blur_pulse
 #include "winimg.h"
 #include "charset.h"
 #include "child.h"
@@ -213,7 +214,16 @@ tblink_fade_cb(void)
 static void
 tblink_cb(void)
 {
-  if (cfg.smooth_blink_attr && term.blink_is_real) {
+  if (cfg.smooth_blink_attr == ANIM_NONE) {
+    term.tblinker = 0;
+    term.tblink_alpha = 255;
+    invalidate_blink_cells(ATTR_BLINK);
+    if (imgs_have_blink())
+      force_imgs = true;
+    win_update(false);
+    return;
+  }
+  if (cfg.smooth_blink_attr == ANIM_SMOOTH && term.blink_is_real) {
     int from = term.tblink_alpha;
     int to = from > 127 ? 0 : 255;
     term.tblinker = to <= 127;
@@ -236,6 +246,11 @@ tblink_cb(void)
 static void
 term_schedule_tblink(void)
 {
+  if (cfg.smooth_blink_attr == ANIM_NONE) {
+    term.tblinker = 0;
+    term.tblink_alpha = 255;
+    return;
+  }
   if (term.blink_is_real)
     win_set_timer(tblink_cb, 500);
   else {
@@ -258,7 +273,16 @@ tblink2_fade_cb(void)
 static void
 tblink2_cb(void)
 {
-  if (cfg.smooth_blink_attr && term.blink_is_real) {
+  if (cfg.smooth_blink_attr == ANIM_NONE) {
+    term.tblinker2 = 0;
+    term.tblink2_alpha = 255;
+    invalidate_blink_cells(ATTR_BLINK2);
+    if (imgs_have_blink())
+      force_imgs = true;
+    win_update(false);
+    return;
+  }
+  if (cfg.smooth_blink_attr == ANIM_SMOOTH && term.blink_is_real) {
     int from = term.tblink2_alpha;
     int to = from > 127 ? 0 : 255;
     term.tblinker2 = to <= 127;
@@ -281,6 +305,11 @@ tblink2_cb(void)
 static void
 term_schedule_tblink2(void)
 {
+  if (cfg.smooth_blink_attr == ANIM_NONE) {
+    term.tblinker2 = 0;
+    term.tblink2_alpha = 255;
+    return;
+  }
   if (term.blink_is_real)
     win_set_timer(tblink2_cb, 300);
   else {
@@ -329,7 +358,15 @@ cblink_fade_cb(void)
 static void
 cblink_cb(void)
 {
-  if (cfg.smooth_blink_cursor && term_cursor_blinks() && term.has_focus) {
+  if (cfg.smooth_blink_cursor == ANIM_NONE) {
+    term.cblinker = 1;
+    term.cblink_alpha = 255;
+    term.cursor_invalid = true;
+    win_update(false);
+    return;
+  }
+  if (cfg.smooth_blink_cursor == ANIM_SMOOTH
+      && term_cursor_blinks() && term.has_focus) {
     int from = term.cblink_alpha;
     int to = from > 127 ? 0 : 255;
     term.cblinker = to > 127;
@@ -346,7 +383,11 @@ cblink_cb(void)
 void
 term_schedule_cblink(void)
 {
-  if (term_cursor_blinks() && term.has_focus)
+  if (cfg.smooth_blink_cursor == ANIM_NONE) {
+    term.cblinker = 1;
+    term.cblink_alpha = 255;
+  }
+  else if (term_cursor_blinks() && term.has_focus)
     win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
   else {
     term.cblinker = 1;  /* reset when not in use */
@@ -440,7 +481,7 @@ void
 term_cursor_track(int dx, int dy)
 {
   if (dx < 0 || dy < 0 || !term.cursor_on || term.show_other_screen
-      || !term.has_focus || !cfg.smooth_cursor || tek_mode)
+      || !term.has_focus || cfg.smooth_cursor != ANIM_SMOOTH || tek_mode)
   {
     curs_anim_cancel();
     term.curs_last_x = dx;
@@ -486,6 +527,8 @@ term_cursor_track(int dx, int dy)
   term.curs_animate = true;
   term.curs_last_x = dx;
   term.curs_last_y = dy;
+  if (cfg.dynamic_blur > 0)
+    win_dynamic_blur_pulse();
   win_set_timer(curs_anim_cb, 16);
 }
 
@@ -502,7 +545,7 @@ curs_anim_invalidate(void)
 static void
 curs_anim_cb(void)
 {
-  if (!term.curs_animate || !cfg.smooth_cursor) {
+  if (!term.curs_animate || cfg.smooth_cursor != ANIM_SMOOTH) {
     term.curs_animate = false;
     return;
   }
@@ -562,7 +605,7 @@ term_scroll_anim_cancel(void)
 bool
 term_scroll_anim_active(void)
 {
-  return term.scroll_animate && cfg.smooth_scroll && !tek_mode;
+  return term.scroll_animate && cfg.smooth_scroll == ANIM_SMOOTH && !tek_mode;
 }
 
 /*
@@ -576,7 +619,7 @@ term_scroll_anim_begin(int topline, int botline, int lines)
   bool had = term.scroll_animate;
   scroll_anim_stop();
 
-  bool ok = cfg.smooth_scroll && !tek_mode && lines && cell_height > 0
+  bool ok = cfg.smooth_scroll == ANIM_SMOOTH && !tek_mode && lines && cell_height > 0
             && abs(lines) <= cfg.smooth_scroll_lines
             && !win_is_iconic();
   int top = 0, bot = 0;
@@ -604,6 +647,8 @@ term_scroll_anim_begin(int topline, int botline, int lines)
   term.scroll_anim_top = top;
   term.scroll_anim_bot = bot;
   term.scroll_anim_start = get_tick_count();
+  if (cfg.dynamic_blur > 0)
+    win_dynamic_blur_pulse();
   win_set_timer(scroll_anim_cb, 16);
 }
 
@@ -926,10 +971,19 @@ term_reconfig(void)
     term.tblink_alpha = term.tblinker ? 0 : 255;
     term.tblink2_alpha = term.tblinker2 ? 0 : 255;
   }
-  if (!new_cfg.smooth_cursor)
+  if (new_cfg.smooth_cursor != ANIM_SMOOTH)
     curs_anim_cancel();
-  if (!new_cfg.smooth_scroll)
+  if (new_cfg.smooth_scroll != ANIM_SMOOTH)
     term_scroll_anim_cancel();
+  if (new_cfg.smooth_blink_cursor == ANIM_NONE
+      || new_cfg.smooth_blink_attr == ANIM_NONE) {
+    term.cblinker = 1;
+    term.cblink_alpha = 255;
+    term.tblinker = 0;
+    term.tblink_alpha = 255;
+    term.tblinker2 = 0;
+    term.tblink2_alpha = 255;
+  }
   cfg.cursor_blinks = new_cfg.cursor_blinks;
   term_schedule_tblink();
   term_schedule_tblink2();

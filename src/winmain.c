@@ -866,6 +866,27 @@ void
 win_set_timer(void (*cb)(void), uint ticks)
 { SetTimer(wnd, (UINT_PTR)cb, ticks, null); }
 
+static bool dynblur_on;
+
+static void
+dynblur_off(void)
+{
+  if (!dynblur_on)
+    return;
+  dynblur_on = false;
+  win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
+}
+
+void
+win_dynamic_blur_pulse(void)
+{
+  if (cfg.dynamic_blur <= 0 || !pDwmEnableBlurBehindWindow)
+    return;
+  dynblur_on = true;
+  win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
+  win_set_timer(dynblur_off, (uint)cfg.dynamic_blur);
+}
+
 void
 win_keep_screen_on(bool on)
 {
@@ -2543,8 +2564,8 @@ win_update_blur(bool opaque)
 // see https://github.com/imintty/imintty/issues/501
   if (pDwmEnableBlurBehindWindow) {
     bool blur =
-      cfg.transparency && cfg.blurred && !win_is_fullscreen &&
-      !(opaque && term.has_focus);
+      ((cfg.transparency && cfg.blurred) || dynblur_on) && !win_is_fullscreen &&
+      !(opaque && term.has_focus && !dynblur_on);
 #define dont_use_dwmapi_h
 #ifdef use_dwmapi_h
 #warning dwmapi_include_shown_for_documentation

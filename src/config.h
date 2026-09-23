@@ -11,6 +11,8 @@ typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4,
 enum { HOLD_NEVER, HOLD_START, HOLD_ERROR, HOLD_ALWAYS };
 enum { CUR_BLOCK, CUR_UNDERSCORE, CUR_LINE, CUR_BOX };
 enum { FS_DEFAULT, FS_PARTIAL, FS_NONE, FS_FULL };
+// Animation / blink mode: none = off, default = traditional, smooth = fade
+enum { ANIM_NONE = 0, ANIM_DEFAULT = 1, ANIM_SMOOTH = 2 };
 enum { FR_TEXTOUT, FR_UNISCRIBE };
 enum { MC_VOID, MC_PASTE, MC_EXTEND, MC_ENTER };
 enum { RC_MENU, RC_PASTE, RC_EXTEND, RC_ENTER };
@@ -89,15 +91,16 @@ typedef struct {
   bool bold_as_font;
   bool bold_as_colour;
   bool allow_blinking;
-  bool smooth_blink_attr;
-  bool smooth_blink_cursor;
+  char smooth_blink_attr;    // ANIM_*: text (SGR 5) blink
+  char smooth_blink_cursor;  // ANIM_*: cursor blink
   bool smooth_blink_bell;
   int smooth_blink_duration;
-  bool smooth_cursor;
+  char smooth_cursor;        // ANIM_*: cursor motion
   int smooth_cursor_duration;
-  bool smooth_scroll;
+  char smooth_scroll;        // ANIM_*: scroll motion
   int smooth_scroll_duration;
   int smooth_scroll_lines;
+  int dynamic_blur;          // ms; 0 = none
   string locale;
   string charset;
   char charwidth;

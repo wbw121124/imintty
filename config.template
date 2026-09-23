@@ -41,6 +41,9 @@
 # enable terminal reflow on resize (also configurable in Options)
 #RewrapOnResize=yes
 
+# enable the Kitty keyboard protocol (also configurable in Options)
+#KittyKeyboard=yes
+
 # enable single-dash long options, e.g. imintty -WSL
 #ShortLongOpts=on
 

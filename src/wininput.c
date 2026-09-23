@@ -27,6 +27,14 @@ static uint compose_key = 0;
 static uint last_key_down = 0;
 static uint last_key_up = 0;
 
+// Kitty keyboard protocol: last CSI u press, for key-up release reporting
+static uint last_kitty_vk;
+static uint last_kitty_code;
+static uint last_kitty_shifted;
+static uint last_kitty_base;
+static mod_keys last_kitty_mods;
+static bool last_kitty_reported;
+
 static uint newwin_key = 0;
 static bool newwin_pending = false;
 static bool newwin_shifted = false;
@@ -3278,9 +3286,122 @@ C	M	+C	+A	"	"
     return false;
   }
 
-  // Keycode buffers
-  char buf[32];
+  // Keycode buffers (enlarged for Kitty CSI u with associated text)
+  char buf[64];
   int len = 0;
+
+  bool kitty_flag(uint bit) {
+    return cfg.kitty_keyboard && (term.kitty_kb_flags & bit);
+  }
+
+  // Progressive bits: 1=disambiguate, 2=events, 4=alternate, 8=all, 16=text
+  bool kitty_wants_csi_u(void) {
+    uint f = cfg.kitty_keyboard ? term.kitty_kb_flags : 0;
+    if (!f)
+      return false;
+    if (f & 8)  // report all keys as escape codes
+      return true;
+    if (f & 2)  // event types require CSI u to identify release/repeat
+      return true;
+    if (f & 1) {  // disambiguate: modified special keys and Ctrl/Alt combos
+      if (mods & (MDK_CTRL | MDK_ALT))
+        return true;
+      if (mods
+          && (key == VK_ESCAPE || key == VK_RETURN
+              || key == VK_TAB || key == VK_BACK))
+        return true;
+    }
+    return false;
+  }
+
+  uint kitty_vk_code(void) {
+    switch (key) {
+      when VK_ESCAPE:   return 27;
+      when VK_RETURN:   return 13;
+      when VK_TAB:      return 9;
+      when VK_BACK:     return 127;
+      when VK_INSERT:   return 57348;
+      when VK_DELETE:   return 57349;
+      when VK_PRIOR:    return 57350;
+      when VK_NEXT:     return 57351;
+      when VK_UP:       return 57352;
+      when VK_DOWN:     return 57353;
+      when VK_RIGHT:    return 57354;
+      when VK_LEFT:     return 57355;
+      when VK_HOME:     return 57356;
+      when VK_END:      return 57357;
+      when VK_CAPITAL:  return 57358;
+      when VK_SCROLL:   return 57359;
+      when VK_NUMLOCK:  return 57360;
+      when VK_SNAPSHOT: return 57361;
+      when VK_PAUSE:    return 57362;
+      when VK_APPS:     return 57363;
+      when VK_F1 ... VK_F12: return 57364 + (key - VK_F1);
+      when VK_CLEAR:    return 57376;  // KP_BEGIN
+      when VK_NUMPAD0 ... VK_NUMPAD9: return 57399 + (key - VK_NUMPAD0);
+      otherwise: return 0;
+    }
+  }
+
+  // Unicode codepoint for CSI u key parameter (Ctrl/Alt stripped so Ctrl+A → 97)
+  uint kitty_char_code(void) {
+    uint c = kitty_vk_code();
+    if (c)
+      return c;
+    BYTE kbd0[256];
+    memcpy(kbd0, kbd, sizeof kbd0);
+    kbd0[VK_CONTROL] = kbd0[VK_LCONTROL] = kbd0[VK_RCONTROL] = 0;
+    kbd0[VK_MENU] = kbd0[VK_LMENU] = kbd0[VK_RMENU] = 0;
+    wchar wc;
+    int r = ToUnicode(key, scancode, kbd0, &wc, 1, 0);
+    if (r > 0)
+      return wc;
+    if (key >= 'A' && key <= 'Z')
+      return key + 32;
+    if (key >= '0' && key <= '9')
+      return key;
+    return key;
+  }
+
+  void kitty_alt_forms(uint *shifted, uint *base) {
+    *shifted = *base = 0;
+    if (!kitty_flag(4))
+      return;
+    BYTE kbd_s[256], kbd_b[256];
+    memcpy(kbd_s, kbd, sizeof kbd_s);
+    memcpy(kbd_b, kbd, sizeof kbd_b);
+    for (int i = 0; i < 256; i++)
+      kbd_s[i] &= ~0x80, kbd_b[i] &= ~0x80;
+    kbd_s[VK_SHIFT] = kbd_s[VK_LSHIFT] = kbd_s[VK_RSHIFT] = 0x80;
+    wchar w;
+    if (ToUnicode(key, scancode, kbd_s, &w, 1, 0) > 0)
+      *shifted = w;
+    if (ToUnicode(key, scancode, kbd_b, &w, 1, 0) > 0)
+      *base = w;
+  }
+
+  int kitty_encode(char *dst, uint code, uint shifted, uint base,
+                   mod_keys m, int event, const char *text) {
+    uint f = term.kitty_kb_flags;
+    int n = snprintf(dst, 64, "\e[%u", code);
+    if ((f & 4) && (shifted || base) && n < 63)
+      n += snprintf(dst + n, 64 - n, ":%u:%u", shifted, base);
+    uint xm = (m & 0x7) + 1;
+    bool need_mods = (f & 2) || xm > 1 || ((f & 16) && text && *text);
+    if (need_mods && n < 63) {
+      if (f & 2)
+        n += snprintf(dst + n, 64 - n, ";%u:%d", xm, event);
+      else
+        n += snprintf(dst + n, 64 - n, ";%u", xm);
+      if ((f & 16) && text && *text && n < 63)
+        n += snprintf(dst + n, 64 - n, ";%s", text);
+    }
+    if (n < 63) {
+      dst[n++] = 'u';
+      dst[n] = 0;
+    }
+    return n;
+  }
 
   inline void ch(char c) { buf[len++] = c; }
   inline void esc_if(bool b) { if (b) ch('\e'); }
@@ -4003,6 +4124,33 @@ static struct {
   hide_mouse();
   term_cancel_paste();
 
+  // Kitty keyboard: re-encode as CSI u when progressive flags require it
+  if (len && kitty_wants_csi_u()) {
+    uint code = kitty_char_code();
+    uint shifted = 0, base = 0;
+    kitty_alt_forms(&shifted, &base);
+    int event = kitty_flag(2) ? (repeat ? 2 : 1) : 1;
+    char text[16];
+    text[0] = 0;
+    if (kitty_flag(16) && len == 1 && (unsigned char)buf[0] >= 0x20
+        && !(mods & MDK_CTRL))
+      snprintf(text, sizeof text, "%c", buf[0]);
+    char kbuf[64];
+    int klen = kitty_encode(kbuf, code, shifted, base, mods, event, text);
+    if (klen > 0 && klen < (int)sizeof(buf)) {
+      memcpy(buf, kbuf, klen);
+      len = klen;
+      if (kitty_flag(2)) {
+        last_kitty_vk = key;
+        last_kitty_code = code;
+        last_kitty_shifted = shifted;
+        last_kitty_base = base;
+        last_kitty_mods = mods;
+        last_kitty_reported = true;
+      }
+    }
+  }
+
   if (len) {
     //printf("[%ld] win_key_down %02X\n", mtime(), key); kb_trace = key;
     clear_scroll_lock();
@@ -4093,6 +4241,30 @@ win_key_up(WPARAM wp, LPARAM lp)
   if (!scancode) {
     last_key_up = key;
     return false;
+  }
+
+  // Kitty keyboard: release event for a key that was reported as CSI u press
+  if (last_kitty_reported && key == last_kitty_vk
+      && cfg.kitty_keyboard && (term.kitty_kb_flags & 2)
+     )
+  {
+    char rbuf[64];
+    uint f = term.kitty_kb_flags;
+    int n = snprintf(rbuf, sizeof rbuf, "\e[%u", last_kitty_code);
+    if ((f & 4) && (last_kitty_shifted || last_kitty_base)
+        && n < (int)sizeof rbuf - 1)
+      n += snprintf(rbuf + n, sizeof rbuf - n, ":%u:%u",
+                    last_kitty_shifted, last_kitty_base);
+    uint xm = (last_kitty_mods & 0x7) + 1;
+    if (n < (int)sizeof rbuf - 1)
+      n += snprintf(rbuf + n, sizeof rbuf - n, ";%u:3", xm);
+    if (n < (int)sizeof rbuf - 1) {
+      rbuf[n++] = 'u';
+      rbuf[n] = 0;
+      child_send(rbuf, n);
+      kb_input = true;
+    }
+    last_kitty_reported = false;
   }
 
   //printf("comp %d key %02X dn %02X up %02X\n", comp_state, key, last_key_down, last_key_up);

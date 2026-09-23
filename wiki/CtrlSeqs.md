@@ -105,6 +105,28 @@ The respective setting is cleared with a corresponding sequence ending with `l`.
 | `^[[?77031h`  | Ctrl+_    | `^[[95;5u`   |
 
 
+## Kitty keyboard protocol ##
+
+When enabled (default; toggle with `KittyKeyboard` or Options), imintty
+responds to the Kitty keyboard protocol progressive enhancement sequences.
+Applications query current flags with `CSI ? u` and set them with
+`CSI = flags [; mode] u`, where mode 0 replaces, 1 ORs, 2 clears bits.
+Flags may also be pushed/popped with `CSI > flags u` / `CSI < u`.
+
+| **flag** | **effect**                                          |
+|:---------|:----------------------------------------------------|
+| 1        | disambiguate: modified Esc/Enter/Tab/BS and Ctrl/Alt combos use CSI u |
+| 2        | report press/repeat/release events (`;mods:event`)  |
+| 4        | report alternate keys (`:shifted:base`)             |
+| 8        | report all keys as CSI u escape codes               |
+| 16       | report associated text (`;text`)                    |
+
+Key encoding: `CSI key[:shifted:base];mods[:event][;text]u`
+(mods = xterm bitmask + 1; event 1 = press, 2 = repeat, 3 = release).
+Special key codes follow the Kitty key enum, e.g. Esc = 27, Enter = 13,
+arrows = 57352–57355, F1–F12 = 57364–57375.
+
+
 ## Input method ##
 
 Imintty allows to set, save or restore the IME status explicitly, to support 

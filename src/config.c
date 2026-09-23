@@ -4829,6 +4829,11 @@ setup_config_box(controlbox * b)
     s, _("&Esc/Enter reset IME to alphanumeric"),
     dlg_stdcheckbox_handler, &new_cfg.key_alpha_mode
   );
+  ctrl_checkbox(
+    //__ Options - Keys:
+    s, _("&Kitty keyboard protocol"),
+    dlg_stdcheckbox_handler, &new_cfg.kitty_keyboard
+  );
 
   s = ctrl_new_set(b, _("Keys"), null, 
   //__ Options - Keys: section title

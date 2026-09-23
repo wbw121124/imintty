@@ -534,14 +534,12 @@ msgid "Scroll lines"
 msgstr "滚动行数"
 
 #: config.c:4606
-#, fuzzy
 msgid "Cursor trail"
-msgstr "光标闪烁"
+msgstr "光标拖尾"
 
 #: config.c:4610
-#, fuzzy
 msgid "Short skip"
-msgstr "快捷键"
+msgstr "短距跳过"
 
 #. __ Options - Text: treeview label
 #: config.c:4618 config.c:4643 config.c:4658 config.c:4707 config.c:4757
@@ -638,21 +636,20 @@ msgstr "位置"
 
 #. __ Options - Text: render pipeline
 #: config.c:4845
-#, fuzzy
 msgid "Font render"
-msgstr "字体 "
+msgstr "字体渲染"
 
 #: config.c:4847
 msgid "T&extOut"
-msgstr ""
+msgstr "T&extOut"
 
 #: config.c:4848
 msgid "&Uniscribe"
-msgstr ""
+msgstr "&Uniscribe"
 
 #: config.c:4849
 msgid "D&Write"
-msgstr ""
+msgstr "D&Write"
 
 #. __ Options - Keys: treeview label
 #: config.c:4857 config.c:4892 config.c:4927 config.c:4945

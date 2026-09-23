@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: imintty\n"
 "Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
-"POT-Creation-Date: 2026-09-23 17:30+0800\n"
+"POT-Creation-Date: 2026-09-24 07:30+0800\n"
 "PO-Revision-Date: 2024-06-28 23:51+0200\n"
 "Last-Translator: GeekDuanLian <dl@pbstu.com>\n"
 "Language-Team: \n"
@@ -288,7 +288,7 @@ msgid "Save"
 msgstr "保存"
 
 #. __ Dialog button - cancel
-#: config.c:4375 winctrls.c:1277 windialog.c:944
+#: config.c:4375 winctrls.c:1277 windialog.c:948
 msgid "Cancel"
 msgstr "取消"
 
@@ -298,12 +298,12 @@ msgid "Apply"
 msgstr "应用"
 
 #. __ Dialog button - take notice
-#: config.c:4383 windialog.c:941
+#: config.c:4383 windialog.c:945
 msgid "I see"
 msgstr "我了解了"
 
 #. __ Dialog button - confirm action
-#: config.c:4385 winctrls.c:1276 windialog.c:943
+#: config.c:4385 winctrls.c:1276 windialog.c:947
 msgid "OK"
 msgstr "确定"
 
@@ -444,104 +444,103 @@ msgstr "下划线"
 msgid "Blinkin&g"
 msgstr "闪烁(&G)"
 
-#. __ Options - Looks: Neovide-style expand blink
-#: config.c:4536
-msgid "Neovide &expand blink"
-msgstr ""
-
 #. __ Options - Looks: separate cursor canvas
-#: config.c:4541
+#: config.c:4536
 msgid "&Separate cursor canvas"
 msgstr ""
 
 #. __ Options - Animation: treeview label
 #. __ Options - Animation: panel title
-#: config.c:4546 config.c:4548
+#: config.c:4541 config.c:4543
 msgid "Animation"
 msgstr "动画"
 
-#: config.c:4551
+#: config.c:4546
 msgid "Cursor blink"
 msgstr "光标闪烁"
 
-#: config.c:4553 config.c:4564
+#: config.c:4548 config.c:4559
 msgid "&Blink"
 msgstr "闪烁(&B)"
 
-#: config.c:4554 config.c:4565
+#: config.c:4549 config.c:4560
 msgid "S&mooth"
 msgstr "平滑(&M)"
 
-#: config.c:4555 config.c:4566
+#: config.c:4550 config.c:4561
 msgid "&Phase"
 msgstr "相位(&P)"
 
-#: config.c:4556 config.c:4567
+#: config.c:4551 config.c:4562
 msgid "E&xpand"
 msgstr "扩展(&X)"
 
-#: config.c:4557 config.c:4568
+#: config.c:4552 config.c:4563
 msgid "So&lid"
 msgstr "常亮(&L)"
 
-#: config.c:4562
+#: config.c:4557
 msgid "Text blink"
 msgstr "文本闪烁"
 
-#: config.c:4573
+#: config.c:4568
 msgid "Scroll"
 msgstr "滚动"
 
-#: config.c:4575 config.c:4584
+#: config.c:4570 config.c:4579
 msgid "&Smooth"
 msgstr "平滑(&S)"
 
 #. __ Options - Text:
-#: config.c:4576 config.c:4585 config.c:4728 config.c:4761 config.c:5005
+#: config.c:4571 config.c:4580 config.c:4728 config.c:4761 config.c:5005
 #: config.c:5044 config.c:5198 config.c:5211
 msgid "&Default"
 msgstr "默认(&D)"
 
 #. __ Options - Text:
 #. __ Options - Window: scrollbar
-#: config.c:4577 config.c:4586 config.c:4730 config.c:4763 config.c:5003
+#: config.c:4572 config.c:4581 config.c:4730 config.c:4763 config.c:5003
 #: config.c:5042 config.c:5196 config.c:5209 config.c:5296
 msgid "&None"
 msgstr "无(&N)"
 
-#: config.c:4582
+#: config.c:4577
 msgid "Cursor move"
 msgstr "光标移动"
 
 #. __ Options - Animation: smooth flash on bell
-#: config.c:4592
+#: config.c:4587
 msgid "Smooth &bell flash"
 msgstr "平滑响铃闪烁(&B)"
 
 #. __ Options - Animation: dynamic blur duration in milliseconds, 0 = none
-#: config.c:4597
+#: config.c:4592
 msgid "Dynamic blur ms"
 msgstr "动态模糊毫秒"
 
 #. __ Options - Animation: duration in milliseconds
-#: config.c:4603
+#: config.c:4598
 msgid "Cursor ms"
 msgstr "光标毫秒"
 
 #. __ Options - Animation: duration in milliseconds
-#: config.c:4607
+#: config.c:4602
 msgid "Scroll ms"
 msgstr "滚动毫秒"
 
 #. __ Options - Animation: duration in milliseconds
-#: config.c:4611
+#: config.c:4606
 msgid "Blink ms"
 msgstr "闪烁毫秒"
 
 #. __ Options - Animation: max scroll lines to animate
-#: config.c:4615
+#: config.c:4610
 msgid "Scroll lines"
 msgstr "滚动行数"
+
+#: config.c:4615
+msgid "Neovide &expand blink"
+msgstr ""
 
 #: config.c:4620
 msgid "Cursor trail"
@@ -1178,7 +1177,7 @@ msgid "A&dd to Custom Colours"
 msgstr "添加到自定义颜色(&D)"
 
 #. __ Options: dialog title
-#: windialog.c:311 windialog.c:888
+#: windialog.c:311 windialog.c:892
 msgid "Options"
 msgstr "选项"
 
@@ -1188,11 +1187,11 @@ msgid "available"
 msgstr "可用"
 
 #. __ Options: dialog width scale factor (80...200)
-#: windialog.c:832
+#: windialog.c:836
 msgid "100"
 msgstr "105"
 
-#: windialog.c:973 windialog.c:1000
+#: windialog.c:977 windialog.c:1004
 msgid "Error"
 msgstr "错误"
 

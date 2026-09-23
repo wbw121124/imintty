@@ -239,11 +239,12 @@ tblink_phase_cb(void)
   win_set_timer(tblink_phase_cb, 30);
 }
 
-/* Expand mode for text: triangle-wave alpha (grow/shrink visibility). */
+/* Expand mode for text: cosine ease-in-out alpha, 0..360° cycling. */
 static void
 tblink_expand_cb(void)
 {
-  if (cfg.smooth_blink_attr != ANIM_EXPAND || !term.blink_is_real) {
+  if (cfg.smooth_blink_attr != ANIM_EXPAND || !term.blink_is_real
+      || !term.has_focus || term.show_other_screen) {
     term.tblinker = 0;
     term.tblink_alpha = 255;
     term.tblink_expand = 0;
@@ -251,22 +252,25 @@ tblink_expand_cb(void)
     if (imgs_have_blink())
       force_imgs = true;
     win_update(false);
+    win_set_timer(tblink_expand_cb, 30);
     return;
   }
-  int step = 255 * 30 / max(40, blink_duration());
-  if (!term.tblink_dir) {
-    term.tblink_expand += step;
-    if (term.tblink_expand >= 255) {
-      term.tblink_expand = 255;
-      term.tblink_dir = true;
-    }
-  }
-  else {
-    term.tblink_expand -= step;
-    if (term.tblink_expand <= 0) {
-      term.tblink_expand = 0;
-      term.tblink_dir = false;
-    }
+  /* VSCode-style expand: hold scaleY(1) for 20%, ease-out to scaleY(0) for
+   * the next 60%, hold at 0 for the final 20%. */
+  term.tblink_phase += 12.0;  /* 360° / 30 ticks = 500ms full cycle at 30ms tick */
+  if (term.tblink_phase >= 360.0)
+    term.tblink_phase -= 360.0;
+  double p2 = term.tblink_phase;
+  if (p2 < 72.0) {
+    term.tblink_expand = 255;
+  } else if (p2 < 288.0) {
+    double t = (p2 - 72.0) / 216.0;
+    double c = t < 0.5
+      ? 4.0 * t * t * t
+      : 1.0 - pow(-2.0 * t + 2.0, 3.0) / 2.0;
+    term.tblink_expand = (int)(255.0 * (1.0 - c));
+  } else {
+    term.tblink_expand = 0;
   }
   term.tblink_alpha = term.tblink_expand;
   term.tblinker = term.tblink_alpha <= 127;
@@ -296,7 +300,6 @@ tblink_cb(void)
   }
   if (cfg.smooth_blink_attr == ANIM_EXPAND && term.blink_is_real) {
     term.tblink_expand = 0;
-    term.tblink_dir = false;
     tblink_expand_cb();
     return;
   }
@@ -459,9 +462,8 @@ cblink_phase_cb(void)
   win_set_timer(cblink_phase_cb, 20);
 }
 
-/* Expand mode: ping-pong expand amount 0..255 drives cursor geometry.
- * Geometry overhangs the cursor cell — invalidate a 1-cell margin so the
- * previous larger frame is erased (prevents permanent outline ghosts). */
+/* Expand mode: cosine ease-in-out ping-pong 0..255 drives cursor geometry.
+ * Vertical-only expansion, clamped to cell boundaries (no overflow). */
 static void
 cblink_expand_cb(void)
 {
@@ -476,22 +478,29 @@ cblink_expand_cb(void)
     term_invalidate(term.curs.x - 1, dys - 1,
                     term.curs.x + 1, dys + 1);
     win_update(false);
+    win_set_timer(cblink_expand_cb, 20);
     return;
   }
-  int step = 255 * 20 / max(40, blink_duration());
-  if (!term.cblink_dir) {
-    term.cblink_expand += step;
-    if (term.cblink_expand >= 255) {
-      term.cblink_expand = 255;
-      term.cblink_dir = true;
-    }
-  }
-  else {
-    term.cblink_expand -= step;
-    if (term.cblink_expand <= 0) {
-      term.cblink_expand = 0;
-      term.cblink_dir = false;
-    }
+  /* VSCode-style expand: hold scaleY(1) for 20%, ease-out to scaleY(0) for
+   * the next 60%, hold at 0 for the final 20%. Uses piecewise cosine so
+   * the transition is properly asymmetric (vs a full symmetric cos cycle). */
+  term.cblink_phase += 18.0;  /* 360° / 25 ticks = 500ms full cycle at 20ms tick */
+  if (term.cblink_phase >= 360.0)
+    term.cblink_phase -= 360.0;
+  double p = term.cblink_phase;
+  if (p < 72.0) {
+    /* 0..20%: hold at 1.0 */
+    term.cblink_expand = 255;
+  } else if (p < 288.0) {
+    /* 20..80%: ease-in-out from 1.0 down to 0.0 */
+    double t = (p - 72.0) / 216.0;  /* 0..1 over the transition window */
+    double c = t < 0.5
+      ? 4.0 * t * t * t                         /* ease-in */
+      : 1.0 - pow(-2.0 * t + 2.0, 3.0) / 2.0;   /* ease-out */
+    term.cblink_expand = (int)(255.0 * (1.0 - c));
+  } else {
+    /* 80..100%: hold at 0 */
+    term.cblink_expand = 0;
   }
   term.cblink_alpha = 255;
   term.cblinker = 1;
@@ -524,7 +533,7 @@ cblink_cb(void)
   }
   if (cfg.smooth_blink_cursor == ANIM_EXPAND
       && term_cursor_blinks() && term.has_focus) {
-    /* free-run the expand chain; do not reset expand here (avoids snap) */
+    /* free-run the expand chain; do not reset phase here (avoids snap) */
     cblink_expand_cb();
     return;
   }

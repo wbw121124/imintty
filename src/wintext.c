@@ -1391,36 +1391,40 @@ draw_cursor_overlay(void)
   if (w <= 0 || h <= 0)
     return;
 
-  /* Expand mode: grow geometry from center; line/underscore expand along axis. */
+  /* Expand mode: vertical-only cosine ease-in-out, clamped to cell bounds */
   int expand = 0;
   if (cfg.smooth_blink_cursor == ANIM_EXPAND && term_cursor_blinks()
       && term.has_focus)
     expand = term.cblink_expand;
-  int dx = expand * w / 512;
+  /* dx = 0: no horizontal expansion; dy = expand*h/512 max h/2 (clamped below) */
   int dy = expand * h / 512;
+  int uy = max(y, y - dy);        /* top clamped to cell top at worst */
+  int by = min(y + h, y + h + dy); /* bottom clamped to cell bottom at worst */
 
   HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
   switch (term_cursor_type()) {
     when CUR_BLOCK: {
       HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
-      Rectangle(dc, x - dx, y - dy, x + w + dx, y + h + dy);
+      Rectangle(dc, x, uy, x + w, by);
       DeleteObject(SelectObject(dc, oldbrush));
     }
     when CUR_BOX: {
       HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-      Rectangle(dc, x - dx, y - dy, x + w + dx, y + h + dy);
+      Rectangle(dc, x, uy, x + w, by);
       SelectObject(dc, oldbrush);
     }
     when CUR_LINE: {
       int caret_width = max(2, w / 8);
       HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
-      Rectangle(dc, x - dx, y - dy, x + caret_width + dx, y + h + dy);
+      Rectangle(dc, x, uy, x + caret_width, by);
       DeleteObject(SelectObject(dc, oldbrush));
     }
     when CUR_UNDERSCORE: {
       int th = max(2, h / 8);
+      int ut = max(y + h - th, y + h - th - dy);
+      int bt = min(y + h, y + h + dy);
       HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
-      Rectangle(dc, x - dx, y + h - th - dy, x + w + dx, y + h + dy);
+      Rectangle(dc, x, ut, x + w, bt);
       DeleteObject(SelectObject(dc, oldbrush));
     }
   }
@@ -5187,19 +5191,21 @@ skip_drawing:;
     if (cfg.smooth_blink_cursor == ANIM_EXPAND && term_cursor_blinks()
         && term.has_focus)
       expand = term.cblink_expand;
-    int edx = expand * char_width / 512;
+    /* vertical-only expansion, clamped to cell bounds */
     int edy = expand * cell_height / 512;
+    int uy = max(y, y - edy);
+    int by = min(y + cell_height, y + cell_height + edy);
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
     switch (term_cursor_type()) {
       when CUR_BLOCK:  // solid block cursor
         if (attr.attr & TATTR_PASCURS) {
           HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-          Rectangle(dc, x - edx, y - edy, x + char_width + edx, y + cell_height + edy);
+          Rectangle(dc, x, uy, x + char_width, by);
           SelectObject(dc, oldbrush);
         }
       when CUR_BOX: {  // hollow box cursor
         HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-        Rectangle(dc, x - edx, y - edy, x + char_width + edx, y + cell_height + edy);
+        Rectangle(dc, x, uy, x + char_width, by);
         SelectObject(dc, oldbrush);
       }
       when CUR_LINE: {  // vertical line cursor
@@ -5221,14 +5227,14 @@ skip_drawing:;
         if (attr.attr & TATTR_ACTCURS) {
 #ifdef cursor_painted_with_rectangle
           HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
-          Rectangle(dc, xx - edx, y - edy, xx + caret_width + edx, y + cell_height + edy);
+          Rectangle(dc, xx, uy, xx + caret_width, by);
           DeleteObject(SelectObject(dc, oldbrush));
 #else
           HBRUSH br = CreateSolidBrush(_cc);
 #ifdef simple_inverted_cursor_approach
-          InvertRect(dc, &(RECT){xx - edx, y - edy, xx + caret_width + edx, y + cell_height + edy});
+          InvertRect(dc, &(RECT){xx, uy, xx + caret_width, by});
 #else
-          FillRect(dc, &(RECT){xx - edx, y - edy, xx + caret_width + edx, y + cell_height + edy}, br);
+          FillRect(dc, &(RECT){xx, uy, xx + caret_width, by}, br);
 #endif
           DeleteObject(br);
 #endif
@@ -5250,13 +5256,13 @@ skip_drawing:;
         if (attr.attr & TATTR_ACTCURS) {
           int up = cursor_size(cell_height);
           if (up) {
-            int yct = max(yy - up - edy, yt - edy);
+            int yct = max(yy - up, yt);
             HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
-            Rectangle(dc, x - edx, yct, x + char_width + edx, yy + 2 + edy);
+            Rectangle(dc, x, yct, x + char_width, yy + 2);
             DeleteObject(SelectObject(dc, oldbrush));
           }
           else
-            Rectangle(dc, x - edx, yy - up - edy, x + char_width + edx, yy + 2 + edy);
+            Rectangle(dc, x, yy - up, x + char_width, yy + 2);
         }
         else if (attr.attr & TATTR_PASCURS) {
           for (int dx = 0; dx < char_width; dx += 2) {

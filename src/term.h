@@ -515,12 +515,10 @@ struct term {
   int cblink_alpha;
   int vbell_alpha;
   /* Phase/expand blink animation state */
-  int cblink_phase;       /* Phase mode: 0..359 sine phase degrees */
-  int cblink_expand;      /* Expand mode: 0..255 expansion amount */
-  int tblink_phase;       /* Phase mode for text blink */
-  int tblink_expand;      /* Expand mode for text blink */
-  bool cblink_dir;        /* Expand mode: false = growing, true = shrinking */
-  bool tblink_dir;
+   int cblink_phase;       /* Phase/expand mode: 0..359° cycle angle */
+   int cblink_expand;      /* Expand mode: 0..255 expansion amount */
+   int tblink_phase;       /* Phase/expand mode: 0..359° cycle angle */
+   int tblink_expand;      /* Expand mode for text blink */
    /* Smooth cursor motion (Phase 2): pixel-space animation state */
    bool curs_animate;      /* movement animation in progress */
    int  curs_px0, curs_py0; /* from pixel (text area origin) */

@@ -7628,17 +7628,23 @@ static int dynfonts = 0;
     closedir(d);
   }
   if (!support_wsl && home) {
-    // highest priority first
-    char * d0 = asform("%s/.mintty/fonts", home);
-    char * d1 = asform("%s/.config/mintty/fonts", home);
-    char * d2 = asform("%s/.fonts", home);
+    // highest priority first — MSYS HOME (imintty-specific paths before mintty legacy)
+    char * d0 = asform("%s/.imintty/fonts", home);
+    char * d1 = asform("%s/.config/imintty/fonts", home);
+    char * d2 = asform("%s/.mintty/fonts", home);
+    char * d3 = asform("%s/.config/mintty/fonts", home);
+    char * d4 = asform("%s/.fonts", home);
     add_font_dir_fonts(d0, 0);
     add_font_dir_fonts(d1, 0);
     add_font_dir_fonts(d2, 0);
+    add_font_dir_fonts(d3, 0);
+    add_font_dir_fonts(d4, 0);
     add_font_dir_fonts("/usr/share/fonts", 0);
     free(d0);
     free(d1);
     free(d2);
+    free(d3);
+    free(d4);
   }
 
   if (report_fonts) {

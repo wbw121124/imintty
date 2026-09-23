@@ -108,6 +108,8 @@ const config default_cfg = {
    .smooth_cursor_duration = 50,
    .cursor_trail_size = 0,
    .cursor_short_threshold = 1,
+   .cursor_neovide_expand = false,
+   .cursor_separate_canvas = false,
    .smooth_scroll = ANIM_SMOOTH,
   .smooth_scroll_duration = 100,
   .smooth_scroll_lines = 8,
@@ -437,6 +439,8 @@ options[] = {
    {"SmoothCursorDuration", OPT_INT, offcfg(smooth_cursor_duration)},
    {"CursorTrailSize", OPT_INT, offcfg(cursor_trail_size)},
    {"CursorShortThreshold", OPT_INT, offcfg(cursor_short_threshold)},
+   {"CursorNeovideExpand", OPT_BOOL, offcfg(cursor_neovide_expand)},
+   {"CursorSeparateCanvas", OPT_BOOL, offcfg(cursor_separate_canvas)},
   {"SmoothScroll", OPT_ANIM, offcfg(smooth_scroll)},
   {"SmoothScrollDuration", OPT_INT, offcfg(smooth_scroll_duration)},
   {"SmoothScrollLines", OPT_INT, offcfg(smooth_scroll_lines)},
@@ -4526,6 +4530,16 @@ setup_config_box(controlbox * b)
   ctrl_checkbox(
     //__ Options - Looks: cursor feature
     s, _("Blinkin&g"), dlg_stdcheckbox_handler, &new_cfg.cursor_blinks
+  );
+  ctrl_checkbox(
+    //__ Options - Looks: Neovide-style expand blink
+    s, _("Neovide &expand blink"),
+    dlg_stdcheckbox_handler, &new_cfg.cursor_neovide_expand
+  );
+  ctrl_checkbox(
+    //__ Options - Looks: separate cursor canvas
+    s, _("&Separate cursor canvas"),
+    dlg_stdcheckbox_handler, &new_cfg.cursor_separate_canvas
   );
 
   //__ Options - Animation: treeview label

@@ -1206,6 +1206,12 @@ static HBITMAP scroll_snap_bm;
 static HDC scroll_snap_dc;
 static int scroll_snap_w, scroll_snap_h;
 
+/* Separate cursor canvas (Neovide-style: clear & redraw cursor each frame). */
+static HDC cursor_canvas_dc = 0;
+static HBITMAP cursor_canvas_bm = 0;
+static HBITMAP cursor_canvas_oldbm = 0;
+static int cursor_canvas_w = 0, cursor_canvas_h = 0;
+
 bool
 win_scroll_capture(int top, int bot)
 {
@@ -1393,7 +1399,8 @@ draw_cursor_overlay(void)
 
   /* Expand mode: vertical-only cosine ease-in-out, clamped to cell bounds */
   int expand = 0;
-  if (cfg.smooth_blink_cursor == ANIM_EXPAND && term_cursor_blinks()
+  if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.cursor_neovide_expand)
+      && term_cursor_blinks()
       && term.has_focus)
     expand = term.cblink_expand;
   /* dx = 0: no horizontal expansion; dy = expand*h/512 max h/2 (clamped below) */
@@ -1470,6 +1477,59 @@ draw_cursor_overlay(void)
       DeleteObject(SelectObject(dc, tp));
     }
   }
+}
+
+/* Separate cursor canvas (Neovide-style): clear & redraw cursor layer each frame,
+ * then composite onto screen. Prevents cursor smear without redrawing content. */
+static void
+draw_cursor_to_canvas(HDC screen_dc)
+{
+  RECT cr;
+  GetClientRect(wnd, &cr);
+  int w = cr.right, h = cr.bottom;
+  if (w <= 0 || h <= 0)
+    return;
+
+  /* Create or resize cursor canvas */
+  if (!cursor_canvas_dc
+      || cursor_canvas_w != w || cursor_canvas_h != h) {
+    if (cursor_canvas_dc) {
+      SelectObject(cursor_canvas_dc, cursor_canvas_oldbm);
+      DeleteObject(cursor_canvas_bm);
+      DeleteDC(cursor_canvas_dc);
+    }
+    cursor_canvas_dc = CreateCompatibleDC(screen_dc);
+    cursor_canvas_bm = CreateCompatibleBitmap(screen_dc, w, h);
+    cursor_canvas_oldbm = SelectObject(cursor_canvas_dc, cursor_canvas_bm);
+    cursor_canvas_w = w;
+    cursor_canvas_h = h;
+  }
+  /* Clear cursor canvas */
+  HBRUSH clr = CreateSolidBrush(RGB(0, 0, 0));
+  HBRUSH old_brush = SelectObject(cursor_canvas_dc, clr);
+  Rectangle(cursor_canvas_dc, 0, 0, w, h);
+  SelectObject(cursor_canvas_dc, old_brush);
+  DeleteObject(clr);
+
+  /* Save world transform and set identity for cursor drawing */
+  XFORM saved_xf;
+  bool has_xf = GetWorldTransform(cursor_canvas_dc, &saved_xf) != 0;
+  XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+  if (has_xf)
+    SetWorldTransform(cursor_canvas_dc, &id);
+
+  /* Temporarily redirect dc to cursor canvas for overlay drawing */
+  HDC old_dc = dc;
+  dc = cursor_canvas_dc;
+  draw_cursor_overlay();
+  dc = old_dc;
+
+  /* Restore transform */
+  if (has_xf)
+    SetWorldTransform(cursor_canvas_dc, &saved_xf);
+
+  /* Composite cursor layer onto screen */
+  BitBlt(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, SRCCOPY);
 }
 
 #define dont_debug_cursor 1
@@ -1919,7 +1979,8 @@ do_update(void)
       win_scroll_overlay(dc, remaining - total,
                          term.scroll_anim_top, term.scroll_anim_bot);
     }
-    draw_cursor_overlay();
+    if (!cfg.cursor_separate_canvas)
+      draw_cursor_overlay();
   }
 
   if (mem_dc && mem_bm) {
@@ -1931,6 +1992,9 @@ do_update(void)
     DeleteDC(mem_dc);
     dc = 0;
   }
+  /* Separate cursor canvas: draw cursor onto its own layer, then composite */
+  if (cfg.cursor_separate_canvas)
+    draw_cursor_to_canvas(screen_dc);
   if (screen_dc)
     ReleaseDC(wnd, screen_dc);
   dc = 0;
@@ -5188,7 +5252,8 @@ skip_drawing:;
     printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
 #endif
     int expand = 0;
-    if (cfg.smooth_blink_cursor == ANIM_EXPAND && term_cursor_blinks()
+    if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.cursor_neovide_expand)
+        && term_cursor_blinks()
         && term.has_focus)
       expand = term.cblink_expand;
     /* vertical-only expansion, clamped to cell bounds */
@@ -6316,9 +6381,10 @@ win_paint(void)
         int remaining = term_scroll_anim_offset();
         win_scroll_overlay(dc, remaining - total,
                            term.scroll_anim_top, term.scroll_anim_bot);
-      }
-      draw_cursor_overlay();
-      if (has_xf_paint)
+       }
+       if (!cfg.cursor_separate_canvas)
+         draw_cursor_overlay();
+       if (has_xf_paint)
         SetWorldTransform(dc, &xf_paint);
     }
   }
@@ -6386,6 +6452,9 @@ win_paint(void)
     DeleteObject(mem_bm);
     DeleteDC(mem_dc);
   }
+  /* Separate cursor canvas: draw cursor onto its own layer, then composite */
+  if (cfg.cursor_separate_canvas)
+    draw_cursor_to_canvas(screen_dc);
   dc = 0;
 
   EndPaint(wnd, &p);

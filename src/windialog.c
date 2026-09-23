@@ -758,10 +758,9 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         // lay out the new panel at the top (no vertical scrollbar)
         (void)create_controls(wnd, (char *) item.lParam);
         update_panel_visibility(wnd);
-        // clear any residual pixels in the viewport after the switch
+        // invalidate so next paint cycle clears any residual pixels
         RECT clipr = panel_clip(wnd);
-        RedrawWindow(wnd, &clipr, null,
-                     RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+        InvalidateRect(wnd, &clipr, false);
         debug("WM_NOTIFY: create");
         dlg_refresh(null); /* set up control values */
         debug("WM_NOTIFY: refresh");

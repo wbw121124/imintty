@@ -10,6 +10,7 @@
 #include "charset.h"
 #include "child.h"
 #include "winsearch.h"
+#include "tek.h"
 #if CYGWIN_VERSION_API_MINOR >= 66
 #include <langinfo.h>
 #endif
@@ -268,11 +269,14 @@ term_cursor_blinks(void)
       || (term.cursor_blinks == -1 ? cfg.cursor_blinks : term.cursor_blinks);
 }
 
+static void curs_anim_cancel(void);
+
 void
 term_hide_cursor(void)
 {
   if (term.cursor_on) {
     term.cursor_on = false;
+    curs_anim_cancel();
     win_update(false);
   }
 }
@@ -365,6 +369,117 @@ term_schedule_vbell(int already_started, int startpoint)
       win_set_timer(vbell_cb, ticks);
     }
   }
+}
+
+/* Smooth cursor movement (Phase 2) */
+
+static int
+smooth_cursor_duration(void)
+{
+  int d = cfg.smooth_cursor_duration;
+  if (d < 10)
+    d = 10;
+  if (d > 500)
+    d = 500;
+  return d;
+}
+
+static void
+curs_anim_cancel(void)
+{
+  term.curs_animate = false;
+}
+
+void
+term_cursor_anim_cancel(void)
+{
+  curs_anim_cancel();
+}
+
+static void
+curs_anim_cb(void);
+
+/* Detect cursor cell move at paint time; display coords (dx, dy). */
+void
+term_cursor_track(int dx, int dy)
+{
+  if (dx < 0 || dy < 0 || !term.cursor_on || term.show_other_screen
+      || !term.has_focus || !cfg.smooth_cursor || tek_mode)
+  {
+    curs_anim_cancel();
+    term.curs_last_x = dx;
+    term.curs_last_y = dy;
+    return;
+  }
+
+  if (term.curs_last_x < 0 || term.curs_last_y < 0) {
+    term.curs_last_x = dx;
+    term.curs_last_y = dy;
+    return;
+  }
+
+  if (dx == term.curs_last_x && dy == term.curs_last_y) {
+    if (term.curs_animate) {
+      /* keep animating to the same target */
+    }
+    return;
+  }
+
+  int from_x, from_y;
+  if (term.curs_animate) {
+    /* retarget from current visual position */
+    int elapsed = get_tick_count() - term.curs_anim_start;
+    int dur = smooth_cursor_duration();
+    if (elapsed >= dur)
+      elapsed = dur;
+    from_x = term.curs_px0 + (term.curs_px1 - term.curs_px0) * elapsed / dur;
+    from_y = term.curs_py0 + (term.curs_py1 - term.curs_py0) * elapsed / dur;
+  }
+  else {
+    from_x = term.curs_last_x * cell_width + PADDING;
+    from_y = term.curs_last_y * cell_height + OFFSET + PADDING;
+  }
+
+  term.curs_px0 = from_x;
+  term.curs_py0 = from_y;
+  term.curs_px1 = dx * cell_width + PADDING;
+  term.curs_py1 = dy * cell_height + OFFSET + PADDING;
+  term.curs_anim_start = get_tick_count();
+  term.curs_animate = true;
+  term.curs_last_x = dx;
+  term.curs_last_y = dy;
+  win_set_timer(curs_anim_cb, 16);
+}
+
+static void
+curs_anim_invalidate(void)
+{
+  int x0 = (term.curs_px0 - PADDING) / cell_width;
+  int y0 = (term.curs_py0 - PADDING - OFFSET) / cell_height;
+  int x1 = (term.curs_px1 - PADDING) / cell_width;
+  int y1 = (term.curs_py1 - PADDING - OFFSET) / cell_height;
+  term_invalidate(min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1));
+}
+
+static void
+curs_anim_cb(void)
+{
+  if (!term.curs_animate || !cfg.smooth_cursor) {
+    term.curs_animate = false;
+    return;
+  }
+  int elapsed = get_tick_count() - term.curs_anim_start;
+  int dur = smooth_cursor_duration();
+  if (elapsed >= dur) {
+    term.curs_animate = false;
+    term.cursor_invalid = true;
+    curs_anim_invalidate();
+    win_update(false);
+    return;
+  }
+  curs_anim_invalidate();
+  win_update(false);
+  win_set_timer(curs_anim_cb, 16);
 }
 
 /* Find the bottom line on the screen that has any content.
@@ -526,6 +641,8 @@ term_reset(bool full)
   term.cursor_size = 0;
   term.cursor_blinks = -1;
   term.cursor_blink_interval = 0;
+  term.curs_animate = false;
+  term.curs_last_x = term.curs_last_y = -1;
   if (full) {
     term.blink_is_real = cfg.allow_blinking;
     term.tblinker = 1;
@@ -600,6 +717,9 @@ show_screen(bool other_screen, bool flip)
   if (flip || cfg.input_clears_selection)
     term.selected = false;
 
+  term.curs_animate = false;
+  term.curs_last_x = term.curs_last_y = -1;
+
   // Reset cursor blinking.
   if (!other_screen) {
     term.cblinker = 1;
@@ -635,6 +755,8 @@ term_reconfig(void)
     term.tblink_alpha = term.tblinker ? 0 : 255;
     term.tblink2_alpha = term.tblinker2 ? 0 : 255;
   }
+  if (!new_cfg.smooth_cursor)
+    curs_anim_cancel();
   cfg.cursor_blinks = new_cfg.cursor_blinks;
   term_schedule_tblink();
   term_schedule_tblink2();
@@ -1769,6 +1891,8 @@ void
 term_resize(int newrows, int newcols, bool quick_reflow)
 {
   trace_resize(("--- term_resize %d %d quick %d\n", newrows, newcols, quick_reflow));
+
+  term.curs_animate = false;
 
   bool on_alt_screen = term.on_alt_screen;
   term_switch_screen(0, false);
@@ -3338,6 +3462,8 @@ term_paint(void)
   int curs_y =
     term.cursor_on && !term.show_other_screen
     ? term.curs.y - term.disptop : -1;
+  if (curs_y < 0)
+    term_cursor_track(-1, -1);
 
   int nlines_progress = 0;
   int total_progress = 0;
@@ -4047,9 +4173,12 @@ term_paint(void)
         curs_x--;
 #endif
 
+      term_cursor_track(curs_x, curs_y);
+
      /* Determine cursor cell attributes. */
       newchars[curs_x].attr.attr |=
         (!term.has_focus ? TATTR_PASCURS :
+         term.curs_animate ? 0 :
          term.cblink_alpha > 0 || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
         (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);
 
@@ -4922,8 +5051,10 @@ term_scroll(int rel, int where)
 void
 term_set_focus(bool has_focus, bool may_report)
 {
-  if (!has_focus)
+  if (!has_focus) {
     term.hovering = false;
+    curs_anim_cancel();
+  }
 
   if (has_focus != term.has_focus) {
     term.has_focus = has_focus;

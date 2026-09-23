@@ -93,6 +93,8 @@ typedef struct {
   bool smooth_blink_cursor;
   bool smooth_blink_bell;
   int smooth_blink_duration;
+  bool smooth_cursor;
+  int smooth_cursor_duration;
   string locale;
   string charset;
   char charwidth;

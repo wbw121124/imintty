@@ -514,6 +514,12 @@ struct term {
   int tblink2_alpha;
   int cblink_alpha;
   int vbell_alpha;
+  /* Smooth cursor motion (Phase 2): pixel-space animation state */
+  bool curs_animate;      /* movement animation in progress */
+  int  curs_px0, curs_py0; /* from pixel (text area origin) */
+  int  curs_px1, curs_py1; /* to pixel */
+  int  curs_anim_start;    /* GetTickCount at animation start */
+  int  curs_last_x, curs_last_y; /* last painted cursor cell, -1 = none */
   bool blink_is_real;     /* Actually blink blinking text */
   bool echoing;           /* Does terminal want local echo? */
   bool insert;            /* Insert mode */
@@ -740,6 +746,8 @@ extern void term_flush(void);
 extern void term_set_focus(bool has_focus, bool may_report);
 extern int  term_cursor_type(void);
 extern bool term_cursor_blinks(void);
+extern void term_cursor_track(int dx, int dy);
+extern void term_cursor_anim_cancel(void);
 extern void term_hide_cursor(void);
 
 extern void term_set_search(wchar * needle);

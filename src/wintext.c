@@ -1201,6 +1201,71 @@ static bool ime_open_native = false;
 static int update_skipped = 0;
 int lines_scrolled = 0;
 
+/* Draw floating cursor overlay during smooth cursor motion (Phase 2). */
+static void
+draw_cursor_overlay(void)
+{
+  if (!term.curs_animate || !cfg.smooth_cursor || !term.cursor_on
+      || term.show_other_screen)
+    return;
+
+  int dur = cfg.smooth_cursor_duration;
+  if (dur < 10)
+    dur = 10;
+  if (dur > 500)
+    dur = 500;
+  int elapsed = get_tick_count() - term.curs_anim_start;
+  if (elapsed < 0)
+    elapsed = 0;
+  if (elapsed > dur)
+    elapsed = dur;
+
+  /* ease-out: 1 - (1-t)^2 */
+  int u = dur - elapsed;
+  int eased = dur - u * u / max(dur, 1);
+
+  int x = term.curs_px0 + (term.curs_px1 - term.curs_px0) * eased / max(dur, 1);
+  int y = term.curs_py0 + (term.curs_py1 - term.curs_py0) * eased / max(dur, 1);
+
+  colour bg = win_get_colour(BG_COLOUR_I);
+  colour cc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
+  if (cfg.smooth_blink_cursor && term_cursor_blinks() && term.has_focus
+      && term.cblink_alpha < 255)
+    cc = blend_colour(bg, cc, term.cblink_alpha);
+
+  int w = cell_width;
+  int h = cell_height;
+  if (w <= 0 || h <= 0)
+    return;
+
+  HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
+  switch (term_cursor_type()) {
+    when CUR_BLOCK: {
+      HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+      Rectangle(dc, x, y, x + w, y + h);
+      DeleteObject(SelectObject(dc, oldbrush));
+    }
+    when CUR_BOX: {
+      HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+      Rectangle(dc, x, y, x + w, y + h);
+      SelectObject(dc, oldbrush);
+    }
+    when CUR_LINE: {
+      int caret_width = max(2, w / 8);
+      HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+      Rectangle(dc, x, y, x + caret_width, y + h);
+      DeleteObject(SelectObject(dc, oldbrush));
+    }
+    when CUR_UNDERSCORE: {
+      int th = max(2, h / 8);
+      HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+      Rectangle(dc, x, y + h - th, x + w, y + h);
+      DeleteObject(SelectObject(dc, oldbrush));
+    }
+  }
+  DeleteObject(SelectObject(dc, oldpen));
+}
+
 #define dont_debug_cursor 1
 
 static struct charnameentry {
@@ -1603,6 +1668,7 @@ do_update(void)
   else {
     term_paint();
     winimgs_paint();
+    draw_cursor_overlay();
   }
 
   ReleaseDC(wnd, dc);
@@ -5802,6 +5868,7 @@ win_paint(void)
     else {
       term_paint();
       winimgs_paint();
+      draw_cursor_overlay();
     }
   }
 

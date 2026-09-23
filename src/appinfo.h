@@ -3,16 +3,16 @@
 
 #define APPNAME "imintty"
 #define APPFULL "Improved MinTTY"
-#define WEBSITE "http://imintty.github.io/"
+#define WEBSITE "https://wbw121124.github.io/imintty"
 
-#define MAJOR_VERSION  3
-#define MINOR_VERSION  8
-#define PATCH_NUMBER   3
+#define MAJOR_VERSION  0
+#define MINOR_VERSION  0
+#define PATCH_NUMBER   1
 #define BUILD_NUMBER   0
 
 // needed for res.rc
 #define APPDESC "Improved MinTTY Terminal"
-#define AUTHOR  "Thomas Wolff, Andy Koppe"
+#define AUTHOR  "wbw121124"
 #define YEAR    "2026"
 
 #define CONCAT_(a,b) a##b
@@ -67,9 +67,10 @@
 // needed for Options... - About...
 //__ %s: WEBSITE (URL)
 #define ABOUT_TEXT \
-  __("Please report bugs or request enhancements through the " \
-  "issue tracker on the imintty project page located at" \
-  "\n%s.\n" \
+  __("imintty is a fork of the mintty project.\n" \
+  "Please report bugs or request enhancements through the " \
+  "issue tracker on the project page located at\n" \
+  "%s.\n" \
   "See also the Wiki there for further hints, thanks and credits.")
 
 #endif

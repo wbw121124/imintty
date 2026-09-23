@@ -970,13 +970,43 @@ hhook(LPHELPINFO lpHelpInfo)
 }
 #endif
 
+static wchar * about_body;
+static wchar * about_url;
+
+static INT_PTR CALLBACK
+about_dlg_proc(HWND awnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+  switch (msg) {
+    when WM_INITDIALOG:
+      SetDlgItemTextW(awnd, IDC_ABOUT_TEXT, about_body ?: W(""));
+      SetDlgItemTextW(awnd, IDC_ABOUT_LINK, about_url ?: W(""));
+      return true;
+    when WM_NOTIFY: {
+      NMHDR * nm = (NMHDR *)lParam;
+      if (nm->idFrom == IDC_ABOUT_LINK
+          && (nm->code == NM_CLICK || nm->code == NM_RETURN))
+        win_open(wcsdup(W(WEBSITE)), true);
+      return true;
+    }
+    when WM_COMMAND:
+      if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
+        EndDialog(awnd, LOWORD(wParam));
+        return true;
+      }
+  }
+  return false;
+}
+
 void
 win_show_about(void)
 {
+  INITCOMMONCONTROLSEX icc = {sizeof icc, ICC_LINK_CLASS};
+  InitCommonControlsEx(&icc);
+
 #if CYGWIN_VERSION_API_MINOR < 74
-  char * aboutfmt = newn(char, 
+  char * aboutfmt = newn(char,
     strlen(VERSION_TEXT) + strlen(COPYRIGHT) + strlen(LICENSE_TEXT) + strlen(_(WARRANTY_TEXT)) + strlen(_(ABOUT_TEXT)) + 11);
-  sprintf(aboutfmt, "%s\n%s\n%s\n%s\n\n%s", 
+  sprintf(aboutfmt, "%s\n%s\n%s\n%s\n\n%s",
            VERSION_TEXT, COPYRIGHT, LICENSE_TEXT, _(WARRANTY_TEXT), _(ABOUT_TEXT));
   char * abouttext = newn(char, strlen(aboutfmt) + strlen(WEBSITE));
   sprintf(abouttext, aboutfmt, WEBSITE);
@@ -984,32 +1014,29 @@ win_show_about(void)
   DWORD win_version = GetVersion();
   uint build = HIWORD(win_version);
   char * aboutfmt =
-    asform("%s [Windows %u] {PID %u}\n%s\n%s\n%s\n\n%s", 
+    asform("%s [Windows %u] {PID %u}\n%s\n%s\n%s\n\n%s",
            VERSION_TEXT, build, getpid(), COPYRIGHT, LICENSE_TEXT, _(WARRANTY_TEXT), _(ABOUT_TEXT));
   char * abouttext = asform(aboutfmt, WEBSITE);
 #endif
   free(aboutfmt);
-  wchar * wmsg = cs__utftowcs(abouttext);
+
+  // Build SysLink HTML for clickable website
+  char * linkfmt = asform("<a href=\"%s\">%s</a>", WEBSITE, WEBSITE);
+  wchar * wtext = cs__utftowcs(abouttext);
+  wchar * wlink = cs__utftowcs(linkfmt);
   free(abouttext);
-  oklabel = null;
-  oktype = MB_OK;
-  hook_windows(set_labels);
-  MessageBoxIndirectW(&(MSGBOXPARAMSW){
-    .cbSize = sizeof(MSGBOXPARAMSW),
-    .hwndOwner = config_wnd,
-    .hInstance = inst,
-    .lpszCaption = W(APPFULL),
-#ifdef about_version_check
-    .dwStyle = MB_USERICON | MB_OK | MB_HELP,
-    .lpfnMsgBoxCallback = hhook,
-#else
-    .dwStyle = MB_USERICON | MB_OK,
-#endif
-    .lpszIcon = MAKEINTRESOURCEW(IDI_MAINICON),
-    .lpszText = wmsg
-  });
-  unhook_windows();
-  free(wmsg);
+  free(linkfmt);
+
+  about_body = wtext;
+  about_url = wlink;
+
+  INT_PTR ret = DialogBoxW(inst, MAKEINTRESOURCEW(IDD_ABOUT),
+                           config_wnd ?: wnd, about_dlg_proc);
+  (void)ret;
+  free(about_body);
+  free(about_url);
+  about_body = null;
+  about_url = null;
 }
 
 void

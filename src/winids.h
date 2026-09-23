@@ -2,7 +2,10 @@
 #define WINIDS_H
 
 #define IDD_MAINBOX      100
+#define IDD_ABOUT        101
 #define IDI_MAINICON     200
+#define IDC_ABOUT_TEXT   1100
+#define IDC_ABOUT_LINK   1101
 
 /* From MSDN: In the WM_SYSCOMMAND message, the four low-order bits of
  * wParam are used by Windows, and should be masked off, so we shouldn't

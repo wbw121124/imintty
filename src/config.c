@@ -191,7 +191,7 @@ const config default_cfg = {
   .scroll_mod = MDK_SHIFT,
   .border_style = BORDER_NORMAL,
   .pgupdn_scroll = false,
-  .lang = W(""),
+  .lang = W("@"),
   .search_bar = W(""),
   .search_context = 0,
   // Terminal
@@ -278,7 +278,7 @@ const config default_cfg = {
   .auto_leading = 2,
   .padding = 1,
   .ligatures = 1,
-  .ligatures_support = 0,
+  .ligatures_support = 2,
   .box_drawing = 1,
   .handle_dpichanged = 2,
   .check_version_update = 0,
@@ -4461,6 +4461,48 @@ setup_config_box(controlbox * b)
     //__ Options - Looks: cursor feature
     s, _("Blinkin&g"), dlg_stdcheckbox_handler, &new_cfg.cursor_blinks
   );
+
+  s = ctrl_new_set(b, _("Looks"), null,
+  //__ Options - Looks: section title
+                      _("Animation"));
+  ctrl_columns(s, 2, 50, 50);
+  ctrl_checkbox(
+    //__ Options - Looks: animation feature
+    s, _("Smooth &cursor"), dlg_stdcheckbox_handler, &new_cfg.smooth_cursor
+  )->column = 0;
+  ctrl_checkbox(
+    //__ Options - Looks: animation feature
+    s, _("Smooth &scroll"), dlg_stdcheckbox_handler, &new_cfg.smooth_scroll
+  )->column = 1;
+  ctrl_checkbox(
+    //__ Options - Looks: animation feature
+    s, _("Smooth cursor blin&k"),
+    dlg_stdcheckbox_handler, &new_cfg.smooth_blink_cursor
+  )->column = 0;
+  ctrl_checkbox(
+    //__ Options - Looks: animation feature
+    s, _("Smooth &bell flash"),
+    dlg_stdcheckbox_handler, &new_cfg.smooth_blink_bell
+  )->column = 1;
+  ctrl_columns(s, 1, 100);
+  ctrl_columns(s, 4, 22, 28, 22, 28);
+  ctrl_editbox(
+    //__ Options - Looks: animation duration in milliseconds
+    s, _("Cursor ms"), 40, dlg_stdintbox_handler, &new_cfg.smooth_cursor_duration
+  )->column = 1;
+  ctrl_editbox(
+    //__ Options - Looks: animation duration in milliseconds
+    s, _("Scroll ms"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_duration
+  )->column = 3;
+  ctrl_editbox(
+    //__ Options - Looks: animation duration in milliseconds
+    s, _("Blink ms"), 40, dlg_stdintbox_handler, &new_cfg.smooth_blink_duration
+  )->column = 1;
+  ctrl_editbox(
+    //__ Options - Looks: max scroll lines to animate
+    s, _("Scroll lines"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_lines
+  )->column = 3;
+  ctrl_columns(s, 1, 100);
 
  /*
   * The Text panel.

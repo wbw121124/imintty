@@ -252,7 +252,6 @@ tblink_expand_cb(void)
     if (imgs_have_blink())
       force_imgs = true;
     win_update(false);
-    win_set_timer(tblink_expand_cb, 30);
     return;
   }
   /* VSCode-style expand: hold scaleY(1) for 20%, ease-out to scaleY(0) for
@@ -478,7 +477,6 @@ cblink_expand_cb(void)
     term_invalidate(term.curs.x - 1, dys - 1,
                     term.curs.x + 1, dys + 1);
     win_update(false);
-    win_set_timer(cblink_expand_cb, 20);
     return;
   }
   /* VSCode-style expand: hold scaleY(1) for 20%, ease-out to scaleY(0) for

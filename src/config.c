@@ -4532,11 +4532,6 @@ setup_config_box(controlbox * b)
     s, _("Blinkin&g"), dlg_stdcheckbox_handler, &new_cfg.cursor_blinks
   );
   ctrl_checkbox(
-    //__ Options - Looks: force expand blink via config
-    s, _("&Expand cursor blink"),
-    dlg_stdcheckbox_handler, &new_cfg.cursor_neovide_expand
-  );
-  ctrl_checkbox(
     //__ Options - Looks: separate cursor canvas
     s, _("&Separate cursor canvas"),
     dlg_stdcheckbox_handler, &new_cfg.cursor_separate_canvas
@@ -4615,6 +4610,11 @@ setup_config_box(controlbox * b)
     s, _("Scroll lines"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_lines
   )->column = 3;
   ctrl_columns(s, 1, 100);
+  //__ Options - Animation: Neovide-style expand blink
+  ctrl_checkbox(
+    s, _("Neovide &expand blink"),
+    dlg_stdcheckbox_handler, &new_cfg.cursor_neovide_expand
+  );
   //__ Options - Animation: Neovide cursor trail
   ctrl_editbox(
     s, _("Cursor trail"), 40, dlg_stdintbox_handler, &new_cfg.cursor_trail_size

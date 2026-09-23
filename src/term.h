@@ -663,6 +663,11 @@ struct term {
     DCS_PASSTHROUGH,
     DCS_IGNORE,
     DCS_ESCAPE,
+    /* Kitty graphics APC state */
+    KITTY_G_START,
+    KITTY_G_DATA,
+    KITTY_G_ESCAPE,
+    KITTY_G_IGNORE,
     VT52_Y, VT52_X,
     VT52_FG, VT52_BG,
     TEK_ESCAPE, TEK_ADDRESS0, TEK_ADDRESS, TEK_INCREMENTAL

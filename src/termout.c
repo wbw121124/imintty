@@ -924,6 +924,8 @@ write_primary_da(void)
       child_write(";22", 3);  // Color Text
     if (cfg.allow_set_selection && !contains(cfg.suppress_osc, 52))
       child_write(";52", 3);
+    if (cfg.kitty_graphics && !contains(cfg.suppress_dec, 43))
+      child_write(";43", 3);  // Kitty graphics protocol
     child_write("c", 1);
   }
   else
@@ -2058,8 +2060,15 @@ do_esc(uchar c)
       term.state = OSC_START;
     when 'P':  /* DCS: device control string */
       term.state = DCS_START;
-    when '^' or '_' or 'X': /* PM, APC, SOS strings to be ignored */
+    when '^' or 'X': /* PM, SOS strings to be ignored */
       term.state = IGNORE_STRING;
+    when '_':  /* APC: may carry Kitty graphics */
+      if (cfg.kitty_graphics) {
+        term.state = KITTY_G_START;
+        term.cmd_len = 0;
+      }
+      else
+        term.state = IGNORE_STRING;
     when '7':  /* DECSC: save cursor */
       save_cursor();
     when '8':  /* DECRC: restore cursor */
@@ -4553,6 +4562,126 @@ osc_fini(void)
   return term.state == CMD_ESCAPE ? "\e\\" : "\a";
 }
 
+/* Kitty graphics APC handler.
+ * Payload format: t<m>;a<align>;c<cols>;r<rows>;i<id>;<base64data>
+ * Returns immediately for q=? queries (no ST needed). */
+static void
+do_kitty_graphics(void)
+{
+  char *s = term.cmd_buf;
+  int slen = term.cmd_len;
+  if (!slen) return;
+
+  /* Check for q=? query — respond immediately */
+  if (slen >= 3 && !strncmp(s, "q=?", 3)) {
+    child_printf("\e[?61;2;1;0;imintty;imintty c");
+    term.state = NORMAL;
+    return;
+  }
+
+  /* Parse parameters */
+  char *b64 = 0;
+  int width = 0, height = 0;
+  int pixelwidth = 0, pixelheight = 0;
+  int crop_x = 0, crop_y = 0, crop_width = 0, crop_height = 0;
+  bool pAR = true;
+  char *name = 0;
+  int mode = 1;  /* default: transmit + show inline */
+
+  /* Find the base64 data start (after ';') */
+  char *semi = memchr(s, ';', slen);
+  if (semi) {
+    *semi = 0;
+    b64 = semi + 1;
+  }
+
+  /* Parse key=value parameters */
+  char *p = s;
+  while (*p) {
+    char *eq = strchr(p, '=');
+    char *next = strchr(p, ';');
+    if (next && (!eq || next < eq)) {
+      /* bare key like 't1' without = */
+      if (*p == 't') mode = atoi(p + 1);
+      p = next + 1;
+      continue;
+    }
+    if (!eq) break;
+    int kvlen = (next ? next : s + slen) - eq;
+    if (kvlen > 63) kvlen = 63;
+    char val[64];
+    strncpy(val, eq + 1, kvlen);
+    val[kvlen] = 0;
+    switch (*p) {
+      when 't': mode = atoi(val);
+      when 'a': /* alignment — not used for rendering placement */
+      when 'c': width = atoi(val);
+      when 'r': height = atoi(val);
+      when 'w': pixelwidth = atoi(val);
+      when 'h': pixelheight = atoi(val);
+      when 'i': name = val; /* id — we don't keep it, but accept it */
+      when 'x': crop_x = atoi(val);
+      when 'y': crop_y = atoi(val);
+      when 'W': crop_width = atoi(val);
+      when 'H': crop_height = atoi(val);
+      when 'p': pAR = (*val != '0');
+    }
+    p = eq + 1;
+    if (next) p = next + 1;
+  }
+  if (semi) *semi = ';';  /* restore for clean cmd_buf */
+
+  if (!b64 || !*b64) return;
+  int blen = strlen(b64);
+  int datalen = blen - (blen / 4);
+  void *data = malloc(datalen);
+  if (!data) return;
+  datalen = base64_decode_clip(b64, blen, data, datalen);
+  if (datalen <= 0) { free(data); return; }
+
+  /* Compute cell sizes from pixel sizes if not given */
+  if (!pixelwidth && width) pixelwidth = cell_width * width;
+  if (!pixelheight && height) pixelheight = cell_height * height;
+  if (!width && pixelwidth) width = (pixelwidth + cell_width - 1) / cell_width;
+  if (!height && pixelheight) height = (pixelheight + cell_height - 1) / cell_height;
+  if (!width) width = 1;
+  if (!height) height = 1;
+
+  imglist *img;
+  short left = term.curs.x;
+  short top = term.curs.y;
+  if (winimg_new(&img, name, (unsigned char *)data, datalen,
+                 left, top, width, height,
+                 pixelwidth, pixelheight, pAR,
+                 crop_x, crop_y, crop_width, crop_height,
+                 term.curs.attr.attr & (ATTR_BLINK | ATTR_BLINK2))) {
+    fill_image_space(img, false);
+    if (term.imgs.first == NULL) {
+      term.imgs.first = term.imgs.last = img;
+    } else {
+      img->prev = term.imgs.last;
+      term.imgs.last->next = img;
+      term.imgs.last = img;
+    }
+  }
+  else
+    free(data);
+
+  /* Mode 2 (placement) advances cursor past the image area */
+  if (mode == 2) {
+    term.curs.x += width;
+    term.curs.y += height;
+  }
+  /* Mode 1 (inline) also advances cursor */
+  else if (mode == 1) {
+    term.curs.x += width;
+    term.curs.y += height;
+  }
+  /* Mode 0 (transmit only): do not advance cursor */
+
+  term.state = NORMAL;
+}
+
 static void
 print_osc_colour(colour c)
 {
@@ -6224,6 +6353,54 @@ term_do_write(const char *buf, uint len, bool fix_status)
           term.imgs.parser_state = NULL;
           do_esc(c);
         }
+
+       /* Kitty graphics APC (ESC _ G … ST): https://sw.kovidgoyal.net/kitty/graphics-protocol/ */
+       when KITTY_G_START:
+         term.cmd_len = 0;
+         switch (c) {
+           when 'G':
+             term.state = KITTY_G_DATA;
+           when '\e':
+             term.state = ESCAPE;
+           otherwise:
+             term.state = KITTY_G_IGNORE;
+         }
+
+       when KITTY_G_DATA:
+         if (c == 0x9C || (c == '\e' && term.cmd_len > 0
+                          && term.cmd_buf[term.cmd_len - 1] == '\\')) {
+           /* ST received — process */
+           do_kitty_graphics();
+           term.state = NORMAL;
+         }
+         else if (c == '\a') {
+           do_kitty_graphics();
+           term.state = NORMAL;
+         }
+         else if (c == '\e') {
+           term.state = KITTY_G_ESCAPE;
+         }
+         else {
+           term_push_cmd(c);
+         }
+
+       when KITTY_G_ESCAPE:
+         if (c == '\\') {
+           do_kitty_graphics();
+           term.state = NORMAL;
+         }
+         else {
+           term.state = ESCAPE;
+           do_esc(c);
+         }
+
+       when KITTY_G_IGNORE:
+         switch (c) {
+           when '\a':
+             term.state = NORMAL;
+           when '\e':
+             term.state = ESCAPE;
+         }
     }
 
     if (fix_status)

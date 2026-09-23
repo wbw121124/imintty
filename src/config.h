@@ -123,7 +123,8 @@ typedef struct {
   char old_altgr_detection;
   int old_modify_keys;
   int format_other_keys;
-  bool kitty_keyboard;
+   bool kitty_keyboard;
+   bool kitty_graphics;
   bool auto_repeat;
   int external_hotkeys;
   bool clip_shortcuts;

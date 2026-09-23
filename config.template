@@ -12,7 +12,7 @@
 # enable a Compose key
 #ComposeKey=ctrl
 
-# enhance cursor visibility
+# cursor type: block (default), line, underscore
 #CursorType=block
 
 # smooth animations (fade transitions for blink effects)

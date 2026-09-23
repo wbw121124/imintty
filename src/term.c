@@ -178,11 +178,35 @@ fade_advance(struct blink_fade *f, int *alpha, void (*cb)(void))
 }
 
 static void
+invalidate_blink_cells(cattrflags mask)
+{
+  for (int i = 0; i < term_allrows; i++) {
+    termline *dl = term.displines[i];
+    if (!dl)
+      continue;
+    for (int j = 0; j < term.cols; j++)
+      if (dl->chars[j].attr.attr & mask)
+        dl->chars[j].attr.attr |= ATTR_INVALID;
+  }
+}
+
+static bool
+imgs_have_blink(void)
+{
+  for (imglist *img = term.imgs.first; img; img = img->next)
+    if (img->attr & (ATTR_BLINK | ATTR_BLINK2))
+      return true;
+  return false;
+}
+
+static void
 tblink_fade_cb(void)
 {
   fade_advance(&fade_tblink, &term.tblink_alpha, tblink_fade_cb);
   term.tblinker = term.tblink_alpha <= 127;
-  force_imgs = true;
+  invalidate_blink_cells(ATTR_BLINK);
+  if (imgs_have_blink())
+    force_imgs = true;
   win_update(false);
 }
 
@@ -194,11 +218,16 @@ tblink_cb(void)
     int to = from > 127 ? 0 : 255;
     term.tblinker = to <= 127;
     fade_start(&fade_tblink, from, to, tblink_fade_cb);
+    invalidate_blink_cells(ATTR_BLINK);
+    if (imgs_have_blink())
+      force_imgs = true;
   }
   else {
     term.tblinker = !term.tblinker;
     term.tblink_alpha = term.tblinker ? 0 : 255;
-    force_imgs = true;
+    invalidate_blink_cells(ATTR_BLINK);
+    if (imgs_have_blink())
+      force_imgs = true;
     win_update(false);
   }
   term_schedule_tblink();
@@ -220,7 +249,9 @@ tblink2_fade_cb(void)
 {
   fade_advance(&fade_tblink2, &term.tblink2_alpha, tblink2_fade_cb);
   term.tblinker2 = term.tblink2_alpha <= 127;
-  force_imgs = true;
+  invalidate_blink_cells(ATTR_BLINK2);
+  if (imgs_have_blink())
+    force_imgs = true;
   win_update(false);
 }
 
@@ -232,11 +263,16 @@ tblink2_cb(void)
     int to = from > 127 ? 0 : 255;
     term.tblinker2 = to <= 127;
     fade_start(&fade_tblink2, from, to, tblink2_fade_cb);
+    invalidate_blink_cells(ATTR_BLINK2);
+    if (imgs_have_blink())
+      force_imgs = true;
   }
   else {
     term.tblinker2 = !term.tblinker2;
     term.tblink2_alpha = term.tblinker2 ? 0 : 255;
-    force_imgs = true;
+    invalidate_blink_cells(ATTR_BLINK2);
+    if (imgs_have_blink())
+      force_imgs = true;
     win_update(false);
   }
   term_schedule_tblink2();

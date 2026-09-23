@@ -104,9 +104,11 @@ const config default_cfg = {
   .smooth_blink_cursor = ANIM_SMOOTH,
   .smooth_blink_bell = true,
   .smooth_blink_duration = 100,
-  .smooth_cursor = ANIM_SMOOTH,
-  .smooth_cursor_duration = 50,
-  .smooth_scroll = ANIM_SMOOTH,
+   .smooth_cursor = ANIM_SMOOTH,
+   .smooth_cursor_duration = 50,
+   .cursor_trail_size = 0,
+   .cursor_short_threshold = 1,
+   .smooth_scroll = ANIM_SMOOTH,
   .smooth_scroll_duration = 100,
   .smooth_scroll_lines = 8,
   .dynamic_blur = 0,
@@ -431,7 +433,9 @@ options[] = {
   {"SmoothBlinkBell", OPT_BOOL, offcfg(smooth_blink_bell)},
   {"SmoothBlinkDuration", OPT_INT, offcfg(smooth_blink_duration)},
   {"SmoothCursor", OPT_ANIM, offcfg(smooth_cursor)},
-  {"SmoothCursorDuration", OPT_INT, offcfg(smooth_cursor_duration)},
+   {"SmoothCursorDuration", OPT_INT, offcfg(smooth_cursor_duration)},
+   {"CursorTrailSize", OPT_INT, offcfg(cursor_trail_size)},
+   {"CursorShortThreshold", OPT_INT, offcfg(cursor_short_threshold)},
   {"SmoothScroll", OPT_ANIM, offcfg(smooth_scroll)},
   {"SmoothScrollDuration", OPT_INT, offcfg(smooth_scroll_duration)},
   {"SmoothScrollLines", OPT_INT, offcfg(smooth_scroll_lines)},
@@ -1937,7 +1941,10 @@ fix_config(void)
 
   cfg.smooth_scroll_duration = max(40, min(500, cfg.smooth_scroll_duration));
   cfg.smooth_scroll_lines = max(1, min(cfg.rows, cfg.smooth_scroll_lines));
-  cfg.smooth_cursor_duration = max(0, min(500, cfg.smooth_cursor_duration));
+   cfg.smooth_cursor_duration = max(0, min(500, cfg.smooth_cursor_duration));
+   cfg.cursor_trail_size = max(0, min(32, cfg.cursor_trail_size));
+   cfg.cursor_short_threshold = max(0, min(cfg.rows + cfg.cols,
+                                            cfg.cursor_short_threshold));
   cfg.smooth_blink_duration = max(40, min(1000, cfg.smooth_blink_duration));
   cfg.dynamic_blur = max(0, min(5000, cfg.dynamic_blur));
 }
@@ -4590,6 +4597,15 @@ setup_config_box(controlbox * b)
     //__ Options - Animation: max scroll lines to animate
     s, _("Scroll lines"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_lines
   )->column = 3;
+  ctrl_columns(s, 1, 100);
+  //__ Options - Animation: Neovide cursor trail
+  ctrl_editbox(
+    s, _("Cursor trail"), 40, dlg_stdintbox_handler, &new_cfg.cursor_trail_size
+  );
+  //__ Options - Animation: skip animation for short moves
+  ctrl_editbox(
+    s, _("Short skip"), 40, dlg_stdintbox_handler, &new_cfg.cursor_short_threshold
+  );
   ctrl_columns(s, 1, 100);
 
  /*

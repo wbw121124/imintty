@@ -637,6 +637,7 @@ static void
 curs_anim_cancel(void)
 {
   term.curs_animate = false;
+  term.curs_trail_len = 0;
 }
 
 void
@@ -676,29 +677,55 @@ term_cursor_track(int dx, int dy)
     return;
   }
 
-  int from_x, from_y;
-  if (term.curs_animate) {
-    /* retarget from current visual position */
-    int elapsed = get_tick_count() - term.curs_anim_start;
-    int dur = smooth_cursor_duration();
-    if (elapsed >= dur)
-      elapsed = dur;
-    from_x = term.curs_px0 + (term.curs_px1 - term.curs_px0) * elapsed / dur;
-    from_y = term.curs_py0 + (term.curs_py1 - term.curs_py0) * elapsed / dur;
-  }
-  else {
-    from_x = term.curs_last_x * cell_width + PADDING;
-    from_y = term.curs_last_y * cell_height + OFFSET + PADDING;
-  }
+   int from_x, from_y;
+   if (term.curs_animate) {
+     /* retarget from current visual position */
+     int elapsed = get_tick_count() - term.curs_anim_start;
+     int dur = smooth_cursor_duration();
+     if (elapsed >= dur)
+       elapsed = dur;
+     from_x = term.curs_px0 + (term.curs_px1 - term.curs_px0) * elapsed / dur;
+     from_y = term.curs_py0 + (term.curs_py1 - term.curs_py0) * elapsed / dur;
+   }
+   else {
+     from_x = term.curs_last_x * cell_width + PADDING;
+     from_y = term.curs_last_y * cell_height + OFFSET + PADDING;
+   }
 
-  term.curs_px0 = from_x;
-  term.curs_py0 = from_y;
-  term.curs_px1 = dx * cell_width + PADDING;
-  term.curs_py1 = dy * cell_height + OFFSET + PADDING;
-  term.curs_anim_start = get_tick_count();
-  term.curs_animate = true;
-  term.curs_last_x = dx;
-  term.curs_last_y = dy;
+   /* Short-distance threshold: snap directly if move is tiny. */
+   if (cfg.cursor_short_threshold > 0
+       && abs(dx - term.curs_last_x) + abs(dy - term.curs_last_y)
+          <= cfg.cursor_short_threshold
+       && !term.curs_animate) {
+     curs_anim_cancel();
+     term.curs_last_x = dx;
+     term.curs_last_y = dy;
+     return;
+   }
+
+   term.curs_px0 = from_x;
+   term.curs_py0 = from_y;
+   term.curs_px1 = dx * cell_width + PADDING;
+   term.curs_py1 = dy * cell_height + OFFSET + PADDING;
+   term.curs_anim_start = get_tick_count();
+   term.curs_animate = true;
+   term.curs_last_x = dx;
+   term.curs_last_y = dy;
+   /* Push current final position into the Neovide trail ring. */
+   if (cfg.cursor_trail_size > 0) {
+     int n = cfg.cursor_trail_size;
+     for (int i = n - 1; i > 0; i--)
+       term.curs_trail[i][0] = term.curs_trail[i-1][0];
+     term.curs_trail[0][0] = term.curs_px0;
+     for (int i = n - 1; i > 0; i--)
+       term.curs_trail[i][1] = term.curs_trail[i-1][1];
+     term.curs_trail[0][1] = term.curs_py0;
+     term.curs_trail_len = n;
+     term.curs_trail_count++;
+   }
+   else {
+     term.curs_trail_len = 0;
+   }
   if (cfg.dynamic_blur > 0)
     win_dynamic_blur_pulse();
   win_set_timer(curs_anim_cb, 16);
@@ -712,6 +739,14 @@ curs_anim_invalidate(void)
   int x1 = (term.curs_px1 - PADDING) / cell_width;
   int y1 = (term.curs_py1 - PADDING - OFFSET) / cell_height;
   term_invalidate(min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1));
+  /* invalidate trail cells too */
+  if (term.curs_trail_len > 0) {
+    for (int i = 0; i < term.curs_trail_len; i++) {
+      int tx = (term.curs_trail[i][0] - PADDING) / cell_width;
+      int ty = (term.curs_trail[i][1] - PADDING - OFFSET) / cell_height;
+      term_invalidate(tx, ty, tx, ty);
+    }
+  }
 }
 
 static void
@@ -729,6 +764,20 @@ curs_anim_cb(void)
     curs_anim_invalidate();
     win_update(false);
     return;
+  }
+  /* update trail head to current interpolated position */
+  if (cfg.cursor_trail_size > 0) {
+    int u = dur - elapsed;
+    int eased = dur - u * u / max(dur, 1);
+    int px = term.curs_px0 + (term.curs_px1 - term.curs_px0) * eased / max(dur, 1);
+    int py = term.curs_py0 + (term.curs_py1 - term.curs_py0) * eased / max(dur, 1);
+    int n = cfg.cursor_trail_size;
+    for (int i = n - 1; i > 0; i--)
+      term.curs_trail[i][0] = term.curs_trail[i-1][0];
+    term.curs_trail[0][0] = px;
+    for (int i = n - 1; i > 0; i--)
+      term.curs_trail[i][1] = term.curs_trail[i-1][1];
+    term.curs_trail[0][1] = py;
   }
   curs_anim_invalidate();
   win_update(false);

@@ -521,12 +521,15 @@ struct term {
   int tblink_expand;      /* Expand mode for text blink */
   bool cblink_dir;        /* Expand mode: false = growing, true = shrinking */
   bool tblink_dir;
-  /* Smooth cursor motion (Phase 2): pixel-space animation state */
-  bool curs_animate;      /* movement animation in progress */
-  int  curs_px0, curs_py0; /* from pixel (text area origin) */
-  int  curs_px1, curs_py1; /* to pixel */
-  int  curs_anim_start;    /* GetTickCount at animation start */
-  int  curs_last_x, curs_last_y; /* last painted cursor cell, -1 = none */
+   /* Smooth cursor motion (Phase 2): pixel-space animation state */
+   bool curs_animate;      /* movement animation in progress */
+   int  curs_px0, curs_py0; /* from pixel (text area origin) */
+   int  curs_px1, curs_py1; /* to pixel */
+   int  curs_anim_start;    /* GetTickCount at animation start */
+   int  curs_last_x, curs_last_y; /* last painted cursor cell, -1 = none */
+   int  curs_trail[32][2]; /* Neovide trail: px,py at each segment */
+   int  curs_trail_len;    /* number of trail segments in flight */
+   int  curs_trail_count;  /* current write index into ring */
   /* Smooth scroll (Phase 3): pixel-space animation of visible scroll */
   bool scroll_animate;    /* scroll animation in progress */
   int  scroll_anim_lines; /* signed lines still to animate (+ = content up) */

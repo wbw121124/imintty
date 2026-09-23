@@ -97,12 +97,14 @@ typedef struct {
   char smooth_blink_cursor;  // ANIM_*: cursor blink
   bool smooth_blink_bell;
   int smooth_blink_duration;
-  char smooth_cursor;        // ANIM_*: cursor motion
-  int smooth_cursor_duration;
-  char smooth_scroll;        // ANIM_*: scroll motion
-  int smooth_scroll_duration;
-  int smooth_scroll_lines;
-  int dynamic_blur;          // ms; 0 = none
+   char smooth_cursor;        // ANIM_*: cursor motion
+   int smooth_cursor_duration;
+   int cursor_trail_size;     // Neovide-style trail segments, 0 = none
+   int cursor_short_threshold; // cell-distance below which animation snaps
+   char smooth_scroll;        // ANIM_*: scroll motion
+   int smooth_scroll_duration;
+   int smooth_scroll_lines;
+   int dynamic_blur;          // ms; 0 = none
   string locale;
   string charset;
   char charwidth;

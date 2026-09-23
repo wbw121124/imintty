@@ -1425,6 +1425,47 @@ draw_cursor_overlay(void)
     }
   }
   DeleteObject(SelectObject(dc, oldpen));
+
+  /* Neovide-style cursor trail: render ghost copies at decreasing alpha. */
+  if (term.curs_trail_len > 0 && term.curs_animate && cfg.smooth_cursor == ANIM_SMOOTH
+      && !scroll_layer) {
+    colour tcc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
+    int n = term.curs_trail_len;
+    for (int i = n - 1; i >= 0; i--) {
+      int alpha = 255 * (i + 1) / (n + 1);
+      if (alpha < 16)
+        continue;
+      colour g = blend_colour(bg, tcc, alpha);
+      int gx = term.curs_trail[i][0];
+      int gy = term.curs_trail[i][1];
+      HPEN tp = SelectObject(dc, CreatePen(PS_SOLID, 0, g));
+      switch (term_cursor_type()) {
+        when CUR_BLOCK: {
+          HBRUSH tb = SelectObject(dc, CreateSolidBrush(g));
+          Rectangle(dc, gx, gy, gx + w, gy + h);
+          DeleteObject(SelectObject(dc, tb));
+        }
+        when CUR_BOX: {
+          HBRUSH tb = SelectObject(dc, GetStockObject(NULL_BRUSH));
+          Rectangle(dc, gx, gy, gx + w, gy + h);
+          SelectObject(dc, tb);
+        }
+        when CUR_LINE: {
+          int tw = max(2, w / 8);
+          HBRUSH tb = SelectObject(dc, CreateSolidBrush(g));
+          Rectangle(dc, gx, gy, gx + tw, gy + h);
+          DeleteObject(SelectObject(dc, tb));
+        }
+        when CUR_UNDERSCORE: {
+          int th = max(2, h / 8);
+          HBRUSH tb = SelectObject(dc, CreateSolidBrush(g));
+          Rectangle(dc, gx, gy + h - th, gx + w, gy + h);
+          DeleteObject(SelectObject(dc, tb));
+        }
+      }
+      DeleteObject(SelectObject(dc, tp));
+    }
+  }
 }
 
 #define dont_debug_cursor 1

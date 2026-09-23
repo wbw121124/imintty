@@ -801,9 +801,13 @@ static opt_val * const opt_vals[] = {
     {0, 0}
   },
   [OPT_ANIM] = (opt_val[]) {
+    {"solid", ANIM_NONE},
     {"none", ANIM_NONE},
+    {"blink", ANIM_DEFAULT},
     {"default", ANIM_DEFAULT},
     {"smooth", ANIM_SMOOTH},
+    {"phase", ANIM_PHASE},
+    {"expand", ANIM_EXPAND},
     // legacy Smooth*=yes/no mapping
     {"no", ANIM_DEFAULT},
     {"yes", ANIM_SMOOTH},
@@ -4514,28 +4518,33 @@ setup_config_box(controlbox * b)
     s, _("Blinkin&g"), dlg_stdcheckbox_handler, &new_cfg.cursor_blinks
   );
 
-  s = ctrl_new_set(b, _("Looks"), null,
-  //__ Options - Looks: section title
-                      _("Animation"));
-  //__ Options - Looks: animation - cursor blink mode
+  //__ Options - Animation: treeview label
+  s = ctrl_new_set(b, _("Animation"),
+  //__ Options - Animation: panel title
+                      _("Animation"), null);
+  //__ Options - Animation: cursor blink mode
   ctrl_radiobuttons(
-    s, _("Cursor blink"), 3,
+    s, _("Cursor blink"), 5,
     dlg_stdradiobutton_handler, &new_cfg.smooth_blink_cursor,
-    _("&Smooth"), ANIM_SMOOTH,
-    _("&Default"), ANIM_DEFAULT,
-    _("&None"), ANIM_NONE,
+    _("&Blink"), ANIM_DEFAULT,
+    _("S&mooth"), ANIM_SMOOTH,
+    _("&Phase"), ANIM_PHASE,
+    _("E&xpand"), ANIM_EXPAND,
+    _("So&lid"), ANIM_NONE,
     null
   );
-  //__ Options - Looks: animation - text (SGR 5) blink mode
+  //__ Options - Animation: text (SGR 5) blink mode
   ctrl_radiobuttons(
-    s, _("Text blink"), 3,
+    s, _("Text blink"), 5,
     dlg_stdradiobutton_handler, &new_cfg.smooth_blink_attr,
-    _("&Smooth"), ANIM_SMOOTH,
-    _("&Default"), ANIM_DEFAULT,
-    _("&None"), ANIM_NONE,
+    _("&Blink"), ANIM_DEFAULT,
+    _("S&mooth"), ANIM_SMOOTH,
+    _("&Phase"), ANIM_PHASE,
+    _("E&xpand"), ANIM_EXPAND,
+    _("So&lid"), ANIM_NONE,
     null
   );
-  //__ Options - Looks: animation - scroll mode
+  //__ Options - Animation: scroll mode
   ctrl_radiobuttons(
     s, _("Scroll"), 3,
     dlg_stdradiobutton_handler, &new_cfg.smooth_scroll,
@@ -4544,7 +4553,7 @@ setup_config_box(controlbox * b)
     _("&None"), ANIM_NONE,
     null
   );
-  //__ Options - Looks: animation - cursor motion mode
+  //__ Options - Animation: cursor motion mode
   ctrl_radiobuttons(
     s, _("Cursor move"), 3,
     dlg_stdradiobutton_handler, &new_cfg.smooth_cursor,
@@ -4555,30 +4564,30 @@ setup_config_box(controlbox * b)
   );
   ctrl_columns(s, 2, 60, 40);
   ctrl_checkbox(
-    //__ Options - Looks: animation feature
+    //__ Options - Animation: smooth flash on bell
     s, _("Smooth &bell flash"),
     dlg_stdcheckbox_handler, &new_cfg.smooth_blink_bell
   )->column = 0;
   ctrl_editbox(
-    //__ Options - Looks: dynamic blur duration in milliseconds, 0 = none
+    //__ Options - Animation: dynamic blur duration in milliseconds, 0 = none
     s, _("Dynamic blur ms"), 40, dlg_stdintbox_handler, &new_cfg.dynamic_blur
   )->column = 1;
   ctrl_columns(s, 1, 100);
   ctrl_columns(s, 4, 22, 28, 22, 28);
   ctrl_editbox(
-    //__ Options - Looks: animation duration in milliseconds
+    //__ Options - Animation: duration in milliseconds
     s, _("Cursor ms"), 40, dlg_stdintbox_handler, &new_cfg.smooth_cursor_duration
   )->column = 1;
   ctrl_editbox(
-    //__ Options - Looks: animation duration in milliseconds
+    //__ Options - Animation: duration in milliseconds
     s, _("Scroll ms"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_duration
   )->column = 3;
   ctrl_editbox(
-    //__ Options - Looks: animation duration in milliseconds
+    //__ Options - Animation: duration in milliseconds
     s, _("Blink ms"), 40, dlg_stdintbox_handler, &new_cfg.smooth_blink_duration
   )->column = 1;
   ctrl_editbox(
-    //__ Options - Looks: max scroll lines to animate
+    //__ Options - Animation: max scroll lines to animate
     s, _("Scroll lines"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_lines
   )->column = 3;
   ctrl_columns(s, 1, 100);

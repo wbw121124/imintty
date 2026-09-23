@@ -12,6 +12,7 @@
 #include "child.h"
 #include "winsearch.h"
 #include "tek.h"
+#include <math.h>
 #if CYGWIN_VERSION_API_MINOR >= 66
 #include <langinfo.h>
 #endif
@@ -211,6 +212,70 @@ tblink_fade_cb(void)
   win_update(false);
 }
 
+/* Phase mode for text: sine-wave alpha. */
+static void
+tblink_phase_cb(void)
+{
+  if (cfg.smooth_blink_attr != ANIM_PHASE || !term.blink_is_real) {
+    term.tblinker = 0;
+    term.tblink_alpha = 255;
+    invalidate_blink_cells(ATTR_BLINK);
+    if (imgs_have_blink())
+      force_imgs = true;
+    win_update(false);
+    return;
+  }
+  term.tblink_phase += 15;
+  if (term.tblink_phase >= 360)
+    term.tblink_phase -= 360;
+  double rad = term.tblink_phase * 3.14159265358979 / 180.0;
+  term.tblink_alpha = (int)(127.5 * (1.0 - cos(rad)));
+  term.tblinker = term.tblink_alpha > 127;
+  invalidate_blink_cells(ATTR_BLINK);
+  if (imgs_have_blink())
+    force_imgs = true;
+  win_update(false);
+  win_set_timer(tblink_phase_cb, 30);
+}
+
+/* Expand mode for text: triangle-wave alpha (grow/shrink visibility). */
+static void
+tblink_expand_cb(void)
+{
+  if (cfg.smooth_blink_attr != ANIM_EXPAND || !term.blink_is_real) {
+    term.tblinker = 0;
+    term.tblink_alpha = 255;
+    term.tblink_expand = 0;
+    invalidate_blink_cells(ATTR_BLINK);
+    if (imgs_have_blink())
+      force_imgs = true;
+    win_update(false);
+    return;
+  }
+  int step = 255 * 30 / max(40, blink_duration());
+  if (!term.tblink_dir) {
+    term.tblink_expand += step;
+    if (term.tblink_expand >= 255) {
+      term.tblink_expand = 255;
+      term.tblink_dir = true;
+    }
+  }
+  else {
+    term.tblink_expand -= step;
+    if (term.tblink_expand <= 0) {
+      term.tblink_expand = 0;
+      term.tblink_dir = false;
+    }
+  }
+  term.tblink_alpha = term.tblink_expand;
+  term.tblinker = term.tblink_alpha <= 127;
+  invalidate_blink_cells(ATTR_BLINK);
+  if (imgs_have_blink())
+    force_imgs = true;
+  win_update(false);
+  win_set_timer(tblink_expand_cb, 30);
+}
+
 static void
 tblink_cb(void)
 {
@@ -221,6 +286,17 @@ tblink_cb(void)
     if (imgs_have_blink())
       force_imgs = true;
     win_update(false);
+    return;
+  }
+  if (cfg.smooth_blink_attr == ANIM_PHASE && term.blink_is_real) {
+    term.tblink_phase = 0;
+    tblink_phase_cb();
+    return;
+  }
+  if (cfg.smooth_blink_attr == ANIM_EXPAND && term.blink_is_real) {
+    term.tblink_expand = 0;
+    term.tblink_dir = false;
+    tblink_expand_cb();
     return;
   }
   if (cfg.smooth_blink_attr == ANIM_SMOOTH && term.blink_is_real) {
@@ -249,6 +325,7 @@ term_schedule_tblink(void)
   if (cfg.smooth_blink_attr == ANIM_NONE) {
     term.tblinker = 0;
     term.tblink_alpha = 255;
+    term.tblink_expand = 0;
     return;
   }
   if (term.blink_is_real)
@@ -355,14 +432,86 @@ cblink_fade_cb(void)
   win_update(false);
 }
 
+/* Phase mode: sine-wave alpha driven by continuous phase angle. */
+static void
+cblink_phase_cb(void)
+{
+  if (cfg.smooth_blink_cursor != ANIM_PHASE
+      || !term_cursor_blinks() || !term.has_focus) {
+    term.cblinker = 1;
+    term.cblink_alpha = 255;
+    term.cursor_invalid = true;
+    win_update(false);
+    return;
+  }
+  term.cblink_phase += 15;  /* ~150ms half-period at 20ms tick */
+  if (term.cblink_phase >= 360)
+    term.cblink_phase -= 360;
+  double rad = term.cblink_phase * 3.14159265358979 / 180.0;
+  term.cblink_alpha = (int)(127.5 * (1.0 - cos(rad)));
+  term.cblinker = term.cblink_alpha > 127;
+  term.cursor_invalid = true;
+  win_update(false);
+  win_set_timer(cblink_phase_cb, 20);
+}
+
+/* Expand mode: ping-pong expand amount 0..255 drives cursor geometry. */
+static void
+cblink_expand_cb(void)
+{
+  if (cfg.smooth_blink_cursor != ANIM_EXPAND
+      || !term_cursor_blinks() || !term.has_focus) {
+    term.cblinker = 1;
+    term.cblink_alpha = 255;
+    term.cblink_expand = 0;
+    term.cursor_invalid = true;
+    win_update(false);
+    return;
+  }
+  int step = 255 * 20 / max(40, blink_duration());
+  if (!term.cblink_dir) {
+    term.cblink_expand += step;
+    if (term.cblink_expand >= 255) {
+      term.cblink_expand = 255;
+      term.cblink_dir = true;
+    }
+  }
+  else {
+    term.cblink_expand -= step;
+    if (term.cblink_expand <= 0) {
+      term.cblink_expand = 0;
+      term.cblink_dir = false;
+    }
+  }
+  term.cblink_alpha = 255;
+  term.cblinker = 1;
+  term.cursor_invalid = true;
+  win_update(false);
+  win_set_timer(cblink_expand_cb, 20);
+}
+
 static void
 cblink_cb(void)
 {
   if (cfg.smooth_blink_cursor == ANIM_NONE) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
+    term.cblink_expand = 0;
     term.cursor_invalid = true;
     win_update(false);
+    return;
+  }
+  if (cfg.smooth_blink_cursor == ANIM_PHASE
+      && term_cursor_blinks() && term.has_focus) {
+    term.cblink_phase = 0;
+    cblink_phase_cb();
+    return;
+  }
+  if (cfg.smooth_blink_cursor == ANIM_EXPAND
+      && term_cursor_blinks() && term.has_focus) {
+    term.cblink_expand = 0;
+    term.cblink_dir = false;
+    cblink_expand_cb();
     return;
   }
   if (cfg.smooth_blink_cursor == ANIM_SMOOTH
@@ -386,12 +535,20 @@ term_schedule_cblink(void)
   if (cfg.smooth_blink_cursor == ANIM_NONE) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
+    term.cblink_expand = 0;
   }
+  else if (cfg.smooth_blink_cursor == ANIM_PHASE
+           && term_cursor_blinks() && term.has_focus)
+    win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
+  else if (cfg.smooth_blink_cursor == ANIM_EXPAND
+           && term_cursor_blinks() && term.has_focus)
+    win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
   else if (term_cursor_blinks() && term.has_focus)
     win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
   else {
     term.cblinker = 1;  /* reset when not in use */
     term.cblink_alpha = 255;
+    term.cblink_expand = 0;
   }
 }
 
@@ -981,10 +1138,24 @@ term_reconfig(void)
       || new_cfg.smooth_blink_attr == ANIM_NONE) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
+    term.cblink_expand = 0;
     term.tblinker = 0;
     term.tblink_alpha = 255;
+    term.tblink_expand = 0;
     term.tblinker2 = 0;
     term.tblink2_alpha = 255;
+  }
+  if (new_cfg.smooth_blink_cursor != cfg.smooth_blink_cursor) {
+    term.cblinker = 1;
+    term.cblink_alpha = 255;
+    term.cblink_expand = 0;
+    term.cursor_invalid = true;
+  }
+  if (new_cfg.smooth_blink_attr != cfg.smooth_blink_attr) {
+    term.tblinker = 0;
+    term.tblink_alpha = 255;
+    term.tblink_expand = 0;
+    invalidate_blink_cells(ATTR_BLINK);
   }
   cfg.cursor_blinks = new_cfg.cursor_blinks;
   term_schedule_tblink();

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: imintty\n"
 "Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
-"POT-Creation-Date: 2026-09-23 14:10+0800\n"
+"POT-Creation-Date: 2026-09-23 15:45+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: charset.c:229 charset.c:240 winmain.c:7162 winmain.c:7275 winmain.c:7282
+#: charset.c:229 charset.c:240 winmain.c:7166 winmain.c:7279 winmain.c:7286
 msgid "(Default)"
 msgstr ""
 
@@ -115,246 +115,246 @@ msgid "full"
 msgstr ""
 
 #. __ %s: unknown option name
-#: config.c:955
+#: config.c:959
 msgid "Ignoring unknown option '%s'"
 msgstr ""
 
-#: config.c:1003 config.c:1032
+#: config.c:1007 config.c:1036
 msgid "Internal error: too many options"
 msgstr ""
 
-#: config.c:1019
+#: config.c:1023
 msgid "Internal error: too many options/comments"
 msgstr ""
 
 #. __ %2$s: option name, %1$s: invalid value
 #. report errors only during initialisation
-#: config.c:1189
+#: config.c:1193
 msgid "Ignoring invalid value '%s' for option '%s'"
 msgstr ""
 
 #. __ %s: option name
-#: config.c:1201
+#: config.c:1213
 msgid "Ignoring option '%s' with missing value"
 msgstr ""
 
 #. __ Config log: list heading
-#: config.c:1745
+#: config.c:1757
 msgid "Config files handled:"
 msgstr ""
 
 #. __ Config log: message for loaded file
-#: config.c:1784
+#: config.c:1796
 msgid "Config file loaded:"
 msgstr ""
 
 #. __ Config log: message for file to save to, if read-only
-#: config.c:1798
+#: config.c:1810
 msgid "Should save to config file but read-only:"
 msgstr ""
 
 #. __ Config log: message for file to save to
-#: config.c:1806
+#: config.c:1818
 msgid "Save to config file:"
 msgstr ""
 
 #. __ %1$s: config file name, %2$s: error message
-#: config.c:2044
+#: config.c:2061
 msgid ""
 "Could not save options to '%s':\n"
 "%s."
 msgstr ""
 
-#: config.c:2433
+#: config.c:2450
 msgid "◇ None (printing disabled) ◇"
 msgstr ""
 
-#: config.c:2435
+#: config.c:2452
 msgid "◆ Default printer ◆"
 msgstr ""
 
 #. __ UI localization disabled
-#: config.c:2544
+#: config.c:2561
 msgid "– None –"
 msgstr ""
 
 #. __ UI localization: use Windows desktop setting
-#: config.c:2546
+#: config.c:2563
 msgid "@ Windows language @"
 msgstr ""
 
 #. __ UI localization: use environment variable setting (LANGUAGE, LC_*)
-#: config.c:2548
+#: config.c:2565
 msgid "* Locale environm. *"
 msgstr ""
 
 #. __ UI localization: use imintty configuration setting (Text - Locale)
-#: config.c:2550
+#: config.c:2567
 msgid "= cfg. Text Locale ="
 msgstr ""
 
-#: config.c:2655
+#: config.c:2672
 msgid "simple beep"
 msgstr ""
 
-#: config.c:2656
+#: config.c:2673
 msgid "no beep"
 msgstr ""
 
-#: config.c:2657
+#: config.c:2674
 msgid "Default Beep"
 msgstr ""
 
-#: config.c:2658
+#: config.c:2675
 msgid "Critical Stop"
 msgstr ""
 
-#: config.c:2659
+#: config.c:2676
 msgid "Question"
 msgstr ""
 
-#: config.c:2660
+#: config.c:2677
 msgid "Exclamation"
 msgstr ""
 
-#: config.c:2661
+#: config.c:2678
 msgid "Asterisk"
 msgstr ""
 
-#: config.c:2704
+#: config.c:2721
 msgid "◇ None (system sound) ◇"
 msgstr ""
 
 #. __ terminal theme / colour scheme
 #. __ emojis style
-#: config.c:3145 config.c:3305 config.c:4109
+#: config.c:3162 config.c:3322 config.c:4126
 msgid "◇ None ◇"
 msgstr ""
 
 #. __ terminal theme / colour scheme used in dark mode
-#: config.c:3151 config.c:3297
+#: config.c:3168 config.c:3314
 msgid "◇ Same ◇"
 msgstr ""
 
 #. __ indicator of unsaved downloaded colour scheme
-#: config.c:3155 config.c:3310
+#: config.c:3172 config.c:3327
 msgid "downloaded / give me a name!"
 msgstr ""
 
-#: config.c:3261 config.c:3417 config.c:3500
+#: config.c:3278 config.c:3434 config.c:3517
 msgid "Could not load web theme"
 msgstr ""
 
-#: config.c:3612 config.c:3713
+#: config.c:3629 config.c:3730
 msgid "Cannot write theme file"
 msgstr ""
 
-#: config.c:3617 config.c:3718 config.c:3723
+#: config.c:3634 config.c:3735 config.c:3740
 msgid "Cannot store theme file"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4186 config.c:4623 config.c:4722
+#: config.c:4203 config.c:4645 config.c:4744
 msgid "as font"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4187 config.c:4628 config.c:4727
+#: config.c:4204 config.c:4650 config.c:4749
 msgid "as colour"
 msgstr ""
 
-#: config.c:4188
+#: config.c:4205
 msgid "as font & as colour"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4189 config.c:4633 config.c:4732
+#: config.c:4206 config.c:4655 config.c:4754
 msgid "xterm"
 msgstr ""
 
 #. __ Dialog button - show About text
-#: config.c:4337
+#: config.c:4354
 msgid "About..."
 msgstr ""
 
 #. __ Dialog button - save changes
-#: config.c:4340
+#: config.c:4357
 msgid "Save"
 msgstr ""
 
 #. __ Dialog button - cancel
-#: config.c:4344 winctrls.c:1277 windialog.c:1006
+#: config.c:4361 winctrls.c:1277 windialog.c:986
 msgid "Cancel"
 msgstr ""
 
 #. __ Dialog button - apply changes
-#: config.c:4348
+#: config.c:4365
 msgid "Apply"
 msgstr ""
 
 #. __ Dialog button - take notice
-#: config.c:4352 windialog.c:1003
+#: config.c:4369 windialog.c:983
 msgid "I see"
 msgstr ""
 
 #. __ Dialog button - confirm action
-#: config.c:4354 winctrls.c:1276 windialog.c:1005
+#: config.c:4371 winctrls.c:1276 windialog.c:985
 msgid "OK"
 msgstr ""
 
 #. __ Options - Looks: treeview label
-#: config.c:4361 config.c:4422 config.c:4481 config.c:4504
+#: config.c:4378 config.c:4439 config.c:4498
 msgid "Looks"
 msgstr ""
 
 #. __ Options - Looks: panel title
-#: config.c:4363
+#: config.c:4380
 msgid "Looks in Terminal"
 msgstr ""
 
 #. __ Options - Looks: section title
-#: config.c:4365
+#: config.c:4382
 msgid "Colours"
 msgstr ""
 
 #. __ Options - Looks:
-#: config.c:4369
+#: config.c:4386
 msgid "&Foreground..."
 msgstr ""
 
 #. __ Options - Looks:
-#: config.c:4373
+#: config.c:4390
 msgid "&Background..."
 msgstr ""
 
 #. __ Options - Looks:
-#: config.c:4377
+#: config.c:4394
 msgid "&Cursor..."
 msgstr ""
 
 #. __ Options - Looks:
-#: config.c:4388
+#: config.c:4405
 msgid "&Theme"
 msgstr ""
 
 #. __ Options - Looks: store colour scheme
-#: config.c:4393 config.c:4406 winctrls.c:484
+#: config.c:4410 config.c:4423 winctrls.c:484
 msgid "Store"
 msgstr ""
 
 #. __ Options - Looks:
 #. __ Options - Looks: configure dark mode theme
-#: config.c:4402 config.c:4414
+#: config.c:4419 config.c:4431
 msgid "&Darkmode"
 msgstr ""
 
 #. __ Options - Looks: name of web service
-#: config.c:4419
+#: config.c:4436
 msgid "Color Scheme Designer"
 msgstr ""
 
 #. __ Options - Looks: section title
-#: config.c:4424
+#: config.c:4441
 msgid "Transparency"
 msgstr ""
 
@@ -362,322 +362,342 @@ msgstr ""
 #. __ Options - Keys:
 #. __ Options - Mouse:
 #. __ Options - Window:
-#: config.c:4430 config.c:4886 config.c:5049 config.c:5247
+#: config.c:4447 config.c:4908 config.c:5071 config.c:5269
 msgid "&Off"
 msgstr ""
 
 #. __ Options - Looks: transparency
-#: config.c:4432
+#: config.c:4449
 msgid "&Low"
 msgstr ""
 
 #. __ Options - Looks: transparency, short form of radio button label "Medium"
-#: config.c:4434
+#: config.c:4451
 msgid "&Med."
 msgstr ""
 
 #. __ Options - Looks: transparency
-#: config.c:4436
+#: config.c:4453
 msgid "&Medium"
 msgstr ""
 
 #. __ Options - Looks: transparency
-#: config.c:4438
+#: config.c:4455
 msgid "&High"
 msgstr ""
 
 #. __ Options - Looks: transparency
-#: config.c:4440
+#: config.c:4457
 msgid "Gla&ss"
 msgstr ""
 
 #. __ Options - Looks: transparency
-#: config.c:4447 config.c:4459 config.c:4466
+#: config.c:4464 config.c:4476 config.c:4483
 msgid "Opa&que when focused"
 msgstr ""
 
 #. __ Options - Looks: transparency
-#: config.c:4452
+#: config.c:4469
 msgid "Blu&r"
 msgstr ""
 
-#: config.c:4473
+#: config.c:4490
 msgid "◄"
 msgstr ""
 
-#: config.c:4476
+#: config.c:4493
 msgid "►"
 msgstr ""
 
 #. __ Options - Looks: section title
-#: config.c:4483
+#: config.c:4500
 msgid "Cursor"
 msgstr ""
 
 #. __ Options - Looks: cursor type
-#: config.c:4488
+#: config.c:4505
 msgid "Li&ne"
 msgstr ""
 
 #. __ Options - Looks: cursor type
-#: config.c:4490
+#: config.c:4507
 msgid "Bloc&k"
 msgstr ""
 
 #. __ Options - Looks: cursor type
-#: config.c:4493
+#: config.c:4510
 msgid "Bo&x"
 msgstr ""
 
 #. __ Options - Looks: cursor type
-#: config.c:4496
+#: config.c:4513
 msgid "&Underscore"
 msgstr ""
 
 #. __ Options - Looks: cursor feature
-#: config.c:4501
+#: config.c:4518
 msgid "Blinkin&g"
 msgstr ""
 
-#. __ Options - Looks: section title
-#: config.c:4506
+#. __ Options - Animation: treeview label
+#. __ Options - Animation: panel title
+#: config.c:4522 config.c:4524
 msgid "Animation"
 msgstr ""
 
-#: config.c:4509
+#: config.c:4527
 msgid "Cursor blink"
 msgstr ""
 
-#: config.c:4511 config.c:4520 config.c:4529 config.c:4538
+#: config.c:4529 config.c:4540
+msgid "&Blink"
+msgstr ""
+
+#: config.c:4530 config.c:4541
+msgid "S&mooth"
+msgstr ""
+
+#: config.c:4531 config.c:4542
+msgid "&Phase"
+msgstr ""
+
+#: config.c:4532 config.c:4543
+msgid "E&xpand"
+msgstr ""
+
+#: config.c:4533 config.c:4544
+msgid "So&lid"
+msgstr ""
+
+#: config.c:4538
+msgid "Text blink"
+msgstr ""
+
+#: config.c:4549
+msgid "Scroll"
+msgstr ""
+
+#: config.c:4551 config.c:4560
 msgid "&Smooth"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4512 config.c:4521 config.c:4530 config.c:4539 config.c:4673
-#: config.c:4706 config.c:4937 config.c:4976 config.c:5130 config.c:5143
+#: config.c:4552 config.c:4561 config.c:4695 config.c:4728 config.c:4959
+#: config.c:4998 config.c:5152 config.c:5165
 msgid "&Default"
 msgstr ""
 
 #. __ Options - Text:
 #. __ Options - Window: scrollbar
-#: config.c:4513 config.c:4522 config.c:4531 config.c:4540 config.c:4675
-#: config.c:4708 config.c:4935 config.c:4974 config.c:5128 config.c:5141
-#: config.c:5228
+#: config.c:4553 config.c:4562 config.c:4697 config.c:4730 config.c:4957
+#: config.c:4996 config.c:5150 config.c:5163 config.c:5250
 msgid "&None"
 msgstr ""
 
-#: config.c:4518
-msgid "Text blink"
-msgstr ""
-
-#: config.c:4527
-msgid "Scroll"
-msgstr ""
-
-#: config.c:4536
+#: config.c:4558
 msgid "Cursor move"
 msgstr ""
 
-#. __ Options - Looks: animation feature
-#: config.c:4546
+#. __ Options - Animation: smooth flash on bell
+#: config.c:4568
 msgid "Smooth &bell flash"
 msgstr ""
 
-#. __ Options - Looks: dynamic blur duration in milliseconds, 0 = none
-#: config.c:4551
+#. __ Options - Animation: dynamic blur duration in milliseconds, 0 = none
+#: config.c:4573
 msgid "Dynamic blur ms"
 msgstr ""
 
-#. __ Options - Looks: animation duration in milliseconds
-#: config.c:4557
+#. __ Options - Animation: duration in milliseconds
+#: config.c:4579
 msgid "Cursor ms"
 msgstr ""
 
-#. __ Options - Looks: animation duration in milliseconds
-#: config.c:4561
+#. __ Options - Animation: duration in milliseconds
+#: config.c:4583
 msgid "Scroll ms"
 msgstr ""
 
-#. __ Options - Looks: animation duration in milliseconds
-#: config.c:4565
+#. __ Options - Animation: duration in milliseconds
+#: config.c:4587
 msgid "Blink ms"
 msgstr ""
 
-#. __ Options - Looks: max scroll lines to animate
-#: config.c:4569
+#. __ Options - Animation: max scroll lines to animate
+#: config.c:4591
 msgid "Scroll lines"
 msgstr ""
 
 #. __ Options - Text: treeview label
-#: config.c:4577 config.c:4602 config.c:4617 config.c:4666 config.c:4716
-#: config.c:4741 config.c:4763 config.c:4776 config.c:4784
+#: config.c:4599 config.c:4624 config.c:4639 config.c:4688 config.c:4738
+#: config.c:4763 config.c:4785 config.c:4798 config.c:4806
 msgid "Text"
 msgstr ""
 
 #. __ Options - Text: panel title
-#: config.c:4579
+#: config.c:4601
 msgid "Text and Font properties"
 msgstr ""
 
 #. __ Options - Text: section title
-#: config.c:4581
+#: config.c:4603
 msgid "Font"
 msgstr ""
 
 #. __ Options - Text:
 #. __ Font chooser:
-#: config.c:4589 winctrls.c:1287
+#: config.c:4611 winctrls.c:1287
 msgid "Font st&yle:"
 msgstr ""
 
 #. __ Font chooser:
-#: config.c:4594 winctrls.c:1289
+#: config.c:4616 winctrls.c:1289
 msgid "&Size:"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4606 config.c:4685
+#: config.c:4628 config.c:4707
 msgid "Sho&w bold as font"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4611 config.c:4690
+#: config.c:4633 config.c:4712
 msgid "Show &bold as colour"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4619 config.c:4640 config.c:4718 config.c:4745
+#: config.c:4641 config.c:4662 config.c:4740 config.c:4767
 msgid "Show bold"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4647 config.c:4695 config.c:4751
+#: config.c:4669 config.c:4717 config.c:4773
 msgid "&Allow blinking"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4652 config.c:4756
+#: config.c:4674 config.c:4778
 msgid "Show dim as font"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4670 config.c:4703 config.c:4738
+#: config.c:4692 config.c:4725 config.c:4760
 msgid "Font smoothing"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4677 config.c:4710 config.c:4936 config.c:4975 config.c:5129
-#: config.c:5142
+#: config.c:4699 config.c:4732 config.c:4958 config.c:4997 config.c:5151
+#: config.c:5164
 msgid "&Partial"
 msgstr ""
 
 #. __ Options - Text:
-#: config.c:4679 config.c:4712 config.c:4938 config.c:4977 config.c:5131
-#: config.c:5144
+#: config.c:4701 config.c:4734 config.c:4960 config.c:4999 config.c:5153
+#: config.c:5166
 msgid "&Full"
 msgstr ""
 
-#: config.c:4766
+#: config.c:4788
 msgid "&Locale"
 msgstr ""
 
-#: config.c:4769
+#: config.c:4791
 msgid "&Character set"
 msgstr ""
 
 #. __ Options - Text - Emojis:
 #. __ Options - Text:
-#: config.c:4780 config.c:4786
+#: config.c:4802 config.c:4808
 msgid "Emojis"
 msgstr ""
 
 #. __ Options - Text - Emojis:
-#: config.c:4790
+#: config.c:4812
 msgid "Style"
 msgstr ""
 
 #. __ Options - Text - Emojis:
-#: config.c:4795
+#: config.c:4817
 msgid "Placement"
 msgstr ""
 
 #. __ Options - Keys: treeview label
-#: config.c:4803 config.c:4838 config.c:4873 config.c:4891
+#: config.c:4825 config.c:4860 config.c:4895 config.c:4913
 msgid "Keys"
 msgstr ""
 
 #. __ Options - Keys: panel title
-#: config.c:4805
+#: config.c:4827
 msgid "Keyboard features"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4809
+#: config.c:4831
 msgid "&Backarrow sends ^H"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4814
+#: config.c:4836
 msgid "&Delete sends DEL"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4819
+#: config.c:4841
 msgid "Ctrl+LeftAlt is Alt&Gr"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4824
+#: config.c:4846
 msgid "AltGr is also Alt"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4829
+#: config.c:4851
 msgid "&Esc/Enter reset IME to alphanumeric"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4834
+#: config.c:4856
 msgid "&Kitty keyboard protocol"
 msgstr ""
 
 #. __ Options - Keys: section title
-#: config.c:4840
+#: config.c:4862
 msgid "Shortcuts"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4843
+#: config.c:4865
 msgid "Cop&y and Paste (Ctrl/Shift+Ins)"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4848
+#: config.c:4870
 msgid "&Menu and Full Screen (Alt+Space/Enter)"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4853
+#: config.c:4875
 msgid "&Switch window (Ctrl+[Shift+]Tab)"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4858
+#: config.c:4880
 msgid "&Zoom (Ctrl+plus/minus/zero)"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4863
+#: config.c:4885
 msgid "&Alt+Fn shortcuts"
 msgstr ""
 
 #. __ Options - Keys:
-#: config.c:4868
+#: config.c:4890
 msgid "&Ctrl+Shift+letter shortcuts"
 msgstr ""
 
 #. __ Options - Keys: section title
-#: config.c:4875 config.c:4893
+#: config.c:4897 config.c:4915
 msgid "Compose key"
 msgstr ""
 
@@ -686,7 +706,7 @@ msgstr ""
 #. __ Options - Modifier - Shift:
 #. __ Options - Window:
 #. __ Options - Modifier - Shift:
-#: config.c:4880 config.c:5041 config.c:5060 config.c:5239 config.c:5258
+#: config.c:4902 config.c:5063 config.c:5082 config.c:5261 config.c:5280
 msgid "&Shift"
 msgstr ""
 
@@ -695,7 +715,7 @@ msgstr ""
 #. __ Options - Modifier - Control:
 #. __ Options - Window:
 #. __ Options - Modifier - Control:
-#: config.c:4882 config.c:5043 config.c:5068 config.c:5241 config.c:5266
+#: config.c:4904 config.c:5065 config.c:5090 config.c:5263 config.c:5288
 msgid "&Ctrl"
 msgstr ""
 
@@ -704,112 +724,112 @@ msgstr ""
 #. __ Options - Modifier - Alt:
 #. __ Options - Window:
 #. __ Options - Modifier - Alt:
-#: config.c:4884 config.c:5045 config.c:5064 config.c:5243 config.c:5262
+#: config.c:4906 config.c:5067 config.c:5086 config.c:5265 config.c:5284
 msgid "&Alt"
 msgstr ""
 
 #. __ Options - Mouse: treeview label
-#: config.c:4900 config.c:4989 config.c:5021
+#: config.c:4922 config.c:5011 config.c:5043
 msgid "Mouse"
 msgstr ""
 
 #. __ Options - Mouse: panel title
-#: config.c:4902
+#: config.c:4924
 msgid "Mouse functions"
 msgstr ""
 
 #. __ Options - Mouse:
 #. __ Options - Selection:
-#: config.c:4910 config.c:4943 config.c:4959 config.c:5107
+#: config.c:4932 config.c:4965 config.c:4981 config.c:5129
 msgid "Cop&y on select"
 msgstr ""
 
 #. __ Options - Mouse:
 #. __ Options - Selection:
 #. __ Context menu:
-#: config.c:4915 config.c:4948 config.c:5112 wininput.c:701
+#: config.c:4937 config.c:4970 config.c:5134 wininput.c:701
 msgid "Copy with TABs"
 msgstr ""
 
 #. __ Options - Mouse:
 #. __ Options - Selection:
-#: config.c:4920 config.c:4953 config.c:4965 config.c:5117
+#: config.c:4942 config.c:4975 config.c:4987 config.c:5139
 msgid "Copy as &rich text"
 msgstr ""
 
 #. __ Options - Mouse:
 #. __ Options - Selection:
-#: config.c:4926 config.c:4933 config.c:4972 config.c:5126 config.c:5139
+#: config.c:4948 config.c:4955 config.c:4994 config.c:5148 config.c:5161
 msgid "Copy as &HTML"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:4985
+#: config.c:5007
 msgid "Clic&ks place command line cursor"
 msgstr ""
 
 #. __ Options - Mouse: section title
-#: config.c:4991
+#: config.c:5013
 msgid "Click actions"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:4994
+#: config.c:5016
 msgid "Right mouse button"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:4997 config.c:5011
+#: config.c:5019 config.c:5033
 msgid "&Paste"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:4999 config.c:5013
+#: config.c:5021 config.c:5035
 msgid "E&xtend"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:5001
+#: config.c:5023
 msgid "&Menu"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:5003 config.c:5017
+#: config.c:5025 config.c:5039
 msgid "Ente&r"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:5008
+#: config.c:5030
 msgid "Middle mouse button"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:5015
+#: config.c:5037
 msgid "&Nothing"
 msgstr ""
 
 #. __ Options - Mouse: section title
-#: config.c:5023
+#: config.c:5045
 msgid "Application mouse mode"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:5026
+#: config.c:5048
 msgid "Default click target"
 msgstr ""
 
 #. __ Options - Mouse: application mouse mode click target
-#: config.c:5029
+#: config.c:5051
 msgid "&Window"
 msgstr ""
 
 #. __ Options - Mouse: application mouse mode click target
-#: config.c:5031
+#: config.c:5053
 msgid "&Application"
 msgstr ""
 
 #. __ Options - Mouse:
-#: config.c:5038 config.c:5056
+#: config.c:5060 config.c:5078
 msgid "Modifier for overriding default"
 msgstr ""
 
@@ -817,194 +837,194 @@ msgstr ""
 #. __ Options - Modifier - Win:
 #. __ Options - Window:
 #. __ Options - Modifier - Win:
-#: config.c:5047 config.c:5072 config.c:5245 config.c:5270
+#: config.c:5069 config.c:5094 config.c:5267 config.c:5292
 msgid "&Win"
 msgstr ""
 
 #. __ Options - Modifier - Super:
-#: config.c:5076 config.c:5274
+#: config.c:5098 config.c:5296
 msgid "&Sup"
 msgstr ""
 
 #. __ Options - Modifier - Hyper:
-#: config.c:5080 config.c:5278
+#: config.c:5102 config.c:5300
 msgid "&Hyp"
 msgstr ""
 
 #. __ Options - Selection: treeview label
-#: config.c:5090 config.c:5101 config.c:5165
+#: config.c:5112 config.c:5123 config.c:5187
 msgid "Selection"
 msgstr ""
 
 #. __ Options - Selection: panel title
-#: config.c:5092
+#: config.c:5114
 msgid "Selection and clipboard"
 msgstr ""
 
 #. __ Options - Selection:
-#: config.c:5096
+#: config.c:5118
 msgid "Clear selection on input"
 msgstr ""
 
 #. __ Options - Selection: section title
-#: config.c:5103
+#: config.c:5125
 msgid "Clipboard"
 msgstr ""
 
 #. __ Options - Selection:
-#: config.c:5153
+#: config.c:5175
 msgid "Trim space from selection"
 msgstr ""
 
 #. __ Options - Selection:
-#: config.c:5159
+#: config.c:5181
 msgid "Allow setting selection"
 msgstr ""
 
 #. __ Options - Selection: section title
 #. __ Options - Window: treeview label
-#: config.c:5167 config.c:5189 config.c:5214 config.c:5287
+#: config.c:5189 config.c:5211 config.c:5236 config.c:5309
 msgid "Window"
 msgstr ""
 
 #. __ Options - Selection: clock position of info popup for text size
-#: config.c:5172
+#: config.c:5194
 msgid "Show size while selecting (0..12)"
 msgstr ""
 
 #. __ Options - Selection:
-#: config.c:5179
+#: config.c:5201
 msgid "Suspend output while selecting"
 msgstr ""
 
 #. __ Options - Window: panel title
-#: config.c:5191
+#: config.c:5213
 msgid "Window properties"
 msgstr ""
 
 #. __ Options - Window: section title
-#: config.c:5193
+#: config.c:5215
 msgid "Default size"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5197
+#: config.c:5219
 msgid "Colu&mns"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5201
+#: config.c:5223
 msgid "Ro&ws"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5205
+#: config.c:5227
 msgid "C&urrent size"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5210
+#: config.c:5232
 msgid "Re&wrap on resize"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5218
+#: config.c:5240
 msgid "Scroll&back lines"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5223
+#: config.c:5245
 msgid "Scrollbar"
 msgstr ""
 
 #. __ Options - Window: scrollbar
-#: config.c:5226
+#: config.c:5248
 msgid "&Left"
 msgstr ""
 
 #. __ Options - Window: scrollbar
-#: config.c:5230
+#: config.c:5252
 msgid "&Right"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5236 config.c:5254
+#: config.c:5258 config.c:5276
 msgid "Modifier for scrolling"
 msgstr ""
 
 #. __ Options - Window:
-#: config.c:5283
+#: config.c:5305
 msgid "&PgUp and PgDn scroll without modifier"
 msgstr ""
 
 #. __ Options - Window: section title
-#: config.c:5289
+#: config.c:5311
 msgid "UI language"
 msgstr ""
 
 #. __ Options - Terminal: treeview label
-#: config.c:5299 config.c:5312 config.c:5373 config.c:5387
+#: config.c:5321 config.c:5334 config.c:5395 config.c:5409
 msgid "Terminal"
 msgstr ""
 
 #. __ Options - Terminal: panel title
-#: config.c:5301
+#: config.c:5323
 msgid "Terminal features"
 msgstr ""
 
 #. __ Options - Terminal:
-#: config.c:5305
+#: config.c:5327
 msgid "&Type"
 msgstr ""
 
 #. __ Options - Terminal: answerback string for ^E request
-#: config.c:5309
+#: config.c:5331
 msgid "&Answerback"
 msgstr ""
 
 #. __ Options - Terminal: section title
-#: config.c:5314
+#: config.c:5336
 msgid "Bell"
 msgstr ""
 
 #. __ Options - Terminal: bell
-#: config.c:5321
+#: config.c:5343
 msgid "► &Play"
 msgstr ""
 
 #. __ Options - Terminal: bell
-#: config.c:5327
+#: config.c:5349
 msgid "&Wave"
 msgstr ""
 
 #. __ Options - Terminal: bell
-#: config.c:5349 config.c:5362
+#: config.c:5371 config.c:5384
 msgid "&Flash"
 msgstr ""
 
 #. __ Options - Terminal: bell
-#: config.c:5351 config.c:5366
+#: config.c:5373 config.c:5388
 msgid "&Highlight in taskbar"
 msgstr ""
 
 #. __ Options - Terminal: bell
-#: config.c:5353 config.c:5370
+#: config.c:5375 config.c:5392
 msgid "&Popup"
 msgstr ""
 
 #. __ Options - Terminal: section title
-#: config.c:5375
+#: config.c:5397
 msgid "Printer"
 msgstr ""
 
 #. __ Options - Terminal:
-#: config.c:5390
+#: config.c:5412
 msgid "Prompt about running processes on &close"
 msgstr ""
 
 #. __ Options - Terminal:
 #. __ Context menu:
-#: config.c:5395 wininput.c:597
+#: config.c:5417 wininput.c:597
 msgid "Status Line"
 msgstr ""
 
@@ -1118,21 +1138,21 @@ msgid "A&dd to Custom Colours"
 msgstr ""
 
 #. __ Options: dialog title
-#: windialog.c:341 windialog.c:950
+#: windialog.c:347 windialog.c:928
 msgid "Options"
 msgstr ""
 
 #. __ Options: dialog title: "imintty <release> available (for download)"
-#: windialog.c:343
+#: windialog.c:349
 msgid "available"
 msgstr ""
 
 #. __ Options: dialog width scale factor (80...200)
-#: windialog.c:894
+#: windialog.c:872
 msgid "100"
 msgstr ""
 
-#: windialog.c:1035 windialog.c:1062
+#: windialog.c:1015 windialog.c:1042
 msgid "Error"
 msgstr ""
 
@@ -1339,45 +1359,45 @@ msgstr ""
 msgid "[SCROLL MODE] "
 msgstr ""
 
-#: winmain.c:4087
+#: winmain.c:4091
 msgid "Processes are running in session:"
 msgstr ""
 
-#: winmain.c:4088 winmain.c:4099
+#: winmain.c:4092 winmain.c:4103
 msgid "Close anyway?"
 msgstr ""
 
-#: winmain.c:4098
+#: winmain.c:4102
 msgid "Running WSL "
 msgstr ""
 
-#: winmain.c:4124
+#: winmain.c:4128
 msgid "Reset terminal?"
 msgstr ""
 
 #. __ Config log: message box heading
-#: winmain.c:4275
+#: winmain.c:4279
 msgid "Config log"
 msgstr ""
 
-#: winmain.c:4366
+#: winmain.c:4370
 msgid "Try '--help' for more information"
 msgstr ""
 
-#: winmain.c:4374
+#: winmain.c:4378
 msgid "Could not load icon"
 msgstr ""
 
-#: winmain.c:6984
+#: winmain.c:6988
 msgid "Usage:"
 msgstr ""
 
-#: winmain.c:6985
+#: winmain.c:6989
 msgid "[OPTION]... [ PROGRAM [ARG]... | - ]"
 msgstr ""
 
 #. __ help text (output of -H / --help), after initial line ("synopsis")
-#: winmain.c:6988
+#: winmain.c:6992
 msgid ""
 "Start a new terminal session running the specified program or the user's "
 "shell.\n"
@@ -1410,39 +1430,39 @@ msgid ""
 "See manual page for further command line options and configuration.\n"
 msgstr ""
 
-#: winmain.c:7162 winmain.c:7275 winmain.c:7282
+#: winmain.c:7166 winmain.c:7279 winmain.c:7286
 msgid "WSL distribution '%s' not found"
 msgstr ""
 
-#: winmain.c:7312
+#: winmain.c:7316
 msgid "Duplicate option '%s'"
 msgstr ""
 
-#: winmain.c:7320 winmain.c:7411
+#: winmain.c:7324 winmain.c:7415
 msgid "Unknown option '%s'"
 msgstr ""
 
-#: winmain.c:7322
+#: winmain.c:7326
 msgid "Option '%s' requires an argument"
 msgstr ""
 
-#: winmain.c:7349
+#: winmain.c:7353
 msgid "Syntax error in position argument '%s'"
 msgstr ""
 
-#: winmain.c:7360
+#: winmain.c:7364
 msgid "Syntax error in size argument '%s'"
 msgstr ""
 
-#: winmain.c:7520
+#: winmain.c:7524
 msgid "Syntax error in geometry argument '%s'"
 msgstr ""
 
-#: winmain.c:7733
+#: winmain.c:7737
 msgid "Imintty could not detach from caller, starting anyway"
 msgstr ""
 
-#: winmain.c:8116
+#: winmain.c:8120
 msgid "Using default title due to invalid characters in program name"
 msgstr ""
 

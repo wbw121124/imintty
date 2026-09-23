@@ -15,8 +15,9 @@
 # cursor type: block (default), line, underscore
 #CursorType=block
 
-# animation modes: smooth, default, none
-# cursor/text blink (none = no blink; default = hard on/off; smooth = fade)
+# animation modes: blink, smooth, phase, expand, solid
+# cursor/text blink (solid = always on; blink = hard on/off; smooth = fade;
+# phase = sine wave; expand = grow/shrink)
 #SmoothBlinkCursor=smooth
 #SmoothBlinkAttr=smooth
 #SmoothBlinkBell=yes

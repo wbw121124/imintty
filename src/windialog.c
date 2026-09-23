@@ -87,10 +87,6 @@ wstring dragndrop;
 
 static int dialog_height;  // dummy
 
-/* Panel vertical scroll state (dialog units along y) */
-static int panel_scroll_pos;
-static int panel_content_bottom;  // final cp.ypos after panel layout
-
 enum {
   IDCX_TVSTATIC = 1001,
   IDCX_TREEVIEW,
@@ -224,7 +220,7 @@ create_controls(HWND wnd, char *path)
 
 /* Panel viewport in client pixels (excludes tree column and button row).
  * bottom is exclusive and must stop at the button row top (DLU 183),
- * so ScrollWindow never shifts the About/Save/Cancel/Apply buttons. */
+ * so panel controls never paint over About/Save/Cancel/Apply. */
 static RECT
 panel_clip(HWND wnd)
 {
@@ -244,7 +240,7 @@ panel_clip(HWND wnd)
 }
 
 /* Hide panel controls that fall outside the viewport so tall panels
- * do not paint over the bottom button row. */
+ * do not paint over the bottom button row (safety after tree split). */
 static void
 update_panel_visibility(HWND wnd)
 {
@@ -262,67 +258,6 @@ update_panel_visibility(HWND wnd)
       ShowWindow(item, vis ? SW_SHOW : SW_HIDE);
     }
   }
-}
-
-static void
-scroll_panel(HWND wnd, int new_pos)
-{
-  SCROLLINFO si = {.cbSize = sizeof(si), .fMask = SIF_ALL};
-  GetScrollInfo(wnd, SB_VERT, &si);
-  int max_pos = (int)si.nMax - (int)si.nPage + 1;
-  if (max_pos < 0)
-    max_pos = 0;
-  if (new_pos < (int)si.nMin)
-    new_pos = si.nMin;
-  if (new_pos > max_pos)
-    new_pos = max_pos;
-  int delta = new_pos - panel_scroll_pos;
-  if (!delta)
-    return;
-  panel_scroll_pos = new_pos;
-  si.nPos = new_pos;
-  SetScrollInfo(wnd, SB_VERT, &si, true);
-
-  int ad = delta > 0 ? delta : -delta;
-  RECT mr = {0, 0, 1, ad};
-  MapDialogRect(wnd, &mr);
-  int dpx = scale_dialog(mr.bottom);
-  int dy = delta > 0 ? -dpx : dpx;
-  RECT clip = panel_clip(wnd);
-  // lpScrollRect = clip: only panel children move; button row untouched
-  ScrollWindow(wnd, 0, dy, &clip, &clip);
-  update_panel_visibility(wnd);
-  // clear residue under/around the button row (strip + dialog)
-  RECT cr;
-  GetClientRect(wnd, &cr);
-  RECT brow = {0, clip.bottom, cr.right, cr.bottom};
-  InvalidateRect(wnd, &brow, true);
-  if (button_hwnd)
-    InvalidateRect(button_hwnd, null, true);
-  UpdateWindow(wnd);
-  if (button_hwnd)
-    UpdateWindow(button_hwnd);
-}
-
-static void
-update_panel_scrollbar(HWND wnd)
-{
-  // viewport height in DLU: from panel top (3) up to button row top (DIALOG_HEIGHT-17-1)
-  int view_h = (DIALOG_HEIGHT - 17 - 1) - 3;
-  int content_h = panel_content_bottom - 3;
-  int max_scroll = content_h - view_h;
-  bool overflow = max_scroll > 0;
-
-  EnableScrollBar(wnd, SB_VERT, overflow ? ESB_ENABLE_BOTH : ESB_DISABLE_BOTH);
-  SCROLLINFO si = {
-    .cbSize = sizeof(si),
-    .fMask = SIF_RANGE | SIF_PAGE | SIF_POS,
-    .nMin = 0,
-    .nMax = content_h > 0 ? content_h - 1 : 0,
-    .nPage = view_h > 0 ? view_h : 1,
-    .nPos = panel_scroll_pos
-  };
-  SetScrollInfo(wnd, SB_VERT, &si, true);
 }
 
 static void
@@ -863,49 +798,13 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         winctrl_cleanup(&ctrls_panel);
         debug("WM_NOTIFY: cleanup");
 
-        // reset scroll before laying out the new panel at the top
-        panel_scroll_pos = 0;
-        panel_content_bottom = 0;
-        update_panel_scrollbar(wnd);
-
-        // here we need the correct DIALOG_HEIGHT already
-        panel_content_bottom = create_controls(wnd, (char *) item.lParam);
-        update_panel_scrollbar(wnd);
+        // lay out the new panel at the top (no vertical scrollbar)
+        (void)create_controls(wnd, (char *) item.lParam);
         update_panel_visibility(wnd);
         debug("WM_NOTIFY: create");
         dlg_refresh(null); /* set up control values */
         debug("WM_NOTIFY: refresh");
       }
-    }
-
-    when WM_VSCROLL: {
-      SCROLLINFO si = {.cbSize = sizeof(si), .fMask = SIF_ALL};
-      GetScrollInfo(wnd, SB_VERT, &si);
-      int line = 8;
-      int pos = si.nPos;
-      switch (LOWORD(wParam)) {
-        when SB_LINEUP: pos -= line;
-        when SB_LINEDOWN: pos += line;
-        when SB_PAGEUP: pos -= (int)si.nPage;
-        when SB_PAGEDOWN: pos += (int)si.nPage;
-        when SB_TOP: pos = si.nMin;
-        when SB_BOTTOM: pos = si.nMax;
-        when SB_THUMBTRACK or SB_THUMBPOSITION: pos = si.nTrackPos;
-      }
-      scroll_panel(wnd, pos);
-      return 1;
-    }
-
-    when WM_MOUSEWHEEL: {
-      int wheel = GET_WHEEL_DELTA_WPARAM(wParam);
-      if (wheel) {
-        int notches = wheel / WHEEL_DELTA;
-        if (!notches)
-          notches = wheel > 0 ? 1 : -1;
-        // wheel up (positive) scrolls content down => decrease position
-        scroll_panel(wnd, panel_scroll_pos - notches * 8);
-      }
-      return 1;
     }
 
     when WM_COMMAND or WM_DRAWITEM: {

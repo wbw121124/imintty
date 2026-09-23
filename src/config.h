@@ -11,8 +11,10 @@ typedef enum { MDK_SHIFT = 1, MDK_ALT = 2, MDK_CTRL = 4,
 enum { HOLD_NEVER, HOLD_START, HOLD_ERROR, HOLD_ALWAYS };
 enum { CUR_BLOCK, CUR_UNDERSCORE, CUR_LINE, CUR_BOX };
 enum { FS_DEFAULT, FS_PARTIAL, FS_NONE, FS_FULL };
-// Animation / blink mode: none = off, default = traditional, smooth = fade
-enum { ANIM_NONE = 0, ANIM_DEFAULT = 1, ANIM_SMOOTH = 2 };
+// Animation / blink mode: none/solid = always on, default/blink = hard on/off,
+// smooth = fade, phase = sine wave, expand = grow/shrink
+enum { ANIM_NONE = 0, ANIM_DEFAULT = 1, ANIM_SMOOTH = 2,
+       ANIM_PHASE = 3, ANIM_EXPAND = 4 };
 enum { FR_TEXTOUT, FR_UNISCRIBE };
 enum { MC_VOID, MC_PASTE, MC_EXTEND, MC_ENTER };
 enum { RC_MENU, RC_PASTE, RC_EXTEND, RC_ENTER };

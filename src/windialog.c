@@ -16,7 +16,7 @@ extern void setup_config_box(controlbox *);
 
 #include <commctrl.h>
 
-# define debug_dialog_crash
+//# define debug_dialog_crash
 
 #ifdef debug_dialog_crash
 #include <signal.h>

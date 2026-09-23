@@ -128,6 +128,7 @@ const config default_cfg = {
   .old_altgr_detection = false,
   .old_modify_keys = 0,
   .format_other_keys = 1,
+  .kitty_keyboard = true,
   .auto_repeat = true,
   .external_hotkeys = 2,
   .clip_shortcuts = true,
@@ -478,6 +479,7 @@ options[] = {
   {"OldAltGrDetection", OPT_BOOL, offcfg(old_altgr_detection)},
   {"OldModifyKeys", OPT_INT, offcfg(old_modify_keys)},
   {"FormatOtherKeys", OPT_INT, offcfg(format_other_keys)},
+  {"KittyKeyboard", OPT_BOOL, offcfg(kitty_keyboard)},
   {"AutoRepeat", OPT_BOOL, offcfg(auto_repeat)},
   {"SupportExternalHotkeys", OPT_INT, offcfg(external_hotkeys)},
   {"ClipShortcuts", OPT_BOOL, offcfg(clip_shortcuts)},
@@ -4502,7 +4504,6 @@ setup_config_box(controlbox * b)
   s = ctrl_new_set(b, _("Looks"), null,
   //__ Options - Looks: section title
                       _("Animation"));
-  ctrl_columns(s, 1, 100);
   //__ Options - Looks: animation - cursor blink mode
   ctrl_radiobuttons(
     s, _("Cursor blink"), 3,

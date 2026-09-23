@@ -793,6 +793,8 @@ term_reset(bool full)
     term.erase_to_screen = false;
   }
   term.modify_other_keys = 0;  // xterm resets this
+  term.kitty_kb_flags = 0;
+  term.kitty_kb_stack_len = 0;
 
   term.backspace_sends_bs = cfg.backspace_sends_bs;  // xterm only with RIS
   term.delete_sends_del = cfg.delete_sends_del;  // not reset by xterm

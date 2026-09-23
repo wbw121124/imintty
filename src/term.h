@@ -578,6 +578,10 @@ struct term {
   bool app_wheel;             // dedicated wheel codes instead of cursor codes
   bool alt_wheel;             // add Alt modifier to wheel cursor codes
   int  modify_other_keys;
+  /* Kitty keyboard protocol progressive enhancement flags (bits 0..4) */
+  uint kitty_kb_flags;
+  uint kitty_kb_stack[32];
+  uint kitty_kb_stack_len;
   bool newline_mode;
   bool report_focus;
   bool report_font_changed;

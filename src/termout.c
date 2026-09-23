@@ -3525,6 +3525,31 @@ do_csi(uchar c)
         save_cursor();
     when 'u':        /* SCORC: restore cursor */
       restore_cursor();
+    when CPAIR('=', 'u'): {  /* Kitty keyboard: set progressive flags */
+      if (cfg.kitty_keyboard) {
+        uint flags = term.csi_argv[0];
+        uint mode = term.csi_argc > 1 ? term.csi_argv[1] : 0;
+        flags &= 0x1F;
+        if (mode == 0)
+          term.kitty_kb_flags = flags;
+        else if (mode == 1)
+          term.kitty_kb_flags |= flags;
+        else if (mode == 2)
+          term.kitty_kb_flags &= ~flags;
+      }
+    }
+    when CPAIR('>', 'u'): {  /* Kitty keyboard: push flags */
+      if (cfg.kitty_keyboard && term.kitty_kb_stack_len < lengthof(term.kitty_kb_stack)) {
+        term.kitty_kb_stack[term.kitty_kb_stack_len++] = term.kitty_kb_flags;
+        term.kitty_kb_flags = term.csi_argv[0] & 0x1F;
+      }
+    }
+    when CPAIR('<', 'u'):  /* Kitty keyboard: pop flags */
+      if (cfg.kitty_keyboard && term.kitty_kb_stack_len)
+        term.kitty_kb_flags = term.kitty_kb_stack[--term.kitty_kb_stack_len];
+    when CPAIR('?', 'u'):  /* Kitty keyboard: query flags */
+      if (cfg.kitty_keyboard)
+        child_printf("\e[?%uu", term.kitty_kb_flags);
     when 'm':        /* SGR: set graphics rendition */
       do_sgr();
 #if 0

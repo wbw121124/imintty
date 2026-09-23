@@ -101,7 +101,7 @@ typedef struct {
    int smooth_cursor_duration;
    int cursor_trail_size;     // Neovide-style trail segments, 0 = none
    int cursor_short_threshold; // cell-distance below which animation snaps
-   bool cursor_neovide_expand; // Neovide-style expand blink on cursor
+   bool cursor_neovide_expand; // force expand blink even when cursor blink != expand
    bool cursor_separate_canvas; // separate cursor canvas, clear & redraw each frame
    char smooth_scroll;        // ANIM_*: scroll motion
    int smooth_scroll_duration;

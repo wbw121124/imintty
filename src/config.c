@@ -4532,8 +4532,8 @@ setup_config_box(controlbox * b)
     s, _("Blinkin&g"), dlg_stdcheckbox_handler, &new_cfg.cursor_blinks
   );
   ctrl_checkbox(
-    //__ Options - Looks: Neovide-style expand blink
-    s, _("Neovide &expand blink"),
+    //__ Options - Looks: force expand blink via config
+    s, _("&Expand cursor blink"),
     dlg_stdcheckbox_handler, &new_cfg.cursor_neovide_expand
   );
   ctrl_checkbox(

@@ -132,6 +132,7 @@ vt220(string term)
  */
 static void term_schedule_tblink(void);
 static void term_schedule_tblink2(void);
+static void curs_anim_invalidate(void);
 
 /* Smooth blink fade state (Phase 1): ramp alpha between visible/hidden. */
 struct blink_fade {
@@ -437,34 +438,43 @@ static void
 cblink_phase_cb(void)
 {
   if (cfg.smooth_blink_cursor != ANIM_PHASE
-      || !term_cursor_blinks() || !term.has_focus) {
+      || !term_cursor_blinks() || !term.has_focus
+      || !term.cursor_on || term.show_other_screen) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
     term.cursor_invalid = true;
     win_update(false);
     return;
   }
-  term.cblink_phase += 15;  /* ~150ms half-period at 20ms tick */
+  term.cblink_phase += 15;  /* 15° per 20ms tick → full cycle 4.8s */
   if (term.cblink_phase >= 360)
     term.cblink_phase -= 360;
   double rad = term.cblink_phase * 3.14159265358979 / 180.0;
   term.cblink_alpha = (int)(127.5 * (1.0 - cos(rad)));
   term.cblinker = term.cblink_alpha > 127;
   term.cursor_invalid = true;
+  if (term.curs_animate)
+    curs_anim_invalidate();
   win_update(false);
   win_set_timer(cblink_phase_cb, 20);
 }
 
-/* Expand mode: ping-pong expand amount 0..255 drives cursor geometry. */
+/* Expand mode: ping-pong expand amount 0..255 drives cursor geometry.
+ * Geometry overhangs the cursor cell — invalidate a 1-cell margin so the
+ * previous larger frame is erased (prevents permanent outline ghosts). */
 static void
 cblink_expand_cb(void)
 {
   if (cfg.smooth_blink_cursor != ANIM_EXPAND
-      || !term_cursor_blinks() || !term.has_focus) {
+      || !term_cursor_blinks() || !term.has_focus
+      || !term.cursor_on || term.show_other_screen) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
     term.cblink_expand = 0;
     term.cursor_invalid = true;
+    int dys = term.curs.y - term.disptop;
+    term_invalidate(term.curs.x - 1, dys - 1,
+                    term.curs.x + 1, dys + 1);
     win_update(false);
     return;
   }
@@ -486,6 +496,11 @@ cblink_expand_cb(void)
   term.cblink_alpha = 255;
   term.cblinker = 1;
   term.cursor_invalid = true;
+  int dys = term.curs.y - term.disptop;
+  term_invalidate(term.curs.x - 1, dys - 1,
+                  term.curs.x + 1, dys + 1);
+  if (term.curs_animate)
+    curs_anim_invalidate();
   win_update(false);
   win_set_timer(cblink_expand_cb, 20);
 }
@@ -503,14 +518,13 @@ cblink_cb(void)
   }
   if (cfg.smooth_blink_cursor == ANIM_PHASE
       && term_cursor_blinks() && term.has_focus) {
-    term.cblink_phase = 0;
+    /* free-run the phase chain; do not reset phase here (avoids snap) */
     cblink_phase_cb();
     return;
   }
   if (cfg.smooth_blink_cursor == ANIM_EXPAND
       && term_cursor_blinks() && term.has_focus) {
-    term.cblink_expand = 0;
-    term.cblink_dir = false;
+    /* free-run the expand chain; do not reset expand here (avoids snap) */
     cblink_expand_cb();
     return;
   }
@@ -524,6 +538,7 @@ cblink_cb(void)
   else {
     term.cblinker = !term.cblinker;
     term.cblink_alpha = term.cblinker ? 255 : 0;
+    term.cursor_invalid = true;
     win_update(false);
   }
   term_schedule_cblink();
@@ -789,7 +804,8 @@ term_scroll_anim_begin(int topline, int botline, int lines)
     /* do not animate status area rows */
     if (bot > term.rows)
       bot = term.rows;
-    ok = top < bot;
+    /* both layers must fully cover the band: band height >= |lines|*ch */
+    ok = top < bot && abs(lines) <= bot - top;
   }
   if (ok)
     ok = win_scroll_capture(top, bot);
@@ -804,6 +820,8 @@ term_scroll_anim_begin(int topline, int botline, int lines)
   term.scroll_anim_top = top;
   term.scroll_anim_bot = bot;
   term.scroll_anim_start = get_tick_count();
+  /* first frame: force dirty cells even if pre/post content compares equal */
+  term_invalidate(0, top, term.cols - 1, bot - 1);
   if (cfg.dynamic_blur > 0)
     win_dynamic_blur_pulse();
   win_set_timer(scroll_anim_cb, 16);
@@ -844,7 +862,8 @@ scroll_anim_cb(void)
     win_scroll_release();
     term_invalidate(0, term.scroll_anim_top, term.cols - 1,
                     term.scroll_anim_bot - 1);
-    win_update(false);
+    /* force a synchronous final frame (skip gates must not defer this) */
+    win_update_now();
     return;
   }
   term_invalidate(0, term.scroll_anim_top, term.cols - 1,
@@ -1099,6 +1118,7 @@ show_screen(bool other_screen, bool flip)
   if (!other_screen) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
+    term.cursor_invalid = true;
     term_schedule_cblink();
   }
 
@@ -5426,6 +5446,10 @@ term_invalidate(int left, int top, int right, int bottom)
 void
 term_scroll(int rel, int where)
 {
+  /* User-driven view change invalidates any in-flight smooth-scroll band
+   * (snapshot would overlay stale pixels on the new disptop). */
+  term_scroll_anim_cancel();
+
   if (term.hovering) {
     term.hovering = false;
     win_update(true);

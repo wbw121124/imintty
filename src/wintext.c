@@ -6105,10 +6105,12 @@ win_paint(void)
     dc = screen_dc;
 
   // better invalidate more than less; limited to text area in term_invalidate
+  // account for horizontal view shift (horclip) so the right cells are marked
+  int hclip = horclip();
   term_invalidate(
-    (p.rcPaint.left - PADDING) / cell_width,
+    (p.rcPaint.left - PADDING + hclip) / cell_width,
     (p.rcPaint.top - PADDING - OFFSET) / cell_height,
-    (p.rcPaint.right - PADDING - 1) / cell_width,
+    (p.rcPaint.right - PADDING + hclip - 1) / cell_width,
     (p.rcPaint.bottom - PADDING - OFFSET - 1) / cell_height
   );
 
@@ -6118,6 +6120,14 @@ win_paint(void)
     if (tek_mode)
       tek_paint();
     else {
+      // match do_update: shift world transform for horizontal view clip
+      XFORM xf_paint;
+      bool has_xf_paint = false;
+      if (hclip && SetGraphicsMode(dc, GM_ADVANCED)) {
+        XFORM xform = {1.0f, 0.0f, 0.0f, 1.0f, (float)(-hclip), 0.0f};
+        has_xf_paint = GetWorldTransform(dc, &xf_paint) != 0
+                       && SetWorldTransform(dc, &xform);
+      }
       term_paint();
       {
         XFORM xf_save;
@@ -6137,6 +6147,8 @@ win_paint(void)
                            term.scroll_anim_top, term.scroll_anim_bot);
       }
       draw_cursor_overlay();
+      if (has_xf_paint)
+        SetWorldTransform(dc, &xf_paint);
     }
   }
 

@@ -2914,7 +2914,13 @@ static int last_i = 0;
 
 // Clockwork
 int get_tick_count(void) { return GetTickCount(); }
-int cursor_blink_ticks(void) { return GetCaretBlinkTime(); }
+int cursor_blink_ticks(void)
+{
+  DWORD t = GetCaretBlinkTime();
+  if (t == INFINITE || t > 10000)
+    t = 500;
+  return (int)t;
+}
 
 static void
 flash_taskbar(bool enable)

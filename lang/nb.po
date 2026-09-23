@@ -1,12 +1,12 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the mintty package.
+# This file is distributed under the same license as the imintty package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"Project-Id-Version: imintty\n"
+"Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
 "POT-Creation-Date: 2026-06-09 00:32+0200\n"
 "PO-Revision-Date: 2019-09-06 18:08+0200\n"
 "Last-Translator: Imre Kristoffer Eilertsen <imreeil42@gmail.com>\n"
@@ -191,7 +191,7 @@ msgstr "@ Windows-språk @"
 msgid "* Locale environm. *"
 msgstr "* Regionsområde *"
 
-#. __ UI localization: use mintty configuration setting (Text - Locale)
+#. __ UI localization: use imintty configuration setting (Text - Locale)
 #: config.c:2466
 msgid "= cfg. Text Locale ="
 msgstr "= Oppsatt tekstregion ="
@@ -1064,7 +1064,7 @@ msgstr "L&egg til i de tilpassede fargene"
 msgid "Options"
 msgstr "Innstillinger"
 
-#. __ Options: dialog title: "mintty <release> available (for download)"
+#. __ Options: dialog title: "imintty <release> available (for download)"
 #: windialog.c:268
 msgid "available"
 msgstr "tilgjengelig"
@@ -1419,9 +1419,9 @@ msgid "Syntax error in geometry argument '%s'"
 msgstr "Syntaksfeil i geometriargumentet '%s'"
 
 #: winmain.c:7506
-msgid "Mintty could not detach from caller, starting anyway"
+msgid "Imintty could not detach from caller, starting anyway"
 msgstr ""
-"Mintty klarte ikke å løsrive seg fra påkalleren, men starter opp likevel"
+"Imintty klarte ikke å løsrive seg fra påkalleren, men starter opp likevel"
 
 #: winmain.c:7889
 msgid "Using default title due to invalid characters in program name"
@@ -1478,11 +1478,11 @@ msgstr "Det gis ingen forsikringer, i den grad loven tillater det."
 #: appinfo.h:69
 msgid ""
 "Please report bugs or request enhancements through the issue tracker on the "
-"mintty project page located at\n"
+"imintty project page located at\n"
 "%s.\n"
 "See also the Wiki there for further hints, thanks and credits."
 msgstr ""
 "Vennligst meld inn bugger eller forespør forbedringer gjennom rapportlisten "
-"på mintty sin prosjektside, som er hos\n"
+"på imintty sin prosjektside, som er hos\n"
 "%s.\n"
 "Se også wikien der for flere tips, takk, og krediteringer."

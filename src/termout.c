@@ -1,4 +1,4 @@
-// termout.c (part of mintty)
+// termout.c (part of imintty)
 // Copyright 2008-23 Andy Koppe, 2017-2026 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -2668,7 +2668,7 @@ set_modes(bool state)
         when 2004:       /* xterm bracketed paste mode */
           term.bracketed_paste = state;
 
-        /* Mintty private modes */
+        /* Imintty private modes */
         when 7700:       /* CJK ambiguous width reporting */
           term.report_ambig_width = state;
         when 7711:       /* Scroll marker in current line */
@@ -2878,7 +2878,7 @@ get_mode(bool privatemode, int arg)
       when 1022:
         return 2 - term.emoji_width;
 
-      /* Mintty private modes */
+      /* Imintty private modes */
       when 7700:       /* CJK ambiguous width reporting */
         return 2 - term.report_ambig_width;
       when 7711:       /* Scroll marker in current line */

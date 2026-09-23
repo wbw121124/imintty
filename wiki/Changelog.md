@@ -84,8 +84,8 @@ Window handling
   * Declare per-monitor high DPI support in manifest (#1339).
 
 Other
-  * The "About" display includes the mintty process ID.
-  * Enable saving image and HTML dumps to home directory, also in WSL (mintty/wsltty#372).
+  * The "About" display includes the imintty process ID.
+  * Enable saving image and HTML dumps to home directory, also in WSL (imintty/wsltty#372).
   * Wiki: configuration example for text-to-speech output (~#1350).
   * Fix log filter.
 
@@ -115,13 +115,13 @@ WSL support
   * Workaround for display corruption in wsl/conpty/cygwin chain after entering ^O (#1332).
 
 Window handling
-  * Revise close button handling for WSL, esp. in Windows 10 (mintty/wsltty#368).
+  * Revise close button handling for WSL, esp. in Windows 10 (imintty/wsltty#368).
 
 Configuration
   * Interactive configuration of normal and darkmode themes in switchable dialog box (~#1303).
   * Optional configuration of normal and darkmode themes in two distinct dialog boxes (#1303).
   * New option ConfigThemes to select themes configuration mode (~#1303).
-  * User-definable function config-log to show all effective log files (mintty/wsltty#333).
+  * User-definable function config-log to show all effective log files (imintty/wsltty#333).
   * New option LogFilter to avoid terminal reports on viewing log files.
   * Change emoji default style from none to Emojis=noto.
   * New option KeyClick.
@@ -178,7 +178,7 @@ Keyboard handling
 WSL support
   * New mode to run WSL directly with Windows default access gateway wsl.exe.
   * Drop wslbridge gateways by default.
-  * Derive default icon from WSL launcher shortcut (mintty/wsltty#110).
+  * Derive default icon from WSL launcher shortcut (imintty/wsltty#110).
   * Fix WSL icons in session launcher menu entries, also extracted from WSL launchers.
 
 Window handling
@@ -195,7 +195,7 @@ Configuration
   * New option SelectionMode.
   * New user-definable function toggle-reverse-video.
   * Logfile placeholders $h or $p are replaced with hostname or process ID.
-  * Enable logging toggling by default: Log=mintty.$h.%Y-%m-%d_%H-%M-%S.$p.log Logging=no (~#1167).
+  * Enable logging toggling by default: Log=imintty.$h.%Y-%m-%d_%H-%M-%S.$p.log Logging=no (~#1167).
 
 ### 3.7.8 (22 March 2025) ###
 
@@ -227,7 +227,7 @@ Font configuration:
 Configuration:
   * New option ThemeDark to be used if Windows Darkmode is set (#1305, ~#1303).
   * New glyph centering prefix ">" for option FontChoice (#1313).
-  * Propagate TERM config setting to WSL HOSTTERM variable (mintty/wsltty#290, ~mintty/wsltty#278).
+  * Propagate TERM config setting to WSL HOSTTERM variable (imintty/wsltty#290, ~imintty/wsltty#278).
   * New option PixMousePointer.
   * New option MaxImageSize.
 
@@ -239,7 +239,7 @@ Terminal features
 Character rendering
   * Reenabled distinct blinking for combined characters (broken since 3.5.3).
   * Fix skipping of accent to next position on background colour.
-  * Fix drawing of Powerline round symbols (mintty/wsltty#358).
+  * Fix drawing of Powerline round symbols (imintty/wsltty#358).
   * Fix rendering of right-to-left scripts on italic or cursor position.
   * Tweak diagonal box characters for uniform appearance.
   * Limit double-width enforcement by ZWJ to potential emoji base characters.
@@ -301,7 +301,7 @@ Configuration
   * New option BoxDrawing (#935, #1119).
   * New user-definable functions tab-left, tab-right to reorder tabbar (#1283).
   * Setting options Menu* to empty value disables the respective menu (#1279).
-  * Skip config files in $HOME if $HOME does not exist (mintty/wsltty#351).
+  * Skip config files in $HOME if $HOME does not exist (imintty/wsltty#351).
   * New option BorderStyle (#7).
 
 ### 3.7.4 (03 July 2024) ###
@@ -315,7 +315,7 @@ Misc
   * Fix version tag and package building problems.
 
 Configuration
-  * Prevent saving changed settings to /etc/minttyrc.
+  * Prevent saving changed settings to /etc/iminttyrc.
 
 ### 3.7.2 (27 June 2024) ###
 
@@ -339,7 +339,7 @@ Keyboard handling
   * Revise AltGr handling to support flexible right-Alt+left-Ctrl combinations (#1266).
 
 Misc
-  * Support fallback to legacy wslbridge for old Windows versions (mintty/wsltty#350).
+  * Support fallback to legacy wslbridge for old Windows versions (imintty/wsltty#350).
   * Fix CopyTab=yes crash condition (#1269).
   * Optional confirmation for pasting multi-line clipboard contents (#1268).
   * Unsqueeze the Options dialog slightly.
@@ -371,7 +371,7 @@ Terminal features
 
 Misc
   * Fix handling of options to be saved (#1246, #1247).
-  * Tune and fix click-opening URL (mintty/wsltty#346, #1254).
+  * Tune and fix click-opening URL (imintty/wsltty#346, #1254).
   * Fix layout of Options dialog Selection pane (#1257).
 
 Window handling
@@ -387,7 +387,7 @@ Configuration
 ### 3.7.0 (14 November 2023) ###
 
 Misc
-  * Fix memory leak (mintty/wsltty#340) caused by dynamic emoji checking.
+  * Fix memory leak (imintty/wsltty#340) caused by dynamic emoji checking.
   * Revise and unify handling of dynamic pathnames for terminal control.
   * Guard network access via dynamic pathnames.
 
@@ -409,10 +409,10 @@ Window handling
   * Save image file with proper access rights.
 
 Font rendering
-  * Support size adjustment of alternative fonts, for use as secondary fonts (mintty/wsltty#341).
+  * Support size adjustment of alternative fonts, for use as secondary fonts (imintty/wsltty#341).
 
 Configuration
-  * Alternative font specification supports initial + for size increase (mintty/wsltty#341).
+  * Alternative font specification supports initial + for size increase (imintty/wsltty#341).
   * New option GuardNetworkPaths.
   * Added STTY to FilterPasteControls settings (xterm 388), as default.
 
@@ -460,15 +460,15 @@ Terminal features
   * Support multi-line progress detection.
 
 Windows integration
-  * Manage user-set HOME for calling Windows from WSL (mintty/wsltty#324, ~mintty/wsltty#76).
+  * Manage user-set HOME for calling Windows from WSL (imintty/wsltty#324, ~imintty/wsltty#76).
   * Support OSC 7 directory cloning if cloning WSL window while in rootfs.
 
 Configuration
   * Status line is configurable in Options menu, switchable from context menu.
   * New user-definable function toggle-tabbar (#1201).
   * Setting ClicksPlaceCursor presets all readline mouse modes.
-  * Dynamic support for flags emojis, deployment script (~mintty/wsltty#321).
-  * `MINTTY_DEBUG=C mintty ...` will list loaded config files (#1181).
+  * Dynamic support for flags emojis, deployment script (~imintty/wsltty#321).
+  * `IMINTTY_DEBUG=C imintty ...` will list loaded config files (#1181).
   * New option ProgressScan.
 
 ### 3.6.3 (18 Dec 2022) ###
@@ -562,7 +562,7 @@ Highlights
   * Setting helmholtz theme as default colour scheme.
 
 Window handling
-  * Reflow terminal lines when resizing terminal width (#82, #219, mintty/wsltty#154).
+  * Reflow terminal lines when resizing terminal width (#82, #219, imintty/wsltty#154).
 
 Terminal features
   * Tweak pending auto-wrap state affected when switching wrap modes.
@@ -608,7 +608,7 @@ Desktop integration
 
 Window handling
   * New key shortcut Shift+Shift+Alt+F2 (both Shift keys) to enforce new window outside tabbar.
-  * Distinct system menu items "New Window" and "New Tab" if tabbar enabled (mintty/wsltty#295).
+  * Distinct system menu items "New Window" and "New Tab" if tabbar enabled (imintty/wsltty#295).
   * Limiting size of scrollback buffer to secure buffer and clipboard handling (#1134).
   * Avoid position gap after Options Apply (~#1126) in more cases, especially scrollbar toggling.
   * Always fix window position back to screen when widening beyond screen.
@@ -623,7 +623,7 @@ Hotkey functions and user-definable functions
   * New user-definable functions new-tab and new-tab-cwd.
 
 Configuration
-  * New option NewTabs (mintty/wsltty#295).
+  * New option NewTabs (imintty/wsltty#295).
   * New command-line option --newtabs.
   * New option MaxScrollbackLines.
   * Option OldModifyKeys to tune modified special keys.
@@ -707,8 +707,8 @@ Configuration
   * New option BlinkColour.
   * New options MousePointer, AppMousePointer.
   * Restored "Allow blinking" in Options dialog (#1097).
-  * WSL-specific detection of available settings for Terminal Type (option Term) (mintty/wsltty#278).
-  * Export TERM to WSL (mintty/wsltty#278).
+  * WSL-specific detection of available settings for Terminal Type (option Term) (imintty/wsltty#278).
+  * Export TERM to WSL (imintty/wsltty#278).
 
 ### 3.4.7 (16 March 2021) ###
 
@@ -735,14 +735,14 @@ Vector graphics (Tektronix 4014 mode)
   * Enhanced "defocused" point plot indication by boldened point size.
 
 Window handling
-  * Lines cleared from top of screen are scrolled into scrollback buffer (mintty/wsltty#272).
+  * Lines cleared from top of screen are scrolled into scrollback buffer (imintty/wsltty#272).
   * New user-definable function win-toggle-always-on-top (#1095).
-  * New heuristics to adjust row spacing to font metrics (mintty/wsltty#257).
+  * New heuristics to adjust row spacing to font metrics (imintty/wsltty#257).
 
 Configuration
   * Run shell in login mode if terminal started from Windows shortcut.
   * New option LoginFromShortcut.
-  * New option AutoLeading (mintty/wsltty#257).
+  * New option AutoLeading (imintty/wsltty#257).
   * New option EraseToScrollback.
   * New option TekStrap.
 
@@ -765,9 +765,9 @@ Keyboard handling
   * Applying modifyOtherKeys mode 2 more consistently to special keys (~~#1082).
 
 Configuration
-  * Tool `mintheme` works from WSL and in `screen` (mintty/wsltty#268).
+  * Tool `mintheme` works from WSL and in `screen` (imintty/wsltty#268).
   * Support home or environment variable prefix for setting SaveFilename (~#1086).
-  * New settings -P/--pcon/ConPTY to enable/disable ConPTY support (mintty/wsltty#271).
+  * New settings -P/--pcon/ConPTY to enable/disable ConPTY support (imintty/wsltty#271).
   * Support for theme file conversion on filename drag-and-drop (#1079).
   * Support for theme file conversion on "file:" URL drag-and-drop (~#1079).
   * Support for ".json" theme file conversion (~~#1079).
@@ -778,9 +778,9 @@ Unicode and Emoji data
   * Update to Emoji data version 13.1.
 
 Terminal features
-  * Terminal reset clears progress bar (mintty/wsltty#202).
+  * Terminal reset clears progress bar (imintty/wsltty#202).
   * DECTST colour fillings (CSI 4;10..13 y, VT240).
-  * Smart detection of progress indication also inmidst line (mintty/wsltty#202).
+  * Smart detection of progress indication also inmidst line (imintty/wsltty#202).
   * Fixed rendering of 0x7F (DEL code) in some 96-characters NRCS modes.
   * Support for 48-bit hex colour specs (#1072).
 
@@ -813,10 +813,10 @@ Character encoding
 
 Terminal features
   * Progress bar control sequences CSI %q or OSC 9;4 (experimental).
-  * Optional automatic progress detection (mintty/wsltty#202).
+  * Optional automatic progress detection (imintty/wsltty#202).
   * Media Copy sequence CSI 12 i to dump screen as image (#1051).
   * HTML screen dumps do not visualize Space and TAB.
-  * New DECSCUSR (CSI SP q) values 7, 8 to set cursor style box (mintty/wsltty#204).
+  * New DECSCUSR (CSI SP q) values 7, 8 to set cursor style box (imintty/wsltty#204).
   * Fixed horizontal position of emojis in double-width lines.
 
 Window handling / Tabbar (thanks to K. Takata)
@@ -827,8 +827,8 @@ Character encoding
   * Always set LANG if option Locale is used (#1050).
 
 Configuration
-  * New option ProgressBar (mintty/wsltty#202).
-  * New option value CursorType=box (config file/command line only, mintty/wsltty#204).
+  * New option ProgressBar (imintty/wsltty#202).
+  * New option value CursorType=box (config file/command line only, imintty/wsltty#204).
 
 ### 3.4.1 (24 October 2020) ###
 
@@ -860,7 +860,7 @@ Character encoding
   * New option to enforce narrow ambiguous-width.
   * Do not clear/overwrite all locale categories anymore by option Locale.
   * Do not enforce UTF-8 encoding with WSL anymore.
-  * Propagate locale settings with option --WSL (mintty/wsltty#259).
+  * Propagate locale settings with option --WSL (imintty/wsltty#259).
 
 Configuration
   * New option CopyTab (#1037).
@@ -876,7 +876,7 @@ Window handling / Tabs
 
 Window handling
   * Fixed offset of saved image.
-  * Fixed themes list and interactive theme switching feedback (mintty/wsltty#251).
+  * Fixed themes list and interactive theme switching feedback (imintty/wsltty#251).
   * Support system hotkey for activation in "Quake mode" (#1029).
 
 Mouse handling
@@ -912,12 +912,12 @@ Keyboard handling
   * Deprecated Shift+Escape/Break/Pause.
 
 Window handling
-  * Prevent mouse wheel double interpretation, also fixing speed issues (mintty/wsltty#238).
+  * Prevent mouse wheel double interpretation, also fixing speed issues (imintty/wsltty#238).
   * Handle proper link attributes when screen is scrolled (#1021).
   * Image saving feature for terminal contents (png format), DEC and Tek.
   * Fixed Shift+Alt+F2 size control on maximised/fullscreen windows (#633).
   * Fixed Alt+F2 on normal window to clone current size (broken since 2.4.3).
-  * Tweak click-opening WSL files (mintty/wsltty#115).
+  * Tweak click-opening WSL files (imintty/wsltty#115).
 
 Configuration
   * Support resource configuration directories via links (#1016).
@@ -994,7 +994,7 @@ Terminal features
   * Support Ctrl+Alt-mouse clicks (#987).
 
 Character encoding
-  * Enhanced and documented GB18030 support (mintty/wsltty#224).
+  * Enhanced and documented GB18030 support (imintty/wsltty#224).
 
 Keyboard handling
   * Unmapped AltGr combinations: don't fallback to ESC prefixing (~#969).
@@ -1010,13 +1010,13 @@ Font rendering
   * Support emoji style OpenMoji (#985).
 
 Window handling
-  * Tweak title bar dark mode adaptation to undocumented Windows changes (#983, mintty/wsltty#157).
-  * Support dark mode for menus (#983, mintty/wsltty#157).
+  * Tweak title bar dark mode adaptation to undocumented Windows changes (#983, imintty/wsltty#157).
+  * Support dark mode for menus (#983, imintty/wsltty#157).
   * DropCommands secured against multiple placeholders.
   * DropCommands optionally pastes Windows format paths (#982).
-  * Drag-and-drop import of itermcolors schemes (mintty/wsltty#227).
+  * Drag-and-drop import of itermcolors schemes (imintty/wsltty#227).
   * Workaround to interact with Hot Keyboard (#877, setting SupportExternalHotkeys=4).
-  * Disable deprecated glass mode from interactive options (#501, mintty/wsltty#241).
+  * Disable deprecated glass mode from interactive options (#501, imintty/wsltty#241).
   * Speedup of scrollback searching (#988, #986).
 
 Other
@@ -1026,14 +1026,14 @@ Other
 Configuration
   * Options BellFile2 ... BellFile7 (#974).
   * Options DispSpace, DispTab, DispClear.
-  * Options Suppress* are now resilient against space (mintty/wsltty#235).
+  * Options Suppress* are now resilient against space (imintty/wsltty#235).
   * Option value SupportExternalHotkeys=4 (#877).
   * Option value Emojis=openmoji (#985).
 
 ### 3.1.4 (25 February 2020) ###
 
 Terminal features
-  * Linux console controls for underscore cursor size (mintty/wsltty#203).
+  * Linux console controls for underscore cursor size (imintty/wsltty#203).
   * Fixed sixel display failures at certain sizes (#967).
 
 Window handling
@@ -1145,14 +1145,14 @@ Window handling
   * User-definable functions for scrollback scrolling (~#894).
   * Fixed Sixel image list handling (#905).
   * Optimized Sixel image rendering if overlapped (#905).
-  * Dark colour theme support in scrollbar (mintty/wsltty#157).
+  * Dark colour theme support in scrollbar (imintty/wsltty#157).
   * Clear resizing popup after leaving fullscreen and moving (#913).
 
 Other
   * Cache emoji image data (speedup emoji display).
   * Dropped PATH dependency of printer feature (#897).
   * Dropped float: left from copied HTML style (#900).
-  * Fixed Windows handle resource leak when displaying many emojis (mintty/wsltty#185).
+  * Fixed Windows handle resource leak when displaying many emojis (imintty/wsltty#185).
   * Fixed potential crash on Sixel display after resource leak.
   * Preventing Windows handle resource exhaustion when displaying many Sixel images.
   * Fixed potential crash when confirming exit (#907).
@@ -1244,7 +1244,7 @@ Terminal features
   * VT420 horizontal scrolling: DECBI, DECFI, DECIC, DECDC.
   * VT510 DECNCSM.
   * Primary Device Attributes report VT420 by default; VT525 supported.
-  * Blinking cursor mode (DECSET 12) overlays blinking cursor style (DECSCUSR) so that DECRST 12 does not spoil blinking style (#818, mintty/wsltty#133).
+  * Blinking cursor mode (DECSET 12) overlays blinking cursor style (DECSCUSR) so that DECRST 12 does not spoil blinking style (#818, imintty/wsltty#133).
   * Support ECMA-48 SPD control sequence, values 0 and 3 (RTL fun feature).
   * Support DECSET 1007 (mouse wheel reporting, xterm).
   * New CSI # p/q XTPUSHSGR and XTPOPSGR aliases (xterm 345).
@@ -1277,18 +1277,18 @@ Clipboard handling
   * New options CopyAsRTFFont, CopyAsRTFFontHeight (~#878).
 
 Configuration
-  * Mintty packages include a selection of bell sounds (#711).
+  * Imintty packages include a selection of bell sounds (#711).
   * New user-definable key name CapsLock.
   * New user-definable key name prefix ‘*’ to define for all modifiers.
   * New user-definable modifier key assignments super and hyper.
-  * New user-definable function paste-path (mintty/wsltty#161).
+  * New user-definable function paste-path (imintty/wsltty#161).
   * New user-definable control char syntax (#873).
   * New prefixes U/Y (for super/hyper) for user-defined keys.
   * New user-definable numeric action, entering a function key sequence.
   * New option BellInterval to squash BEL sequences (#865).
   * New option SearchContext (#797).
-  * Offer terminal types vt420, vt525; also xterm-direct, mintty, mintty-direct if installed (~#866, ~#867).
-  * With --WSL, initialise title to WSL name rather than command line (~mintty/wsltty#167).
+  * Offer terminal types vt420, vt525; also xterm-direct, imintty, imintty-direct if installed (~#866, ~#867).
+  * With --WSL, initialise title to WSL name rather than command line (~imintty/wsltty#167).
 
 ### 3.0.0 (28 March 2019) ###
 
@@ -1387,15 +1387,15 @@ Terminal features
 
 Window handling
   * Flexible window grouping configuration (#789).
-  * If started from desktop shortcut, clone AppID from it (#784, mintty/wsltty#96).
+  * If started from desktop shortcut, clone AppID from it (#784, imintty/wsltty#96).
   * Display speedup by skipping refresh intervals (#835).
-  * Support for pasting from Windows clipboard history (mintty/wsltty#139).
-  * Option to lock title from being changed (mintty/wsltty#138).
+  * Support for pasting from Windows clipboard history (imintty/wsltty#139).
+  * Option to lock title from being changed (imintty/wsltty#138).
 
 Keyboard handling
   * Workaround for buggy StrokeIt tool sending right-Alt+Fn key events (#833).
   * Optional support for external hotkeys (esp. to close window), overriding disabled Alt+Fn shortcuts.
-  * Workaround for Windows clipboard history pasting implementation (mintty/wsltty#139).
+  * Workaround for Windows clipboard history pasting implementation (imintty/wsltty#139).
   * Unified environment for external commands attached to keys (KeyFunctions) with those in context menu (UserCommands).
 
 Configuration
@@ -1409,7 +1409,7 @@ Configuration
 ### 2.9.5 (5 December 2018) ###
 
 Window handling
-  * Fixed startup directory after cloning new window after starting from desktop shortcut (#784, mintty/wsltty#96).
+  * Fixed startup directory after cloning new window after starting from desktop shortcut (#784, imintty/wsltty#96).
   * Avoiding stale hover indication in unfocussed window.
   * Changed default handling of resolution change to HandleDPI=2 (#824).
 
@@ -1443,12 +1443,12 @@ Window handling
   * Fixed suspend-output-while-selecting buffer, size is configurable (#816, ~#799).
   * Consider glyph width for font width determination (#808).
   * Do not start process to construct process list for exit confirmation (~#448).
-  * Enhanced taskbar icon grouping behaviour (#784, mintty/wsltty#96, ?#495, ?#420, ??#801).
-  * Setting MINTTY_SHORTCUT when started from a desktop shortcut.
+  * Enhanced taskbar icon grouping behaviour (#784, imintty/wsltty#96, ?#495, ?#420, ??#801).
+  * Setting IMINTTY_SHORTCUT when started from a desktop shortcut.
   * Maintain proper terminal size after DPI change in DPI awareness mode V2 (#774).
 
 Configuration
-  * AppID supports placeholders for flexible customization of taskbar icon grouping behaviour (#784, mintty/wsltty#96, ?#495, ?#420, ??#801).
+  * AppID supports placeholders for flexible customization of taskbar icon grouping behaviour (#784, imintty/wsltty#96, ?#495, ?#420, ??#801).
   * Option SuspendWhileSelecting to set the max size of the suspend-output-while-selecting buffer (#816, ~#799).
 
 ### 2.9.3 (4 October 2018) ###
@@ -1457,12 +1457,12 @@ Terminal features
   * Fixed failing recognition of single-char ESC sequences.
 
 Terminal interaction
-  * Enhanced ligature support redisplays previous cursor line (#601, mintty/wsltty#123).
+  * Enhanced ligature support redisplays previous cursor line (#601, imintty/wsltty#123).
   * Support switching rectangular mode while mouse-dragging selection.
 
 Configuration
   * Option Enable132ColumnSwitching to enable 132/80-column switching initially (#196).
-  * Option value LigaturesSupport=2 (#601, mintty/wsltty#123).
+  * Option value LigaturesSupport=2 (#601, imintty/wsltty#123).
 
 ### 2.9.2 (3 October 2018) ###
 
@@ -1471,7 +1471,7 @@ Terminal interaction
   * Optionally include trailing space in selection (~#768, ~#800).
   * Reduced occasional flickering by buffering terminal input (#799).
   * Sanitized output buffering during selection (~#799).
-  * Ligatures display support while being input (mintty/wsltty#123, #601).
+  * Ligatures display support while being input (imintty/wsltty#123, #601).
   * Optionally suppress mouse wheel effects (#170).
 
 Terminal features
@@ -1483,7 +1483,7 @@ Window handling
   * OSC l to set window title (shelltool, dtterm, xterm 333).
 
 Configuration
-  * Option LigaturesSupport (mintty/wsltty#123, #601).
+  * Option LigaturesSupport (imintty/wsltty#123, #601).
   * Option SuppressMouseWheel (#170).
   * Option TrimSelection (~#768, ~#800).
   * Support multi-line splitting for all key:value list options.
@@ -1536,14 +1536,14 @@ Window handling
   * Always allow switching scrollbar; do not switch on terminal reset (like xterm).
 
 Desktop / taskbar integration
-  * Partially withdrawn 2.9.0 patch to keep WSL windows together in Windows task bar (mintty/wsltty#96).
-  * AppID (to group taskbar icons) is derived from WSL distro only with setting AppID=@ (#784, ~mintty/wsltty#96).
+  * Partially withdrawn 2.9.0 patch to keep WSL windows together in Windows task bar (imintty/wsltty#96).
+  * AppID (to group taskbar icons) is derived from WSL distro only with setting AppID=@ (#784, ~imintty/wsltty#96).
 
 Configuration
   * New tool option `mintheme --save` to save theme in config file (#794).
   * Option ElasticMouse=true to not select characters only slightly touched (#308).
   * Option KeyFunctions for user-defined shortcuts and function keys (#705, #602, #645, #399, #252, ~#726, ~#524, ~#451, ~#523).
-  * Special option setting AppID=@ to derive taskbar grouping implicitly from WSL distro name (#784, ~mintty/wsltty#96).
+  * Special option setting AppID=@ to derive taskbar grouping implicitly from WSL distro name (#784, ~imintty/wsltty#96).
   * Support for Windows pathnames in background filenames (#18, #666).
   * Option to scale window to aspect ratio of background image (#18, #666).
   * New option value -RW to list installed WSL distributions and properties.
@@ -1580,7 +1580,7 @@ Character attributes and rendering
   * SGR 58/59 for underline colour (kitty, iTerm2).
   * Fixed (almost) selection highlighting of emojis.
   * Drawing Unicode Block Elements which are broken in many fonts (#264).
-  * Fixed initial bold as font suppression glitch (mintty/wsltty#103).
+  * Fixed initial bold as font suppression glitch (imintty/wsltty#103).
 
 Window control
   * DECSET 30 to enable/disable outer scrollbar (like xterm) (#159, ~#262).
@@ -1607,7 +1607,7 @@ Window handling
   * Revised Ctrl+(Shift+)Tab window switching (#773).
   * Ctrl+Ctrl+(Shift+)Tab for window switching including iconized windows (#735).
   * Win+Shift move coupling of tab sets if SessionGeomSync ≥ 2 (#600, #699).
-  * Keeping WSL windows together in Windows task bar (mintty/wsltty#96).
+  * Keeping WSL windows together in Windows task bar (imintty/wsltty#96).
 
 Configuration
   * CMY(K) colour specifications in OSC sequences and config file.
@@ -1623,22 +1623,22 @@ Themes management
 
 Other
   * Updated Emoji data and built-in width data to Unicode 11.0.
-  * Enabled OSC 7 current directory injection for Ctrl+click in WSL (mintty/wsltty#104, mintty/wsltty#19).
+  * Enabled OSC 7 current directory injection for Ctrl+click in WSL (imintty/wsltty#104, imintty/wsltty#19).
   * Reporting start error (exit status 255) (#745).
   * Changed start error exit code from 255 to 126 (#745).
   * Fixed slowdown of Character Info mode if Unicode data are not deployed.
-  * Option --WSLmode to tune behaviour for WSL distro but not launch (mintty/wsltty#99).
-  * WSLtty appx mode triggered statically or dynamically (mintty/wsltty.appx#3).
+  * Option --WSLmode to tune behaviour for WSL distro but not launch (imintty/wsltty#99).
+  * WSLtty appx mode triggered statically or dynamically (imintty/wsltty.appx#3).
   * Clarified additional configuration requirements for option TaskCommands in the manual.
 
 ### 2.8.5 (14 Apr 2018) ###
 
 Character handling and rendering
   * CJK brackets are expanded if needed to ensure their symmetry (#756).
-  * Support of emoji style text attribute SGR 51/52 (mintty/wsltty#82, #600).
+  * Support of emoji style text attribute SGR 51/52 (imintty/wsltty#82, #600).
   * Fixed emoji display variation selector handling.
-  * Character Info displays emoji sequence short names (mintty/wsltty#82, #600).
-  * Reverted Sixel colour registers patch that could fail Sixel display or even stall mintty window (#740, mintty/wsltty#90).
+  * Character Info displays emoji sequence short names (imintty/wsltty#82, #600).
+  * Reverted Sixel colour registers patch that could fail Sixel display or even stall imintty window (#740, imintty/wsltty#90).
 
 Input
   * Reenabled Ctrl+key escape sequences (#743).
@@ -1648,11 +1648,11 @@ Mouse handling
   * Reenabled drag-and-drop text selection on focussing at a threshold (~#717).
 
 Configuration
-  * Alt+F2 and mintty --dir=... stay in selected dir even in login mode (#500, #744).
+  * Alt+F2 and imintty --dir=... stay in selected dir even in login mode (#500, #744).
   * Fixed option --dir=...
   * Context menu configuration (MenuMenu etc): new flags 'x' and 'u' (#755).
   * More layout-tolerant colour value syntax (#758).
-  * Invocation as wsl*[-distro].exe implies a --WSL[=distro] parameter (mintty/wsltty#63).
+  * Invocation as wsl*[-distro].exe implies a --WSL[=distro] parameter (imintty/wsltty#63).
   * Added missing option `mintheme --list`.
   * New mintheme options --file (#762) and --query.
   * New option ClearSelectionOnInput=false disables selection highlight clearing on input (#222).
@@ -1662,7 +1662,7 @@ Window handling
   * Skip refresh after colour setting if nothing changed (e.g. by prompt).
 
 Desktop integration
-  * WSL mount point configuration (/etc/wsl.conf or fstab) is considered in path conversion for open/paste (mintty/wsltty#91).
+  * WSL mount point configuration (/etc/wsl.conf or fstab) is considered in path conversion for open/paste (imintty/wsltty#91).
   * Workaround for ConEmu WM_MOUSEACTIVATE bug (#724).
 
 Documentation
@@ -1672,7 +1672,7 @@ Documentation
 ### 2.8.4 (10 Feb 2018) ###
 
 Character handling and rendering
-  * Emoji support (mintty/wsltty#82, #600, ~#671, ~#430).
+  * Emoji support (imintty/wsltty#82, #600, ~#671, ~#430).
   * Fixed double-width handling within right-to-left text.
 
 Window handling
@@ -1682,7 +1682,7 @@ Window handling
   * Workaround for caption-less window exceeding borders (#733) on Windows 10.
 
 Mouse handling
-  * More selective suppression of mouse action on focus-click (mintty/wsltty#88, #717).
+  * More selective suppression of mouse action on focus-click (imintty/wsltty#88, #717).
   * Fixed mouse function in search bar (#85), broken since 2.8.2 (#717).
 
 Desktop integration
@@ -1706,7 +1706,7 @@ Configuration
   * Handling empty working directory (if started from Windows shortcut) for log file.
 
 Window handling
-  * Session switcher restores window only if it was iconic (mintty/wsltty#80).
+  * Session switcher restores window only if it was iconic (imintty/wsltty#80).
   * Workaround for ConEmu focus incompatibility (#724).
 
 ### 2.8.2 (17 Dec 2017) ###
@@ -1744,9 +1744,9 @@ Character rendering and text attribute handling
 Other
   * Bundling selected theme files with the package (#711).
   * Support Alt+F2 in same directory (after OSC 7) for WSL.
-  * MINTTY_PID in UserCommands: support to terminate foreground process (#716).
+  * IMINTTY_PID in UserCommands: support to terminate foreground process (#716).
   * Fixed bug when copying true-colour text as rich text (thanks to avih).
-  * Prevent HOME from being propagated back to Windows applications if called from WSL (mintty/wsltty#76).
+  * Prevent HOME from being propagated back to Windows applications if called from WSL (imintty/wsltty#76).
 
 ### 2.8.1 (31 Oct 2017) ###
 
@@ -1760,13 +1760,13 @@ Window and session control
   * Tweaked full-screen handling in session switcher and launcher (#600).
 
 Pathname handling
-  * Relative pathname opening considers interactive working directory (~mintty/wsltty#19).
-  * Pathname opening accepts escaped space or embedding quotes (~mintty/wsltty#19).
-  * Relative pathname opening from WSL ignores improper directories (mintty/wsltty#19).
+  * Relative pathname opening considers interactive working directory (~imintty/wsltty#19).
+  * Pathname opening accepts escaped space or embedding quotes (~imintty/wsltty#19).
+  * Relative pathname opening from WSL ignores improper directories (imintty/wsltty#19).
 
 WSL support
   * Made WSL parameter optional: --WSL.
-  * Option --WSL supports legacy-only installation "Bash on Windows" (mintty/wsltty#64).
+  * Option --WSL supports legacy-only installation "Bash on Windows" (imintty/wsltty#64).
 
 ### 2.8.0 (22 Oct 2017) ###
 
@@ -1783,13 +1783,13 @@ Configuration
   * Options HighlightBackgroundColour and HighlightForegroundColour.
 
 WSL support
-  * Option --WSL= to run WSL session (mintty/wsltty#52, mintty/wsltty#59, ~mintty/wsltty#60).
-  * Option -~ to start in user's home directory (~mintty/wsltty#3).
-  * Update availability check for wsltty build refers to wsltty version (mintty/wsltty#20).
-  * Fixed rootfs handling in pathname conversion (mintty/wsltty#19).
+  * Option --WSL= to run WSL session (imintty/wsltty#52, imintty/wsltty#59, ~imintty/wsltty#60).
+  * Option -~ to start in user's home directory (~imintty/wsltty#3).
+  * Update availability check for wsltty build refers to wsltty version (imintty/wsltty#20).
+  * Fixed rootfs handling in pathname conversion (imintty/wsltty#19).
 
 Terminal control sequences
-  * Fixed status string DECRQSS (#689, #690, mintty/wsltty#55, vim/vim#2003).
+  * Fixed status string DECRQSS (#689, #690, imintty/wsltty#55, vim/vim#2003).
   * DEC Locator mouse mode (facilitating pixel-based position).
   * DECRQM request mode (to reach VT300 conformance level).
   * Save/Restore DEC Private Mode (DECSET) values (#267).
@@ -1823,8 +1823,8 @@ Character display
   * Limiting glyph width checking to symbol ranges to avoid performance penalty (~#615).
 
 WSL support
-  * Build option VERSION_SUFFIX to add package version indication (mintty/wsltty#35, mintty/wsltty#50).
-  * WSL path conversion supports Store distribution packages (mintty/wsltty#52).
+  * Build option VERSION_SUFFIX to add package version indication (imintty/wsltty#35, imintty/wsltty#50).
+  * WSL path conversion supports Store distribution packages (imintty/wsltty#52).
 
 Other
   * Unicode 10.0 updates.
@@ -1849,17 +1849,17 @@ Terminal features
 
 Window handling
   * Suppressing Windows-caused side effects of "resizing" to current size (#629).
-  * Tweaked window-raising to top (previous #652) to not stick on top (mintty/wsltty#47, #667).
+  * Tweaked window-raising to top (previous #652) to not stick on top (imintty/wsltty#47, #667).
   * Reverted capturing of Shift+Ctrl+0 (~#233) to enable language switching (#663).
   * Capture key after leaving system menu with ESC; insert it and prevent beep.
 
 Configuration
-  * Reverted to stripping CR from most configuration strings (mintty/wsltty#46).
+  * Reverted to stripping CR from most configuration strings (imintty/wsltty#46).
 
 ### 2.7.7 (20 May 2017) ###
 
 Font rendering and display handling
-  * Automatically disabling Uniscribe for ASCII-only chunks (mintty/wsltty#36).
+  * Automatically disabling Uniscribe for ASCII-only chunks (imintty/wsltty#36).
   * Fixed bidi display while showing other screen with Bidi=1 (#592, ~#392, ~#605).
 
 Window handling
@@ -1873,14 +1873,14 @@ Terminal handling
   * Manual: link to Wiki about console issues / winpty wrapper (#650).
 
 Configuration
-  * New option --configdir for config file and resource folders (mintty/winpty#30, mintty/winpty#40, mintty/winpty#38).
-  * Always save to config file specified with -c/--config or --configdir (mintty/winpty#30, ~mintty/winpty#40).
+  * New option --configdir for config file and resource folders (imintty/winpty#30, imintty/winpty#40, imintty/winpty#38).
+  * Always save to config file specified with -c/--config or --configdir (imintty/winpty#30, ~imintty/winpty#40).
   * Options: offer resources from subdirectories of all config directories (#639, #30, ~#38).
   * Configuration resource subdirectories are created as needed (#30, #38, ~#639).
 
 Other
   * Fixed cleanup of environment variables after user command (#654).
-  * Fixed usage of /tmp or (if read-only) alternatives (mintty/wsltty#30).
+  * Fixed usage of /tmp or (if read-only) alternatives (imintty/wsltty#30).
   * Wiki: removed link to buggy themes (#647).
 
 ### 2.7.6 (14 Apr 2017) ###
@@ -1899,15 +1899,15 @@ Bidirectional rendering
   * Bidi can be disabled per screen line with CSI ?7796h (#592, #392, ~#605).
 
 Window handling
-  * Fixed occasional hangup on Apply in font chooser (~#533, ?mintty/wsltty#27).
+  * Fixed occasional hangup on Apply in font chooser (~#533, ?imintty/wsltty#27).
   * Workaround for broken Windows 10 window position reference (#629).
   * Fixed re-initialisation of colour chooser adjustment (#642).
   * Fixed Alt+F2 size cloning inconsistencies (#633).
   * Stick new window to current monitor with Ctrl+Shift+N and sysmenu-New (#649).
 
 Configuration
-  * Optional built-in inline font chooser, option FontMenu for font chooser configuration (?#533, ?mintty/wsltty#27).
-  * Command line option -Rf to list installed fonts as used by mintty.
+  * Optional built-in inline font chooser, option FontMenu for font chooser configuration (?#533, ?imintty/wsltty#27).
+  * Command line option -Rf to list installed fonts as used by imintty.
   * Colour scheme download drops dependency on `curl` tool (#193).
 
 ### 2.7.5 (11 Mar 2017) ###
@@ -1953,7 +1953,7 @@ Configuration
   * New drag-and-drop paste configuration DropCommands (#440).
   * New user commands configuration UserCommands (#100, #475).
   * New option OldWrapModes to restore previous wraparound behaviour.
-  * Checking availability of mintty version update in Options dialog; adjust or disable with option CheckVersionUpdate (mintty/wsltty#20).
+  * Checking availability of imintty version update in Options dialog; adjust or disable with option CheckVersionUpdate (imintty/wsltty#20).
   * Options dialog can be scaled via special pseudo-localization text (#637).
   * Fixed localization of command-line messages (#637).
 
@@ -1981,7 +1981,7 @@ Configuration and Terminal settings:
   * Tweaking Font chooser dialog to widen font sample area.
 
 Other:
-  * Extended WSL link conversion (for link-click and link pasting) to non-/mnt paths (~#164, mintty/wsltty#19).
+  * Extended WSL link conversion (for link-click and link pasting) to non-/mnt paths (~#164, imintty/wsltty#19).
   * Fixed window popup (on escape sequence CSI 5t).
   * Allowed automatic font metrics adjustment to increase row spacing.
 
@@ -2048,7 +2048,7 @@ Terminal:
 Configuration:
   * User interface localization (#537, #1).
   * New option value -Rm to report system's monitor configuration (/#599).
-  * New option --wsl to enable WSL feature adaptations (mintty/wsltty/#8).
+  * New option --wsl to enable WSL feature adaptations (imintty/wsltty/#8).
   * Manual: fixed description of copy/paste shortcuts and refer to option CtrlExchangeShift (#602, #524).
   * Case-insensitive lookup for X11 color names (#600).
   * Dropped experimental options WideIndic and WideExtra in favour of dynamic switching escape sequences (/#553).
@@ -2114,7 +2114,7 @@ Configuration:
 
 ### 2.4.3 (23 Aug 2016) ###
 
-  * Fixed trails when moving other window over mintty under certain conditions (#576).
+  * Fixed trails when moving other window over imintty under certain conditions (#576).
   * Fixed format of double child creation error message.
 
 ### 2.4.2 (27 Jul 2016) ###
@@ -2144,7 +2144,7 @@ Configuration:
   * Link to Color Scheme Configurator in Options menu (#193).
   * Drag-and-drop and Store from Color Scheme Configurator (#193).
   * Drag-and-drop and Store from theme file on the web (#193).
-  * Loading theme and bell sound resources also from XDG default config dir (#525), Windows AppData dir, or /usr/share/mintty.
+  * Loading theme and bell sound resources also from XDG default config dir (#525), Windows AppData dir, or /usr/share/imintty.
   * Enabling cygwin path style for wave file configuration.
   * Size option -s is not persisted in config file on Save.
 
@@ -2225,7 +2225,7 @@ Other:
 ### 2.2.4 (20 Mar 2016) ###
 
 Font configuration:
-  * Mintty adjusts row spacing according to the font metrics, to compensate for tight or tall spacing of some fonts (e.g. Consolas, FreeMono, Monaco). (The RowSpacing value is added to that.)
+  * Imintty adjusts row spacing according to the font metrics, to compensate for tight or tall spacing of some fonts (e.g. Consolas, FreeMono, Monaco). (The RowSpacing value is added to that.)
   * Adjusting font weight selection to available font weights (#520).
   * New option FontWeight supports more specific font weight selection (#520).
   * Font selection menu has its own Apply button.
@@ -2234,12 +2234,12 @@ Font configuration:
   * Excluding fonts with OEM or SYMBOL charset from font selection menu.
   * Excluding vertical fonts from font selection menu.
   * New option ShowHiddenFonts to offer monospace fonts marked to Hide in the menu.
-  * Unicode-enabled Font setting (so e.g. mintty -o Font=Sütterlin works).
+  * Unicode-enabled Font setting (so e.g. imintty -o Font=Sütterlin works).
 
 Themes, Configuration, and Options menu:
   * Colour schemes: New option ThemeFile, configuration also in Options menu (~#193).
   * Configuration of .wav bell sounds (option BellFile, #369) in Options menu.
-  * Resource directory $HOME/.mintty for theme and bell files.
+  * Resource directory $HOME/.imintty for theme and bell files.
   * Fixed -o settings to also be saved when changed in Options menu.
 
 Keyboard and mouse features:
@@ -2411,7 +2411,7 @@ Other Options:
   * Added configuration options BellType, BellFreq, BellLen (~ #369).
   * Option HideMouse=false disables mouse cursor hiding on keyboard input (#403).
   * Configuration option WordCharsExcl to exclude characters from word selection (#450).
-  * Configuration file .minttyrc can contain empty lines and comment lines starting with #.
+  * Configuration file .iminttyrc can contain empty lines and comment lines starting with #.
   * Option MiddleClickAction=void disables mouse-middle-click pasting (#384).
   * Option to simulate Enter/Return with mouse-click (#425).
   * Documented RowSpacing/ColSpacing; tweaked to distribute padding evenly.
@@ -2457,7 +2457,7 @@ Misc:
 Build:
   * Added manifest spell to keep the Program Compatibility Assistant away.
   * Changed compiler options to build for i686 rather i586, and optimise for speed rather than size.
-  * On Cygwin 1.7, mintty is now built using gcc 4.5 rather than 3.4, and tuned for the Atom processor (because Atom's in-order architecture should have most to gain from this).
+  * On Cygwin 1.7, imintty is now built using gcc 4.5 rather than 3.4, and tuned for the Atom processor (because Atom's in-order architecture should have most to gain from this).
 
 ### 1.0.3 (30 December 2011) ###
   * Fixed crash when trying to insert or erase out-of-range lines.
@@ -2473,22 +2473,22 @@ Build:
   * Reflect Cygwin 1.7.10 name change of pty master devices from "/dev/ttyN" to "/dev/ptyN" when creating utmp entries.
 
 ### 1.0.1 (24 July 2011) ###
-  * Fixed a bug in the creation of utmp entries that limited the number of mintty entries to 10. Also prepared for the possibility of Cygwin switching to the Unix98 pty naming scheme.
+  * Fixed a bug in the creation of utmp entries that limited the number of imintty entries to 10. Also prepared for the possibility of Cygwin switching to the Unix98 pty naming scheme.
   * Included semicolon in word selection, for the sake of URLs using them to separate parameters.
   * The cursor now is updated immediately when its shape is changed using the DECSCUSR control sequence.
 
 ### 0.9.9 (12 June 2011) ###
   * The transparency level can now be set to any value ranging from 4 to 254 in the config file or in the command line. (For backward compatibility, values below 4 are multiplied by 16. 255 is "Glass".)
-  * Implemented mintty-specific OSC sequence 7771 for checking which characters are available in the currently selected font.
+  * Implemented imintty-specific OSC sequence 7771 for checking which characters are available in the currently selected font.
   * Ctrl+symbol and Ctrl+number combinations that yield control characters are no longer overridden in xterm "modifyOtherKeys" mode level 1, but only level 2.
   * Stopped sending bogus control sequences for some Ctrl+symbol combinations. Also stopped trying to add Shift to Ctrl+symbol combinations to obtain a control character. That's only done for Ctrl+number combinations now.
-  * Moved implementation of private mode 30 for hiding and showing the scrollbar (as introduced by rxvt) to the mintty-specific private mode 7766, because it doesn't do quite the same thing: instead of changing window size to account for the width of the scrollbar, mintty changes the number of character columns.
+  * Moved implementation of private mode 30 for hiding and showing the scrollbar (as introduced by rxvt) to the imintty-specific private mode 7766, because it doesn't do quite the same thing: instead of changing window size to account for the width of the scrollbar, imintty changes the number of character columns.
   * Stopped rogue mouse release events being sent when application mouse mode is overridden with Shift.
   * Middle button paste now happens on release rather than click of the button, as in xterm and rxvt.
 
 ### 0.9.8 (21 May 2011) ###
   * Fixed a security issue with the OSC 701 sequence for setting and querying the terminal's locale, which allowed an arbitrary string (not including line endings) to be set as the locale and then echoed back as if typed by the user. Querying the locale now will only return valid locale strings.
-  * Dropped the mintty-specific OSC 7776 sequence, which did the same as OSC 701 (as introduced by rxvt-unicode).
+  * Dropped the imintty-specific OSC 7776 sequence, which did the same as OSC 701 (as introduced by rxvt-unicode).
   * Implemented rxvt-unicode's private mode 1015 for encoding mouse events, which unlike standard xterm mouse reporting uses properly formed CSI sequences and which allows for unlimited mouse coordinates.
   * Implemented missing xterm control sequences for window operations: set pixel size, get screen size in characters, refresh window, full screen.
   * Implemented selective erase, where the DECSCA sequence can be used to set a protection attribute on characters, which are then left alone by the DECSED (selective erase in display) and DECSEL (selective erase in line) operations.
@@ -2511,7 +2511,7 @@ Build:
 ### 0.9.6 (20 Feb 2011) ###
   * Fixed crash triggered by lots of combining characters on the same line.
   * Corrected initialisation of the bold background colour. (This is used to display the blink attribute when blinking is disabled.)
-  * Added _Show bold as font_ option. Previously, disabling _Show bold as colour_ would cause text with the bold attribute to be displayed with a thicker font instead of a brighter colour. Having these as separate options allows bold text to be shown with both a thicker font and a brighter colour, which is the default in xterm and others. The mintty default remains bold-as-colour-only.
+  * Added _Show bold as font_ option. Previously, disabling _Show bold as colour_ would cause text with the bold attribute to be displayed with a thicker font instead of a brighter colour. Having these as separate options allows bold text to be shown with both a thicker font and a brighter colour, which is the default in xterm and others. The imintty default remains bold-as-colour-only.
   * Added options that allow to disable the copy and paste shortcuts Ctrl+Ins and Shift+Ins as well as the various Alt+Fn window command shortcuts.
   * Added an option for enabling a set of Ctrl+Shift+letter shortcuts as found in KDE Konsole and GNOME Terminal, as an alternative to the Ctrl/Shift+Ins and Alt+Fn shortcuts. Examples include Ctrl+Shift+V for paste and Ctrl+Shift+N for opening a new window. (These only appear in menus if the corresponding default shortcuts are disabled.)
   * Tweaked option wording and placement (again). The scrolling option now are all on the Window pane of the options dialog.
@@ -2536,7 +2536,7 @@ Build:
   * Disabled flow control with `^S` and `^Q` by default, to stop unwary users from accidentally "hanging" their terminal and to make those keys available for other functions. To re-enable, use `stty stop ^S start ^Q`.
   * Stopped resizing the window when changing font size with Ctrl+plus/minus/zero or Ctrl+mousewheel. This follows the example of KDE's Konsole and is more consistent with other programs that have this feature.
   * Changed interpretation of the `--hold=never` command line option (or `-hn` for short) such that the window should really never stay open after the shell process finishes. The default remains to leave the window open when the shell process exits with status 255. This is used to signal failure to execute the shell command, and it is also used by ssh to indicate connection failure.
-  * Tweaked SIGCHLD handling to reap all dead processes that come mintty's way, not just the shell process.
+  * Tweaked SIGCHLD handling to reap all dead processes that come imintty's way, not just the shell process.
   * Fixed a memory corruption bug in the handling of combining characters.
   * Fixed crash when trying to open a filename that cannot be converted to Windows format.
 
@@ -2548,9 +2548,9 @@ Build:
 
 ### 0.9.1 (3 Oct 2010) ###
 Documentation:
-  * Turned some man page sections into wiki pages (at http://code.google.com/p/mintty/w): keycodes, control sequences, and tips.
+  * Turned some man page sections into wiki pages (at http://code.google.com/p/imintty/w): keycodes, control sequences, and tips.
   * Added a tip on how to use Ctrl+Tab and Ctrl+Shift+Tab to switch session in GNU screen.
-  * Added a wiki page with past changes and one listing PuTTY issues that are addressed in mintty.
+  * Added a wiki page with past changes and one listing PuTTY issues that are addressed in imintty.
 
 Display issues:
   * On multimonitor systems, the window size is no longer limited to the size of a single monitor.
@@ -2561,17 +2561,17 @@ Display issues:
 
 Colours:
   * Added ability to set the 16 ANSI colours in the config file (or on the command line via the -o option), like so: `Blue=0,0,255` or `BoldGreen=128,255,128`. The manual has all the colour names.
-  * Added ability to switch cursor colour depending on whether the Input Method Editor (IME) is active. This is activated by setting _IMECursorColour_ in the config file (or via the -o option). So, for example, adding `IMECursorColour=255,0,0` to _~/.minttyrc_ will turn the cursor red when the IME is active. (IMEs allow entering characters that aren't on the keyboard and are crucial for East Asian languages.)
+  * Added ability to switch cursor colour depending on whether the Input Method Editor (IME) is active. This is activated by setting _IMECursorColour_ in the config file (or via the -o option). So, for example, adding `IMECursorColour=255,0,0` to _~/.iminttyrc_ will turn the cursor red when the IME is active. (IMEs allow entering characters that aren't on the keyboard and are crucial for East Asian languages.)
   * Renamed _Show bold is bright_ setting to _Show bold as colour_.
   * Removed the _Use system colours instead_ checkbox from the options dialog. The _UseSystemColours_ config file setting remains.
 
 Selection:
-  * Added config-file only _WordChars_ setting for controlling the characters selected by a double click. By default, mintty uses an algorithm that's geared towards picking out filenames and URLs. If WordChars is set, that algorithm is disabled, and instead only letters, digits, and the characters specified with this setting are selected. For example, setting `WordChars=_` would ensure that C identifiers are picked out correctly.
+  * Added config-file only _WordChars_ setting for controlling the characters selected by a double click. By default, imintty uses an algorithm that's geared towards picking out filenames and URLs. If WordChars is set, that algorithm is disabled, and instead only letters, digits, and the characters specified with this setting are selected. For example, setting `WordChars=_` would ensure that C identifiers are picked out correctly.
   * Fixed a crash that occurred when copying lots of text on systems with a doublebyte default codepage.
 
 Xterm compatibility:
   * Added support for xterm's VT220-style function key mode (as opposed to the default "PC-style" keycodes), where Ctrl+F3 through Ctrl+F10 act as F13 through F20, the Home and End keys send different keycodes, and the numpad sends "application keypad" codes if enabled with the DECPAM sequence.
-  * In mouse tracking mode, concurrent mouse button presses are now handled in the same way as they are in xterm, i.e. mintty no longer sends a fake mouse release event when the second button is pressed.
+  * In mouse tracking mode, concurrent mouse button presses are now handled in the same way as they are in xterm, i.e. imintty no longer sends a fake mouse release event when the second button is pressed.
   * 'Extended Mouse Mode' as introduced in xterm #262 is now supported. This allows row/column positions greater than 255 (and up to 2015) to be reported, in case you do get that 30'' monitor ...
   * Normalise incoming combining characters to the precomposed from, as xterm does. This makes them look better on screen.
 
@@ -2593,10 +2593,10 @@ Misc:
   * Tweaked postinstall and preremove scripts to better cope with "Just for me" installations.
 
 ### 0.8.1 (6 Aug 2010) ###
-  * Ported mintty to MSYS (i.e. Cygwin 1.3).
+  * Ported imintty to MSYS (i.e. Cygwin 1.3).
   * Copy-on-select is enabled by default.
   * The default font size was reduced from 10 to 9, more in line with the Windows console's default.
-  * I/O handling was redesigned using /dev/windows and select(). The result of this is that signals sent to mintty are now handled immediately. In particular, suspending mintty works properly now.
+  * I/O handling was redesigned using /dev/windows and select(). The result of this is that signals sent to imintty are now handled immediately. In particular, suspending imintty works properly now.
   * A new option allows to put the scrollbar on the left-hand side of the window. It's on the 'Window' pane of the options dialog.
   * The line cursor is displayed with the thickness configured in the Windows accessibility control panel (which defaults to 1 pixel).
   * Excess line content is no longer thrown away when narrowing the window, i.e. it now reappears if the window is widened again afterwards. (Rebreaking of long lines is not done though.)
@@ -2606,13 +2606,13 @@ Misc:
 
 ### 0.7.1 (18 Jun 2010) ###
 Bug fixes:
-  * New mintty sessions created with Alt+F2 no longer needlessly inherit file handles from their parent, which stopped pty devices from being reused.
-  * Fixed a bug that stopped output from working after suspending and resuming mintty.
+  * New imintty sessions created with Alt+F2 no longer needlessly inherit file handles from their parent, which stopped pty devices from being reused.
+  * Fixed a bug that stopped output from working after suspending and resuming imintty.
   * Avoid the cursor becoming invisible, by changing cursor colour if it's too close to the text background colour.
   * Avoid innocent characters being swallowed after encountering an incomplete 4-byte UTF-8 sequence.
 
 Windows and screens:
-  * Added Ctrl+Tab and Ctrl+Shift+Tab shortcuts for switching between mintty windows. These are controlled by a new checkbox on the Keys page of the options dialog, which is enabled by default. Disable to send the keycodes `\e[1;5I` and `\e[1;6I` to the application again.
+  * Added Ctrl+Tab and Ctrl+Shift+Tab shortcuts for switching between imintty windows. These are controlled by a new checkbox on the Keys page of the options dialog, which is enabled by default. Disable to send the keycodes `\e[1;5I` and `\e[1;6I` to the application again.
   * Added --window=normal|min|max|full command line option for setting the initial window state.
   * Added 'Flip Screen' context menu command (with Alt(Gr)+F12 shortcut) for looking at the alternate screen while on the primary screen and vice versa. This allows to peek at the last man page viewed while on the command line, or to copy from the command line while editing a file.
 
@@ -2625,13 +2625,13 @@ Copy & paste:
   * Pasting text is quite a lot faster, so that pasting hundreds of lines should now be tolerable. Still wouldn't recommend pasting thousands of lines.
   * If the right click action is set to paste, middle-click now extends the selection rather than paste as well.
   * Added "Copy Title" command to the window menu (which can be accessed by clicking on the window icon, right clicking on the titlebar, or pressing Alt+Space). This copies the window title to the clipboard.
-  * Added 'Copy as rich text' option, which is on by default. Mintty always copied text both as plain text and as rich text, whereby the latter allows pasting with colours and formatting into applications that support it. Sometimes that's not what's wanted, hence the option.
+  * Added 'Copy as rich text' option, which is on by default. Imintty always copied text both as plain text and as rich text, whereby the latter allows pasting with colours and formatting into applications that support it. Sometimes that's not what's wanted, hence the option.
   * Don't clear the selection when another program copies something to the clipboard.
   * In word selection, don't include dollar and percent signs at the start or end of a word. Do include plus and minus.
   * Added xterm bracketed paste mode, which allows programs to differentiate between keyboard input and pasted text. See http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#Bracketed%20Paste%20Mode.
 
 Input:
-  * Added mintty-specific control sequence for enabling (`\e[7786h`) or disabling (`\e[7786l`) mousewheel reporting on the alternate screen. This is what allows mousewheel scrolling in 'less' and others. It's enabled by default.
+  * Added imintty-specific control sequence for enabling (`\e[7786h`) or disabling (`\e[7786l`) mousewheel reporting on the alternate screen. This is what allows mousewheel scrolling in 'less' and others. It's enabled by default.
   * Removed 'Lone Alt sends ESC' option. This seemed a good idea at the time, but I've got no evidence that anyone actually used it. Worse, it sent an inadvertent ESC when using Alt+Tab for switching windows, and there was no way to fix that.
 
 Other:
@@ -2646,21 +2646,21 @@ Other:
   * Support maximized startup on Windows 7.
   * Fixed issue when copying text that caused black blocks to appear at the end of lines when pasting into some applications, e.g. Wordpad.
   * Fixed an issue with the left Ctrl key not being recognised when it was pressed while another window was active.
-  * Keep the mintty window open showing an error message if invoking the shell or specified command fails.
+  * Keep the imintty window open showing an error message if invoking the shell or specified command fails.
   * Changed fallback shell back to /bin/sh.
   * Save both the G0 and G1 charset settings when saving the cursor or switching to the alternate screen.
 
 ### 0.6.1 (26 Mar 2010) ###
 User interface:
-  * Dropping or pasting files into the mintty window now inserts Cygwin paths rather than Windows paths. Paths with characters that are special to shells are quoted appropriately.
-  * Error messages and help output are now displayed in a message box if writing to stdout or stderr fails, e.g. if mintty is invoked from a console or a shortcut.
+  * Dropping or pasting files into the imintty window now inserts Cygwin paths rather than Windows paths. Paths with characters that are special to shells are quoted appropriately.
+  * Error messages and help output are now displayed in a message box if writing to stdout or stderr fails, e.g. if imintty is invoked from a console or a shortcut.
   * The 'Duplicate' window command was renamed to 'New', because 'Duplicate' might have raised expectations that the whole session including the state of all the processes inside it is duplicated, which isn't really possible. The Alt+F2 keyboard shortcut remains.
   * When pasting from the clipboard, convert Unix line endings, i.e. linefeeds (`^J`), to carriage returns (`^M`), because that's what the Enter key sends. (Sending `^J` caused trouble in nano, where that's the 'Justify' command.)
 
 Config-file handling:
   * Options can be read from multiple config files by providing multiple --config switches. If an option is set in multiple files, the last one wins.
-  * /etc/minttyrc is read before ~/.minttyrc, to allow the administrator to specify system-wide options.
-  * Options are stored to the last config file specified, or ~/.minttyrc otherwise. Only options that have been changed in the dialog are added to the file.
+  * /etc/iminttyrc is read before ~/.iminttyrc, to allow the administrator to specify system-wide options.
+  * Options are stored to the last config file specified, or ~/.iminttyrc otherwise. Only options that have been changed in the dialog are added to the file.
   * Config-file options can now be specified directly on the command line using the -o/--option switch. For example: -o Font=Consolas
 
 Text display:
@@ -2675,12 +2675,12 @@ Keyboard:
 Locales and charsets:
   * The options dialog no longer tries to second-guess the user's locale and charset field input.
   * Support for the Chinese GB18030 charset was added. Cygwin doesn't (yet) support it though, which is why it doesn't appear in the charset dropdown.
-  * The terminal's locale can be changed using urxvt's OSC 701 control sequence, for example `\e]701;ja_JP.SJIS\a`. An empty sequence will restore the original locale: `\e]701;\a`. The previously introduced mintty-specific sequence for this has been deprecated.
+  * The terminal's locale can be changed using urxvt's OSC 701 control sequence, for example `\e]701;ja_JP.SJIS\a`. An empty sequence will restore the original locale: `\e]701;\a`. The previously introduced imintty-specific sequence for this has been deprecated.
 
 Startup & exit:
   * Fall back to /bin/bash rather than /bin/sh if no shell is specified otherwise. This is for the benefit of Windows domain account users, for whom Cygwin setup does not create /etc/passwd entries by default.
-  * Ignore SIGHUP, which means that if mintty is started from a terminal, closing that terminal won't close mintty. That's what happened already when mintty was invoked from a console.
-  * When trying to close the window, follow the xterm approach of only ever sending SIGHUP rather than escalating to SIGTERM. This leaves it up to the application running in mintty whether to really close.
+  * Ignore SIGHUP, which means that if imintty is started from a terminal, closing that terminal won't close imintty. That's what happened already when imintty was invoked from a console.
+  * When trying to close the window, follow the xterm approach of only ever sending SIGHUP rather than escalating to SIGTERM. This leaves it up to the application running in imintty whether to really close.
 
 Misc:
   * Implemented xterm control sequence for allowing or disallowing 80/132 column mode switching. It's disallowed by default, which cures an annoying resize when invoking screen with TERM=xterm-256color.
@@ -2692,7 +2692,7 @@ Misc:
 
 ### 0.5.7 (26 Jan 2010) ###
   * Ctrl+slash now sends `^_` as in xterm.
-  * New --class command line option allows to change the name of mintty's window class. That can make it easier to distinguish different mintty windows in scripting tools like AutoHotKey.
+  * New --class command line option allows to change the name of imintty's window class. That can make it easier to distinguish different imintty windows in scripting tools like AutoHotKey.
   * Dim mode is no longer limited to the 16 basic colours.
   * Drop long path prefix ('\\?\') from Windows paths when opening files or directories. Some programs couldn't deal with those properly.
   * Bring the charset support into line with upcoming changes in Cygwin 1.7.2: use nl\_langinfo(CODESET) instead of making assumptions about locales without explicit charsets, and allow three-letter language codes.
@@ -2720,34 +2720,34 @@ Misc:
   * The "clicks place cursor" feature now works correctly for double-width characters.
   * Fixed some weirdness in mouse selection where the newline character preceding a line would annoyingly be included in the selection.
   * Extended the xterm sequence for maximising and restoring the window: `\e[9;2t` will make it go fullscreen.
-  * Added a mintty-specific control sequence for querying or changing font size, e.g. `\e]7770;+1\a` will increase font size by 1. The control sequences section of the manual has further details.
-  * Added a mintty-specific control sequence for querying or changing locale and charset on the fly, e.g.: `\e]7776;C.ISO-8859-7\a` to switch to the Greek ISO charset. Again, further details in the manual.
-  * Finally, some silly eyecandy: transparency can now be set to "Glass" on Vista and above with desktop compositing enabled. It turns the whole mintty window into a seamless sheet of "Aero glass". To make this anywhere near usable, the glass colour needs to be set to be as dark as possible in the Windows control panel: choose 'Personalize' from the desktop context menu, click on 'Window Color', turn the color intensity up to the maximum, show the color mixer, and turn the brightness down to black.
+  * Added a imintty-specific control sequence for querying or changing font size, e.g. `\e]7770;+1\a` will increase font size by 1. The control sequences section of the manual has further details.
+  * Added a imintty-specific control sequence for querying or changing locale and charset on the fly, e.g.: `\e]7776;C.ISO-8859-7\a` to switch to the Greek ISO charset. Again, further details in the manual.
+  * Finally, some silly eyecandy: transparency can now be set to "Glass" on Vista and above with desktop compositing enabled. It turns the whole imintty window into a seamless sheet of "Aero glass". To make this anywhere near usable, the glass colour needs to be set to be as dark as possible in the Windows control panel: choose 'Personalize' from the desktop context menu, click on 'Window Color', turn the color intensity up to the maximum, show the color mixer, and turn the brightness down to black.
 
 ### 0.5.2 (24 Oct 2009) ###
   * Triple-click line selection now supports wrapped lines.
   * The newline character at the end of a line is no longer included when triple-clicking, to allow the line to be edited after pasting it back into the terminal.
   * Reintroduced an option for setting the backspace keycode back to `^H`.
   * Dropped the option for disabling the Copy&Paste shortcuts.
-  * Added 'shortcut override mode', enabled with `\e[?7783h` and disabled with `\e[?7783l`. When this is on, all mintty shortcuts are overridden and sent to the application instead.
+  * Added 'shortcut override mode', enabled with `\e[?7783h` and disabled with `\e[?7783l`. When this is on, all imintty shortcuts are overridden and sent to the application instead.
   * Improved window resizing behaviour.
 
 ### 0.5.1 (12 Oct 2009) ###
-  * Renamed project from "MinTTY" to "mintty".
+  * Renamed project from "MinTTY" to "imintty".
 
 Keyboard:
   * The default backspace keycode now is `^?` rather than `^H`, to make Ctrl+H available as a shortcut for other purposes, particularly as the help key in emacs. The backspace keycode option is gone. Instead, the DECBKM control sequence for changing the backspace keycode is now supported.
-  * The escape keycode option was replaced with a mintty-specific control sequence: `\e[?7728h` to switch to `^\`, and `\e[?7728l` for standard `^[`.
+  * The escape keycode option was replaced with a imintty-specific control sequence: `\e[?7728h` to switch to `^\`, and `\e[?7728l` for standard `^[`.
   * Added 'Ctrl+Alt is AltGr' option. This is on by default, for standard Windows behaviour. If switched off, Ctrl+LeftAlt is treated separately from AltGr.
   * The backspace keycode change means that the default Ctrl+Backspace code also changes, from `^?` to `^_`. Any keybindings in .inputrc and elsewhere will need to be adjusted accordingly.
 
 Scrollback:
   * Added an option to enable the command line scrollback when on the alternate screen (used by fullscreen apps such as editors). This option is off by default, in which case the mousewheel now sends standard cursor keycodes when on the alternate screen. Hence, mousewheel scrolling in 'less' should now work without special configuration.
-  * The mintty-0.4 mousewheel keycodes can be enabled and disabled using the new control sequences `\e[?7787h` and `\e[?7787l`. These can be used to distinguish the mousewheel from the cursor keys without enabling full mouse reporting.
+  * The imintty-0.4 mousewheel keycodes can be enabled and disabled using the new control sequences `\e[?7787h` and `\e[?7787l`. These can be used to distinguish the mousewheel from the cursor keys without enabling full mouse reporting.
 
 Locales and charsets:
   * The 'Codepage' option is now called 'Character set', and there's a new 'Locale' option for language and territory.
-  * If no locale is set in the options, mintty uses the locale specified via the environment variables LC\_ALL, LC\_CTYPE, or LANG.
+  * If no locale is set in the options, imintty uses the locale specified via the environment variables LC\_ALL, LC\_CTYPE, or LANG.
   * If the locale option is set, the character set is appended to it and the LANG variable set accordingly and LC\_ALL and LC\_CTYPE are cleared.
   * The @cjknarrow locale modifier is automatically appended to LANG if an ambiguous-narrow font is used with an East Asian locale. (See also http://www.cygwin.com/1.7/cygwin-ug-net/setup-locale.html)
   * Any character sets supported by Cygwin or Windows can be used. The dropdown menu lists many of those supported by Cygwin, including UTF-8, the ISO charsets, and also the system's OEM and ANSI codepages. Other Windows codepages can be entered manually using the CP123 format. (Just entering the number works too.)
@@ -2755,9 +2755,9 @@ Locales and charsets:
   * Unicode characters outside the basic multilingual plane can now be displayed if a suitable font is available, which should always be the case on Vista and 7. (Please note, however, that currently many programs do not support these correctly, due to Windows' use of UTF-16 to represent Unicode).
 
 Other:
-  * Simplified configuration of the terminal bell. It's now possible to have it flash the screen and play the system sound at the same time. They're both off by default. Also, the option for continuous flashing of the taskbar is gone, so only the former "Steady" mode is available now. (The taskbar highlighting only happens if the bell is rung without the mintty window being active.)
+  * Simplified configuration of the terminal bell. It's now possible to have it flash the screen and play the system sound at the same time. They're both off by default. Also, the option for continuous flashing of the taskbar is gone, so only the former "Steady" mode is available now. (The taskbar highlighting only happens if the bell is rung without the imintty window being active.)
   * Removed "SCOANSI" control sequences, which were already disabled by default.
-  * mintty should now run on NT4, although with some limitations due to lack of features such as window transparency.
+  * imintty should now run on NT4, although with some limitations due to lack of features such as window transparency.
   * Rearranged options dialog.
 
 ### 0.4.4 (18 Jul 2009) ###
@@ -2765,12 +2765,12 @@ Other:
   * The DECSNM reverse video mode now works as it does in xterm, swapping only the default foreground and background colours instead of swapping the colours of all character cells. (Enable with `\e[?5h`, disable with `\e[?5l`.)
   * The reverse attribute now works correctly in connection with the "Show bold as bright" setting. For example, it now turns bright red text on black into black on bright red instead of grey on red.
   * Added support for the 8-bit version of the 'rgb:' colour format implemented in 0.4.3. Also added missing string terminator to colour query reply.
-  * Reset signal handlers in the child process like in xterm and rxvt. This addresses a problem with signals being ignored when mintty is invoked from a bash script.
+  * Reset signal handlers in the child process like in xterm and rxvt. This addresses a problem with signals being ignored when imintty is invoked from a bash script.
 
 ### 0.4.3 (12 Jul 2009) ###
   * Removed Windows 7 console popup workaround for the next Cygwin 1.7 release (API version 0.211). No more subliminal console flashes, thanks to Christopher Faylor's better workaround in the Cygwin DLL.
   * When parsing the title sequence, the ST character (0x9C) was still being interpreted as string terminator, thereby causing occasional truncated UTF-8 or Windows codepage titles.
-  * In mintty.exe's properties, the file version appeared as 0.0.0.0.
+  * In imintty.exe's properties, the file version appeared as 0.0.0.0.
   * Added --icon option for customising the window icon.
   * Added support for 'rgb:RRRR/GGGG/BBBB' format in colour control sequences. Also added support for querying the current colour settings.
   * DECSCUSR control sequence for setting cursor style.
@@ -2814,7 +2814,7 @@ Other:
   * Decreasing the window size once again crops lines, because the attempted fix for this turned out to have a bug.
   * As is standard on Windows, AltGr now is always treated the same as Ctrl+Alt.
   * The control sequences sent by the mousewheel outside application mouse mode have changed. The previous scheme that tied the encoding to the "modifier for scrolling with cursor keys" was a bad idea, because it meant that the configuration of any program using it had to change depending on that setting.
-  * MinTTY now has its own identity, instead of pretending to be an old xterm. The `^E` answerback string is "mintty", the `^[[c` primary device attribute command reports a vt100, and the `^[[>c` secondary DA command reports terminal type 77 (ASCII 'M') and version 400. The TERM variable remains set to "xterm", to avoid termcap/terminfo trouble.
+  * MinTTY now has its own identity, instead of pretending to be an old xterm. The `^E` answerback string is "imintty", the `^[[c` primary device attribute command reports a vt100, and the `^[[>c` secondary DA command reports terminal type 77 (ASCII 'M') and version 400. The TERM variable remains set to "xterm", to avoid termcap/terminfo trouble.
   * Applications can get the whole numpad to send "application keypad mode" sequences by enabling "DECKPAM" and disabling "DECCKM". This diverges from xterm's behaviour in its default "PC-style function key" setting, but allows applications to tell numpad keys apart from their equivalents on the small keypads.
   * The (non-standard) keycodes for Ctrl combinations with digit and number keys have changed. They remain based on application keypad codes, but they now follow xterm's pattern for encoding modifier keys, e.g. Ctrl+1 is sent as `^[[1;5q`.
   * Xterm's "modifyOtherKeys" mode for encoding key combinations without standard keycodes is now supported, whereby the 'CSI u' format enabled by setting the "formatOtherKeys" resource to 1 in xterm is used.
@@ -2838,17 +2838,17 @@ Other:
   * The man page had a couple of typos in the .lesskey lines for activating mousewheel support in less.
 
 ### 0.3.8 (21 Mar 2009) ###
-  * Added -e option for introducing the command to execute. This is for compatibility with other terminals, and makes mintty work with 'chere' again. (It worked in 0.3.5 only due to a bug in option handling.)
-  * Added window menu command for duplicating the current session, with shortcut Alt+F2. This simply invokes mintty again with the same command line.
+  * Added -e option for introducing the command to execute. This is for compatibility with other terminals, and makes imintty work with 'chere' again. (It worked in 0.3.5 only due to a bug in option handling.)
+  * Added window menu command for duplicating the current session, with shortcut Alt+F2. This simply invokes imintty again with the same command line.
   * Added support for xterm control sequence to change the ANSI colours. (The Linux console's version of this was supported already.)
 
 ### 0.3.7 (16 Mar 2009) ###
   * The Home and End keys now send "PC-style" `^[[H` and `^[[F` instead of VT220-style `^[[1~` and `^[[4`. This is for compatibility with xterm's default configuration and the xterm termcap/terminfo entries, which means that Home and End should work out-of-the box now in bash, i.e. configuring them in ~/.inputrc is no longer necessary.
   * The Reset menu command and the `^[c` ('Full Reset') control sequence now clear the scrollback as well as the screen.
-  * The manual page has gained a tip on using 'sh -c' for setting environment variables in mintty shortcuts.
+  * The manual page has gained a tip on using 'sh -c' for setting environment variables in imintty shortcuts.
 
 ### 0.3.6 (14 Mar 2009) ###
-  * Added a manual page: 'man mintty'. It documents all the options andkeycodes and also has a section with tips on MinTTY usage. Big thanks to Lee D. Rothstein for his help with this.
+  * Added a manual page: 'man imintty'. It documents all the options andkeycodes and also has a section with tips on MinTTY usage. Big thanks to Lee D. Rothstein for his help with this.
   * Added command line options for initial window size and position: --size and --pos.
   * Straightened out some inconsistencies in MinTTY-specific keycodes (which are now documented in the man page).
   * Fixed crash when encountering unknown long command line option.

@@ -2,35 +2,35 @@
 
 ## Introduction ##
 
-Mintty's terminal emulation is aimed at compatibility with 
+Imintty's terminal emulation is aimed at compatibility with 
 **[xterm](http://invisible-island.net/xterm/xterm.html)**. 
 Most of the xterm control sequences documented at 
 http://invisible-island.net/xterm/ctlseqs/ctlseqs.html are supported. 
-Please [report as bugs](https://github.com/mintty/mintty/issues) 
+Please [report as bugs](https://github.com/imintty/imintty/issues) 
 any incompatibilities or unimplemented sequences that would be useful.
 
 Some sequences that were introduced by other terminals such as the 
 [Linux console](http://www.kernel.org/doc/man-pages/online/pages/man4/console_codes.4.html), 
 and that aren't available in xterm, are also supported.
 
-This page only lists control sequences that are specific to mintty. 
+This page only lists control sequences that are specific to imintty. 
 [Caret notation](http://en.wikipedia.org/wiki/Caret_notation) is used to show control characters. 
 The full details of all supported control sequences are only available in the 
-[source code](https://github.com/mintty/mintty/blob/master/src/termout.c).
+[source code](https://github.com/imintty/imintty/blob/master/src/termout.c).
 
 
 ## Terminal identification ##
 
-These escape sequences cause mintty to report its identification.
+These escape sequences cause imintty to report its identification.
 
 | **request** | **response**                      | **comment** |
 |:------------|:----------------------------------|:------------|
 | `^[[>c`     | `^[[>77;`_version_`;`_unicode_`c` | secondary device attributes (DEC); _version_ like 30105, _unicode_ version when using built-in data |
-| `^[[>q`     | `^[P>\|mintty `_version_`^[\`     | terminal identification query (xterm 354); _version_ like 3.1.5 |
+| `^[[>q`     | `^[P>\|imintty `_version_`^[\`     | terminal identification query (xterm 354); _version_ like 3.1.5 |
 
 ### Feature reporting ###
 
-Mintty supports the primary device attributes request conditionally:
+Imintty supports the primary device attributes request conditionally:
 
 | **request** | **response**                               |
 |:------------|:-------------------------------------------|
@@ -40,7 +40,7 @@ Tags 1, 22, and extended tag 52 are only included if the respective features
 are not disabled (e.g. by setting Suppress options). Tags 11, 21, 28 are 
 left out correspondingly if terminal types vt220 or vt340 are configured.
 
-Mintty also adds Feature Reporting as proposed by iTerm2 in response to an 
+Imintty also adds Feature Reporting as proposed by iTerm2 in response to an 
 OSC 1337 Capabilities request:
 
 | **request** | **response**                             |
@@ -66,7 +66,7 @@ The first controls application escape key mode, where the escape key sends a key
 
 Escape key mode also enables VT220 application keypad sequences with 
 application keypad mode in non-VT220 keyboard mode (the default until 3.8.2, 
-see [Keypad usage](https://github.com/mintty/mintty/wiki/Tips#keypad-usage).
+see [Keypad usage](https://github.com/imintty/imintty/wiki/Tips#keypad-usage).
 
 When application escape key mode is off, the escape key can be be configured to send `^\` instead of the standard `^[`. This allows the escape key to be used as one of the special keys in the terminal line settings (as set with the **[stty](http://www.opengroup.org/onlinepubs/009695399/utilities/stty.html)** utility).
 
@@ -107,7 +107,7 @@ The respective setting is cleared with a corresponding sequence ending with `l`.
 
 ## Input method ##
 
-Mintty allows to set, save or restore the IME status explicitly, to support 
+Imintty allows to set, save or restore the IME status explicitly, to support 
 applications like text editors to adapt it to the current input target.
 
 | **sequence**  | **IME status**                            |
@@ -146,7 +146,7 @@ Keyboard auto-repeat can also be disabled with DECSET 8 (DECARM).
 
 ## Area attributes change ##
 
-Mintty extends the scope of rectangular area attributes change functions 
+Imintty extends the scope of rectangular area attributes change functions 
 DECCARA and DECRARA to additional attributes as suitable.
 Colour and font changing functions are only supported with DECCARA.
 True colour and underline colour settings are not supported.
@@ -170,7 +170,7 @@ empty lines from the end of the scrollback buffer.
 
 ## Status line / area ##
 
-Mintty implements the DEC VT320 status line and extends the feature to 
+Imintty implements the DEC VT320 status line and extends the feature to 
 support a multi-line host-writable status area.
 It is configured with a proprietary second parameter to DECSSDT 2.
 Its height is limited to be smaller than half the screen height.
@@ -187,7 +187,7 @@ Its height is limited to be smaller than half the screen height.
 
 ## Bidirectional rendering ##
 
-Mintty supports bidi rendering by default. However, some applications 
+Imintty supports bidi rendering by default. However, some applications 
 may prefer to control bidi appearance themselves. There is one option (Bidi) 
 and some control sequences to adjust the behaviour.
 
@@ -246,7 +246,7 @@ will be rendered in only one terminal cell.
 
 ## Reflow / Rewrap / Line rebreaking on resize ##
 
-Mintty supports reflow of wrapped lines if the terminal is resized and its 
+Imintty supports reflow of wrapped lines if the terminal is resized and its 
 width is changed. This feature, applicable with setting `RewrapOnResize`, 
 can be disabled per line, usable for example for prompt lines.
 
@@ -267,7 +267,7 @@ These sequences can be used to hide or show the scrollbar, whereby the window si
 | `^[[?7766l`   | hide          |
 | `^[[?7766h`   | show          |
 
-Note: Mintty also supports the xterm-compatible sequences to hide or show 
+Note: Imintty also supports the xterm-compatible sequences to hide or show 
 the scrollbar, which handle the scrollbar as "outer" to the terminal, 
 adding to the window width but keeping the terminal width unchanged 
 (except in full-screen mode).
@@ -304,7 +304,7 @@ from 1 to _size_ − _height_ + 1) as well as the total virtual document _size_
 
 Relative scrollbar movement and absolute positioning are reported with 
 special sequences; for details see 
-[Keycodes – Application scrollbar events](https://github.com/mintty/mintty/wiki/Keycodes#application-scrollbar-events).
+[Keycodes – Application scrollbar events](https://github.com/imintty/imintty/wiki/Keycodes#application-scrollbar-events).
 See there also for an illustrated explanation of the meaning of _pos_ vs _size_ values.
 
 
@@ -352,7 +352,7 @@ It supports additional values to switch the progress scan mode
 
 ## Mousewheel reporting ##
 
-Mintty includes support for sending mousewheel events to an application without having to enable full [xterm mouse tracking](http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#Mouse%20Tracking), which takes over all mouse events and isn't supported by every application.
+Imintty includes support for sending mousewheel events to an application without having to enable full [xterm mouse tracking](http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#Mouse%20Tracking), which takes over all mouse events and isn't supported by every application.
 
 Mousewheel reporting only happens on the alternate screen, whereas on the primary screen, the mousewheel scrolls the scrollback buffer. The following two sequences enable or disable mousewheel reporting. It is enabled by default.
 
@@ -363,8 +363,8 @@ Mousewheel reporting only happens on the alternate screen, whereas on the primar
 | `^[[?7786l`   | disabled      |
 | `^[[?7786h`   | enabled       |
 
-The xterm-style sequence mode (1007) is disabled by default but the mintty 
-feature (7786) is enabled by default. The mintty mode can be formatted 
+The xterm-style sequence mode (1007) is disabled by default but the imintty 
+feature (7786) is enabled by default. The imintty mode can be formatted 
 to private sequences (see below). To support these subtle differences, 
 both can be switched independently.
 
@@ -458,10 +458,10 @@ The following sequence can be used to enquire about support for a specified list
 
 Characters shall be specified with their decimal Unicode codepoint. 
 Any number of characters can be given. 
-Mintty replies with the same sequence, except that the question mark is 
+Imintty replies with the same sequence, except that the question mark is 
 replaced with an exclamation mark and that codes for characters that the 
 current font does not have a glyph for are omitted.
-From mintty 3.8.3, the function works for all characters, 
+From imintty 3.8.3, the function works for all characters, 
 also beyond the Unicode BMP, so for characters greater than U+FFFF.
 
 
@@ -499,7 +499,7 @@ this list is subject to change in future versions.
 
 — EXPERIMENTAL —
 
-Mintty provides explicit width override as a character attribute, 
+Imintty provides explicit width override as a character attribute, 
 so an application can enforce single-width characters to be rendered wide 
 or double-width ("wide") characters to be rendered narrow.
 Experimentally, for this purpose the ECMA-48 escape sequences 
@@ -519,7 +519,7 @@ Note: There is one space character before the `Z`.
 
 ## Overstrike ##
 
-Mintty supports overstriking characters, with either an SGR attribute 
+Imintty supports overstriking characters, with either an SGR attribute 
 or the VK100-compatible DECSET 20.
 
 | **sequence** | **effect**                                    |
@@ -579,7 +579,7 @@ For values, see setting `Emojis` in the manual.
 
 ## Emoji width mode ##
 
-By default, mintty displays emojis, particularly emoji sequences, in a 
+By default, imintty displays emojis, particularly emoji sequences, in a 
 grid cell width as defined by the locale function wcswidth. 
 This can yield emoji display in variable width, from 1 cell up to 8 cells, 
 for sequences composed of as many components.
@@ -596,7 +596,7 @@ Emoji width mode can be configured as default with option `EmojiWidth`.
 | `^[[?2027l`   | wcwidth/wcswidth                         |
 | `^[[?2027h`   | 2-cell (mode setting of other terminals) |
 | `^[[?7769l`   | wcwidth/wcswidth                         |
-| `^[[?7769h`   | 2-cell (mintty mode setting, deprecated) |
+| `^[[?7769h`   | 2-cell (imintty mode setting, deprecated) |
 
 The following rules describe the character sequences to be handled as 
 2-cell emojis:
@@ -622,7 +622,7 @@ positioning would be hardly manageable with respect to changing
 Unicode versions and emoji graphic resources.
 
 Note that other terminals support a “Unicode width” mode which may deviate 
-from the rules applied by mintty; a common specification is not yet agreed.
+from the rules applied by imintty; a common specification is not yet agreed.
 For this reason, there are currently 2 mode setting sequences.
 
 
@@ -704,7 +704,7 @@ set the window icon from the given file and optional icon index:
 ## Working directory ##
 
 The following _OSC_ ("operating system command") sequence can be used to 
-inform mintty about the current working directory (as used in the Mac terminal), 
+inform imintty about the current working directory (as used in the Mac terminal), 
 in order to spawn a new (cloned) terminal window in that directory 
 (e.g. Alt+F2):
 
@@ -769,7 +769,7 @@ in order to avoid screen flickering in certain situations of display update.
 
 ## Image support ##
 
-In addition to the legacy graphics features, mintty supports graphic 
+In addition to the legacy graphics features, imintty supports graphic 
 image display via iTerm2 controls:
 
 > `^[]1337;File=` _par_`=`_arg_ [ `;`_par_`=`_arg_ ]* `:`_image_ `^G`
@@ -807,14 +807,14 @@ Image formats supported comprise PNG, JPEG, GIF, TIFF, BMP, Exif.
 Sixel output is anchored at the current cursor position by default 
 (Sixel scrolling mode). DECSET 80 (DECSDM) enables Sixel display mode instead, 
 so Sixel output would start at the top of screen. Note this setting 
-was reversed from mintty 3.0.1 to mintty 3.5.1, following xterm interpretation 
+was reversed from imintty 3.0.1 to imintty 3.5.1, following xterm interpretation 
 which has meanwhile also been fixed.
 (The DECSDM setting can be disabled with option `SuppressDEC=80`.)
 
 After output of a Sixel image in Sixel scrolling mode, or other image, 
 the final cursor position can be next to the right bottom of the image, 
 below the left bottom of the image (default), or at the line beginning 
-below the image (like xterm). The mintty private sequence 7730 chooses 
+below the image (like xterm). The imintty private sequence 7730 chooses 
 between the latter two options and is overridden by the xterm 
 control sequence 8452.
 
@@ -842,7 +842,7 @@ to achieve the same effect case-by-case per image.
 
 ### ReGIS graphics position ###
 
-Mintty supports ReGIS vector graphics output. Unlike DEC VT340, ReGIS 
+Imintty supports ReGIS vector graphics output. Unlike DEC VT340, ReGIS 
 graphics is displayed inlined from the current cursor position.
 DECSET 80 (Sixel Display Mode) can also be used to switch to ReGIS 
 output to the home position.
@@ -862,11 +862,11 @@ and extensions.
 
 — EXPERIMENTAL —
 
-Mintty supports audio sound output with this OSC sequence:
+Imintty supports audio sound output with this OSC sequence:
 
 > `^[]440;` _sound_ [ `:` _option_ ]* `^G`
 
-where _sound_ is the name of a sound file (.wav) in a mintty configuration 
+where _sound_ is the name of a sound file (.wav) in a imintty configuration 
 subdirectory _sounds_, or a path name of a .wav file.
 
 | **option** | **comment**                                              |
@@ -879,7 +879,7 @@ An asynchronous sound can be stopped with an empty sound name:
 
 > `^[]440;^G`
 
-Mintty also supports the DECPS Play Sound escape sequence with 
+Imintty also supports the DECPS Play Sound escape sequence with 
 tone style extension.
 
 | **sequence**                                       | **function**         |
@@ -963,12 +963,12 @@ The sequence also affects the vertical line cursor.
 
 The following _OSC_ ("operating system command") sequence (xterm 367) 
 can be used to set the mouse pointer shape of the current mouse mode 
-(mintty maintains three different mouse pointer shapes, to distinguish 
+(imintty maintains three different mouse pointer shapes, to distinguish 
 application mouse reporting modes).
 Valid values are Windows predefined cursor names 
 (appstarting, arrow, cross, hand, help, ibeam, icon, no, size, sizeall, sizenesw, sizens, sizenwse, sizewe, uparrow, wait) 
 or cursor file names which are looked up in subdirectory `pointers` of 
-a mintty resource directory; supported file types are .cur, .ico, .ani.
+a imintty resource directory; supported file types are .cur, .ico, .ani.
 
 | **sequence**          |
 |:----------------------|
@@ -994,7 +994,7 @@ X11 colour names, or hexadecimal colour specifications such as `#`_RRGGBB_,
 `cmy:`_C_`.`_C_`/`_M_`.`_M_`/`_Y_`.`_Y_ or
 `cmyk:`_C_`.`_C_`/`_M_`.`_M_`/`_Y_`.`_Y_`/`_K_`.`_K_.
 
-If a colour value is left empty, it is reset to the value in the mintty
+If a colour value is left empty, it is reset to the value in the imintty
 configuration. Invalid values are ignored.
 
 The query sequence replies with the single-value sequence if the current values
@@ -1009,7 +1009,7 @@ select different colours with SGR 30..37 etc distinct from SGR 38:5 etc.
 
 ## Printing and screen dump ##
 
-Mintty supports the following DEC, xterm and mintty Media Copy sequences:
+Imintty supports the following DEC, xterm and imintty Media Copy sequences:
 
 | **sequence** | **effect**                      |
 |:-------------|:--------------------------------|
@@ -1025,7 +1025,7 @@ Mintty supports the following DEC, xterm and mintty Media Copy sequences:
 
 ## Display speed ##
 
-Mintty supports the DECSCS sequence to select the communication speed, 
+Imintty supports the DECSCS sequence to select the communication speed, 
 extended by two default settings, either unrestricted speed or 
 the pre-configured speed (option Baud):
 

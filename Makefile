@@ -20,9 +20,9 @@
 
 # To add a file to the distribution:
 # src: add to make variable below: arch_files += ...
-# bin: add to cygwin/mintty.cygport
+# bin: add to cygwin/imintty.cygport
 
-NAME := mintty
+NAME := imintty
 
 exe:
 	#cd src; $(MAKE) exe
@@ -45,7 +45,7 @@ clean:
 DIST := release
 # --mtime would stamp all files the same
 #TARTIME := --mtime="$(shell date +%Y-%m-%d) 00:00:00"
-TARUSER := --owner=root --group=root --owner=mintty --group=cygwin
+TARUSER := --owner=root --group=root --owner=imintty --group=cygwin
 REL := 1
 arch := $(shell uname -m)
 
@@ -90,7 +90,7 @@ checkrelease: committed tag checkver tar
 pkg: release checkrelease cygpkg binver
 
 binver:
-	$(DIST)/$(name_ver)-$(REL).$(arch)/inst/usr/bin/mintty -V | grep "mintty $(version) "
+	$(DIST)/$(name_ver)-$(REL).$(arch)/inst/usr/bin/imintty -V | grep "imintty $(version) "
 
 check:
 	cd src; $(MAKE) check
@@ -131,7 +131,7 @@ generated := docs/$(NAME).1.html
 
 docs/$(NAME).1.html: docs/$(NAME).1 src/htmlroff.sed src/htmlhtml.sed
 	cd src; $(MAKE) html
-	cp docs/$(NAME).1.html mintty.github.io/
+	cp docs/$(NAME).1.html imintty.github.io/
 
 src := $(DIST)/$(name_ver).tar.gz
 tar: $(generated) $(src)
@@ -149,7 +149,7 @@ $(src): $(arch_files)
 
 cygport := $(name_ver)-$(REL).cygport
 cygpkg:
-	cp cygwin/mintty.cygport $(DIST)/$(cygport)
+	cp cygwin/imintty.cygport $(DIST)/$(cygport)
 	cd $(DIST); cygport $(cygport) prep
 	cd $(DIST); cygport $(cygport) compile install package
 
@@ -164,14 +164,14 @@ announcement=cygwin/announcement.$(version)
 ann:	announcement
 announcement:
 	echo To: cygwin-announce@cygwin.com > $(announcement)
-	echo Subject: Updated: mintty $(version) >> $(announcement)
+	echo Subject: Updated: imintty $(version) >> $(announcement)
 	echo >> $(announcement)
-	echo I have uploaded mintty $(version) with the following changes: >> $(announcement)
+	echo I have uploaded imintty $(version) with the following changes: >> $(announcement)
 	sed -n -e 1d -e "/^#/ q" -e p wiki/Changelog.md >> $(announcement)
 	echo It is suggested to also install package emojis-noto >> $(announcement)
 	echo to enable graphic emojis display in default configuration. >> $(announcement)
 	echo  >> $(announcement)
-	echo The homepage is at http://mintty.github.io/ >> $(announcement)
+	echo The homepage is at http://imintty.github.io/ >> $(announcement)
 	echo It also links to the issue tracker. >> $(announcement)
 	echo  >> $(announcement)
 	echo ------ >> $(announcement)
@@ -186,33 +186,33 @@ install:
 	echo Installing into $(DESTDIR)/
 	# binaries
 	mkdir -p $(DESTDIR)/usr/bin
-	cp bin/mintty tools/mintheme $(DESTDIR)/usr/bin/
+	cp bin/imintty tools/mintheme $(DESTDIR)/usr/bin/
 	# manual
 	mkdir -p $(DESTDIR)/usr/share/man
-	gzip -c docs/mintty.1 > $(DESTDIR)/usr/share/man/mintty.1.gz
+	gzip -c docs/imintty.1 > $(DESTDIR)/usr/share/man/imintty.1.gz
 	# resources
-	mkdir -p $(DESTDIR)/usr/share/mintty/{lang,themes,sounds,icon,emojis}
-	cp lang/*.pot lang/*.po $(DESTDIR)/usr/share/mintty/lang/
-	cp themes/* $(DESTDIR)/usr/share/mintty/themes/
-	cp sounds/*.wav sounds/*.WAV $(DESTDIR)/usr/share/mintty/sounds/
-	cp icon/wsl.ico $(DESTDIR)/usr/share/mintty/icon/
-	cp tools/getemojis tools/getflags $(DESTDIR)/usr/share/mintty/emojis/
+	mkdir -p $(DESTDIR)/usr/share/imintty/{lang,themes,sounds,icon,emojis}
+	cp lang/*.pot lang/*.po $(DESTDIR)/usr/share/imintty/lang/
+	cp themes/* $(DESTDIR)/usr/share/imintty/themes/
+	cp sounds/*.wav sounds/*.WAV $(DESTDIR)/usr/share/imintty/sounds/
+	cp icon/wsl.ico $(DESTDIR)/usr/share/imintty/icon/
+	cp tools/getemojis tools/getflags $(DESTDIR)/usr/share/imintty/emojis/
 	# icons
-	for i in 16 24 32 48 64 256; do mkdir -p $(DESTDIR)/usr/share/icons/hicolor/$${i}x$${i}/apps; cp icon/hi$${i}-apps-mintty.png $(DESTDIR)/usr/share/icons/hicolor/$${i}x$${i}/apps/mintty.png; done
+	for i in 16 24 32 48 64 256; do mkdir -p $(DESTDIR)/usr/share/icons/hicolor/$${i}x$${i}/apps; cp icon/hi$${i}-apps-imintty.png $(DESTDIR)/usr/share/icons/hicolor/$${i}x$${i}/apps/imintty.png; done
 	# enable new icon files
 	rm -f $(DESTDIR)/usr/share/icons/hicolor/icon-theme.cache
 	# make X11 desktop entry
 	# template: /usr/share/cygport/lib/src_install.cygpart
 	mkdir -p $(DESTDIR)/usr/share/applications
-	echo "[Desktop Entry]" > $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "Version=1.0" >> $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "Name=Mintty" >> $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "Exec=mintty" >> $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "TryExec=mintty" >> $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "Type=Application" >> $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "Icon=mintty" >> $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "Categories=System;TerminalEmulator;" >> $(DESTDIR)/usr/share/applications/mintty.desktop
-	echo "OnlyShowIn=X-Cygwin;" >> $(DESTDIR)/usr/share/applications/mintty.desktop
+	echo "[Desktop Entry]" > $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "Version=1.0" >> $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "Name=Improved MinTTY" >> $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "Exec=imintty" >> $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "TryExec=imintty" >> $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "Type=Application" >> $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "Icon=imintty" >> $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "Categories=System;TerminalEmulator;" >> $(DESTDIR)/usr/share/applications/imintty.desktop
+	echo "OnlyShowIn=X-Cygwin;" >> $(DESTDIR)/usr/share/applications/imintty.desktop
 
 #############################################################################
 # end

@@ -18,7 +18,7 @@ extern wstring shortcut;
 
 extern bool cygver_ge(uint major, uint minor);
 
-extern void exit_mintty(void);
+extern void exit_imintty(void);
 extern void report_pos(void);
 extern void win_reconfig(void);
 

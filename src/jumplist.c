@@ -116,7 +116,7 @@ register_task(IObjectCollection *pobjs, wstring title, wstring cmd, wstring icon
       if (FAILED(hr))
         break;
 
-      // set full path of mintty.exe
+      // set full path of imintty.exe
       hr = pShellLink->lpVtbl->SetPath((void *)pShellLink, exe_path);
       if (FAILED(hr))
         break;

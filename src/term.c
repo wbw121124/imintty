@@ -1,4 +1,4 @@
-// term.c (part of mintty)
+// term.c (part of imintty)
 // Copyright 2008-2023 Andy Koppe, 2016-2026 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -2193,7 +2193,7 @@ term_set_status_type(int type, int lines)
 	Notes on DECSSDT
 	• If you select no status line (Ps = 0), the terminal uses the 
 	  line as an additional user window line to display data.
-    As an extension, mintty supports a multi-line status area, 
+    As an extension, imintty supports a multi-line status area, 
     configured with a second parameter to DECSSDT 2.
     The suggestion of such an option could be interpreted from VT520 p. 2-35:
 	[The number of data display lines visible, not counting any status lines.]

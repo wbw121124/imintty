@@ -1,4 +1,4 @@
-// ReGIS (part of mintty)
+// ReGIS (part of imintty)
 // Copyright 2025-2026 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 

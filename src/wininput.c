@@ -1,4 +1,4 @@
-// wininput.c (part of mintty)
+// wininput.c (part of imintty)
 // Copyright 2008-23 Andy Koppe, 2015-2026 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -2574,8 +2574,8 @@ static LONG last_key_time = 0;
       &(MSG){.hwnd = wnd, .message = WM_KEYDOWN, .wParam = wp, .lParam = lp}
     );
     // if IME options are switched (#1353), 
-    // the Control key state managed by mintty may get confused 
-    // (as some key release events are not passed to mintty) 
+    // the Control key state managed by imintty may get confused 
+    // (as some key release events are not passed to imintty) 
     // and subsequent letters could be interpreted as if Control-modified,
     // so we reset the modifier state here (and on key release below)
     win_key_reset();
@@ -2752,7 +2752,7 @@ C	M	+C	+A	"	"
   update_mouse(mods);
 
   // Workaround for Windows clipboard history pasting simply injecting Ctrl+V
-  // (mintty/wsltty#139)
+  // (imintty/wsltty#139)
   if (key == 'V' && mods == MDK_CTRL && !scancode) {
     win_paste();
     return true;
@@ -2773,7 +2773,7 @@ C	M	+C	+A	"	"
   // Exit when pressing Enter or Escape while holding the window open after
   // the child process has died.
   if ((key == VK_RETURN || key == VK_ESCAPE) && !mods && !child_is_alive())
-    exit_mintty();
+    exit_imintty();
 
   // On ESC or Enter key, restore keyboard IME state to alphanumeric mode.
   // (#1224, #1375)
@@ -3371,7 +3371,7 @@ C	M	+C	+A	"	"
   bool app_pad_key(char symbol) {
     if (extended)
       return false;
-    // Mintty-specific: produce app_pad codes not only when vt220 mode is on,
+    // Imintty-specific: produce app_pad codes not only when vt220 mode is on,
     // but also in PC-style mode when app_cursor_keys is off, to allow the
     // numpad keys to be distinguished from the cursor/editing keys.
     // 3.8.3: drop this specific behaviour by default (#1357)

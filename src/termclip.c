@@ -1,4 +1,4 @@
-// termclip.c (part of mintty)
+// termclip.c (part of imintty)
 // Copyright 2008-23 Andy Koppe, 2024-2025 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -589,29 +589,29 @@ term_cmd(char * cmd)
   wchar * wsel = term_get_text(true, false, false);
   char * sel = cs__wcstombs(wsel);
   free(wsel);
-  setenv("MINTTY_BUFFER", sel, true);
+  setenv("IMINTTY_BUFFER", sel, true);
   free(sel);
   // provide current selection
   wsel = term_get_text(false, false, false);
   sel = cs__wcstombs(wsel);
   free(wsel);
-  setenv("MINTTY_SELECT", sel, true);
+  setenv("IMINTTY_SELECT", sel, true);
   free(sel);
   // provide current screen
   wsel = term_get_text(false, true, false);
   sel = cs__wcstombs(wsel);
   free(wsel);
-  setenv("MINTTY_SCREEN", sel, true);
+  setenv("IMINTTY_SCREEN", sel, true);
   free(sel);
   // provide last command output
   wsel = term_get_text(false, false, true);
   sel = cs__wcstombs(wsel);
   free(wsel);
-  setenv("MINTTY_OUTPUT", sel, true);
+  setenv("IMINTTY_OUTPUT", sel, true);
   free(sel);
   // provide window title
   char * ttl = win_get_title();
-  setenv("MINTTY_TITLE", ttl, true);
+  setenv("IMINTTY_TITLE", ttl, true);
   free(ttl);
 
   char * path0 = 0;
@@ -628,11 +628,11 @@ term_cmd(char * cmd)
     setenv("PATH", path1, true);
   }
   FILE * cmdf = popen(cmd, "r");
-  unsetenv("MINTTY_TITLE");
-  unsetenv("MINTTY_OUTPUT");
-  unsetenv("MINTTY_SCREEN");
-  unsetenv("MINTTY_SELECT");
-  unsetenv("MINTTY_BUFFER");
+  unsetenv("IMINTTY_TITLE");
+  unsetenv("IMINTTY_OUTPUT");
+  unsetenv("IMINTTY_SCREEN");
+  unsetenv("IMINTTY_SELECT");
+  unsetenv("IMINTTY_BUFFER");
   if (cmdf) {
     if (term.bracketed_paste)
       child_write("\e[200~", 6);
@@ -708,17 +708,17 @@ term_create_html(bool all, FILE * hf, int level)
   colour blink_colour = win_get_colour(BLINK_COLOUR_I);
   hprintf(hf,
     "<head>\n"
-    "  <meta name='generator' content='mintty'/>\n"
+    "  <meta name='generator' content='imintty'/>\n"
     "  <meta http-equiv='Content-Type' content='text/html; charset=UTF-8'/>\n"
-    "  <title>mintty screen dump</title>\n"
+    "  <title>imintty screen dump</title>\n"
     "  <link rel='stylesheet' type='text/css' href='xterm.css'/>\n"
-    "  <link rel='stylesheet' type='text/css' href='mintty.css'/>\n"
+    "  <link rel='stylesheet' type='text/css' href='imintty.css'/>\n"
     //"  <script type='text/javascript' language='JavaScript' src='emoji.js'></script>\n"
     "  <style type='text/css'>\n"
     "  #vt100 pre { font-family: inherit; margin: 0; padding: 0; }\n"
     );
   if (level >= 3)
-    hprintf(hf, "  body.mintty { margin: 0; padding: 0; }\n");
+    hprintf(hf, "  body.imintty { margin: 0; padding: 0; }\n");
   hprintf(hf, "  .super, .sub, .small { line-height: 0; font-size: 0.7em; letter-spacing: 0.3em; }\n");
   hprintf(hf, "  .super { vertical-align: super; }\n");
   hprintf(hf, "  .sub { vertical-align: sub; }\n");
@@ -892,7 +892,7 @@ term_create_html(bool all, FILE * hf, int level)
 #endif
 
   hprintf(hf, "</head>\n\n");
-  hprintf(hf, "<body class=mintty onload='setup();'>\n");
+  hprintf(hf, "<body class=imintty onload='setup();'>\n");
   //hprintf(hf, "  <table border=0 cellpadding=0 cellspacing=0><tr><td>\n");
   hprintf(hf, "  <div class=background id='vt100'>\n");
   hprintf(hf, "   <pre\n>");

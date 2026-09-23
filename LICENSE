@@ -1,4 +1,4 @@
-mintty is copyright 2008-23 Andy Koppe, 2015-23 Thomas Wolff.
+imintty is copyright 2008-23 Andy Koppe, 2015-23 Thomas Wolff.
 
 Licensed under the terms of the GNU General Public License version 3 or later,
 amended with the bundling clause to clarify ambiguous interpretation.
@@ -9,7 +9,7 @@ The GPL license text can be found in the accompanying file LICENSE.GPL,
 at /usr/share/doc/common-licenses/GPL-3.0 on Cygwin installs, 
 or on the GNU website at http://www.gnu.org/licenses/gpl.html.
 
-Sources are available from the project page at http://mintty.github.io/.
+Sources are available from the project page at http://imintty.github.io/.
 
 Based on PuTTY version 0.60 by Simon Tatham and contributors.
 Big thanks to everyone involved for their work on PuTTY.
@@ -19,7 +19,7 @@ ftp://ftp.chiark.greenend.org.uk/users/sgtatham/putty-0.60.
 
 The minibidi algorithm is under MIT license as quoted in the source file.
 
-Sixel code (sixel.c) is relicensed under GPL like mintty with the 
+Sixel code (sixel.c) is relicensed under GPL like imintty with the 
 permission of its author (kmiya@culti); Sixel colour conversion code 
 (sixel_hls.c) is licensed by its author Ross Combs under the license 
 quoted in the source file.
@@ -29,7 +29,7 @@ retrieved from http://websvn.kde.org/trunk/KDE/kdebase/runtime/pics/oxygen.
 Thanks to the KDE artists for their sleek design. The Oxygen icons are licensed
 under the terms of the LGPLv3; see LICENSE.Oxygen for details.
 
-The colour schemes / theme files bundled with mintty are included 
+The colour schemes / theme files bundled with imintty are included 
 under various licenses. The source and license or permission are 
 quoted in the respective theme files.
 

@@ -1,4 +1,4 @@
-// winsearch.c (part of mintty)
+// winsearch.c (part of imintty)
 // Copyright 2015 Kai (kiwiz)
 // Licensed under the terms of the GNU General Public License v3 or later.
 

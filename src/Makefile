@@ -22,7 +22,7 @@
 #	make DEBUG=1
 
 #############################################################################
-NAME := mintty
+NAME := imintty
 
 .PHONY: exe src pkg zip pdf clean
 
@@ -341,7 +341,7 @@ univer = $(shell sed -e '/^\# Blocks-/ s,[^0-9]*\([0-9]*\)\.\([0-9]\)\.\([0-9]\)
 x11ver = $(shell cygcheck -f /usr/share/X11/locale/en_US.UTF-8/Compose | sed -e "s,^[^-]*-,," -e "s,-.*,,")
 
 releasever:
-	sed -e 's,\(Mintty .*\)`.*`,\1`$(srcversion)`,' -i ../wiki/Versions.md
+	sed -e 's,\(Imintty .*\)`.*`,\1`$(srcversion)`,' -i ../wiki/Versions.md
 
 unicodever.t:	Blocks.txt
 	echo "#define UNICODE_VERSION $(unicodever)" > unicodever.t
@@ -369,8 +369,8 @@ composed.t:	# $(compose_list) $(keysymdefs)
 	sh ./mkcomposedt > composed.t
 	sed -e 's,\(X11 .*\)`.*`,\1`$(x11ver)`,' -i ../wiki/Versions.md
 
-XGETTEXT_OPTS=--package-name=mintty #--package-version=$(srcversion)
-XGETTEXT_OPTS+=--msgid-bugs-address=https://github.com/mintty/mintty/issues/700
+XGETTEXT_OPTS=--package-name=imintty #--package-version=$(srcversion)
+XGETTEXT_OPTS+=--msgid-bugs-address=https://github.com/imintty/imintty/issues/700
 
 _:	localization checkloc
 localization:	pot po
@@ -394,7 +394,7 @@ endif
 
 ifdef RELEASE
 pkg := $(name_ver)-$(RELEASE)
-cygport := ../cygwin/mintty.cygport
+cygport := ../cygwin/imintty.cygport
 pkg: $(pkg)
 $(pkg): $(cygport) $(src)
 	cp $(cygport) $(pkg).cygport

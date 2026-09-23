@@ -1,4 +1,4 @@
-// config.c (part of mintty)
+// config.c (part of imintty)
 // Copyright 2008-2023 Andy Koppe, 2015-2026 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -219,7 +219,7 @@ const config default_cfg = {
   .exit_write = false,
   .exit_title = W(""),
   .icon = W(""),
-  .log = W("mintty.$h.%Y-%m-%d_%H-%M-%S.$p.log"),
+  .log = W("imintty.$h.%Y-%m-%d_%H-%M-%S.$p.log"),
   .logging = false,
   .log_filter = 1,
   .create_utmp = false,
@@ -246,7 +246,7 @@ const config default_cfg = {
   .emojis = EMOJIS_NOTO,
   .emoji_placement = EMPL_STRETCH,
   .emoji_width = false,
-  .save_filename = W("mintty.%Y-%m-%d_%H-%M-%S"),
+  .save_filename = W("imintty.%Y-%m-%d_%H-%M-%S"),
   .app_id = W(""),
   .app_name = W(""),
   .app_launch_cmd = W(""),
@@ -291,7 +291,7 @@ const config default_cfg = {
   .old_bold = false,
   .ime_cursor_colour = DEFAULT_COLOUR,
   .ansi_colours = {
-#ifdef old_mintty_colour_scheme  // theme "mintty"
+#ifdef old_imintty_colour_scheme  // theme "imintty"
     [BLACK_I]        = RGB(0x00, 0x00, 0x00),
     [RED_I]          = RGB(0xBF, 0x00, 0x00),
     [GREEN_I]        = RGB(0x00, 0xBF, 0x00),
@@ -873,7 +873,7 @@ save_filename(char * suf)
     if (getcwd(cwd, sizeof(cwd))) {
       if (0 == strcmp("/bin", cwd)) {
         // if we're started from /bin 
-        // (e.g. by creating a shortcut directly from mintty.exe),
+        // (e.g. by creating a shortcut directly from imintty.exe),
         // redirect file save location to home
         // (done elsewhere when started from SYSTEMROOT via desktop shortcut)
         char * pat1 = asform("%s/%s", home, pat);
@@ -1278,20 +1278,20 @@ init_config_dirs(void)
   for (int i = 0; i < ncd; i++)
     config_emojis[i] = -1;
 
-  // /usr/share/mintty , $APPDATA/mintty , ~/.config/mintty , ~/.mintty
+  // /usr/share/imintty , $APPDATA/imintty , ~/.config/imintty , ~/.imintty
   config_dirs[++last_config_dir] = "/usr/share";  // for "/emojis" only
-  config_dirs[++last_config_dir] = "/usr/share/mintty";
+  config_dirs[++last_config_dir] = "/usr/share/imintty";
   if (appdata) {
     appdata = newn(char, strlen(appdata) + 8);
-    sprintf(appdata, "%s/mintty", getenv("APPDATA"));
+    sprintf(appdata, "%s/imintty", getenv("APPDATA"));
     config_dirs[++last_config_dir] = appdata;
   }
   if (!support_wsl && access(home, X_OK) == 0) {
     char * xdgconf = newn(char, strlen(home) + 16);
-    sprintf(xdgconf, "%s/.config/mintty", home);
+    sprintf(xdgconf, "%s/.config/imintty", home);
     config_dirs[++last_config_dir] = xdgconf;
     char * homeconf = newn(char, strlen(home) + 9);
-    sprintf(homeconf, "%s/.mintty", home);
+    sprintf(homeconf, "%s/.imintty", home);
     config_dirs[++last_config_dir] = homeconf;
   }
   if (config_dir) {
@@ -1728,7 +1728,7 @@ load_config(string filename, int to_save)
     free_filename = true;
   }
 
-  // prevent saving to /etc/minttyrc
+  // prevent saving to /etc/iminttyrc
   if (strstr(filename, "/etc/") == filename)
     to_save = false;
 
@@ -1961,7 +1961,7 @@ finish_config(void)
   // This tweak was added in commit/964b3097e4624d4b5a3231389d34c00eb5cd1d6d
   // to support bold display as both font and colour (#242)
   // but it does not seem necessary anymore with the current code and options
-  // handling, and it confuses option initialization (mintty/wsltty#103),
+  // handling, and it confuses option initialization (imintty/wsltty#103),
   // so it's removed.
   if (cfg.bold_as_font == -1) {
     cfg.bold_as_font = !cfg.bold_as_colour;
@@ -1986,7 +1986,7 @@ save_config(void)
   FILE *file = fopen(filename, "w");
 
   if (!file) {
-    // Should we report the failed Windows or POSIX path? (see mintty/wsltty#42)
+    // Should we report the failed Windows or POSIX path? (see imintty/wsltty#42)
     // In either case, we must transform to Unicode.
     // For WSL, it's probably not a good idea to report a POSIX path 
     // because it would be mistaken for a WSL path.
@@ -2498,7 +2498,7 @@ lang_handler(control *ctrl, int event)
   const wstring WINLOC = _W("@ Windows language @");
   //__ UI localization: use environment variable setting (LANGUAGE, LC_*)
   const wstring LOCENV = _W("* Locale environm. *");
-  //__ UI localization: use mintty configuration setting (Text - Locale)
+  //__ UI localization: use imintty configuration setting (Text - Locale)
   const wstring LOCALE = _W("= cfg. Text Locale =");
   switch (event) {
     when EVENT_REFRESH:
@@ -2584,10 +2584,10 @@ term_handler(control *ctrl, int event)
       dlg_listbox_add(ctrl, "vt340");
       dlg_listbox_add(ctrl, "vt420");
       dlg_listbox_add(ctrl, "vt525");
-      if (terminfo_exists("mintty"))
-        dlg_listbox_add(ctrl, "mintty");
-      if (terminfo_exists("mintty-direct"))
-        dlg_listbox_add(ctrl, "mintty-direct");
+      if (terminfo_exists("imintty"))
+        dlg_listbox_add(ctrl, "imintty");
+      if (terminfo_exists("imintty-direct"))
+        dlg_listbox_add(ctrl, "imintty-direct");
       dlg_editbox_set(ctrl, new_cfg.term);
     when EVENT_VALCHANGE or EVENT_SELCHANGE:
       dlg_editbox_get(ctrl, &new_cfg.term);
@@ -2725,7 +2725,7 @@ download_scheme(char * url)
     HRESULT (WINAPI * pURLDownloadToFile)(void *, LPCSTR, LPCSTR, DWORD, void *) = 0;
     pURLDownloadToFile = load_library_func("urlmon.dll", "URLDownloadToFileA");
     bool ok = false;
-    sfn = asform("%s/.mintty-scheme.%d", tmpdir(), getpid());
+    sfn = asform("%s/.imintty-scheme.%d", tmpdir(), getpid());
     if (pURLDownloadToFile) {
 # ifdef __CYGWIN__
       /* Need to sync the Windows environment */
@@ -2974,7 +2974,7 @@ download_scheme(char * url)
       if (!l++ && *linebuf == '{') {
         // handle drag-and-drop json formats that contain colour specs like 
         // "Red=190,70,120" (https://github.com/mskyaxl/wsl-terminal) or
-        // "Red=220,50,47\r" (https://github.com/oumu/mintty-color-schemes)
+        // "Red=220,50,47\r" (https://github.com/oumu/imintty-color-schemes)
         void schapp(char * name)
         {
           char specbuf[30];
@@ -3408,7 +3408,7 @@ theme_handler(control *ctrl, int event)
           || (dragndrop[1] == ':' &&
               (wcsstr(dragndrop, W(".itermcolors")) ||
                wcsstr(dragndrop, W(".json")) ||
-               wcsstr(dragndrop, W(".minttyrc"))
+               wcsstr(dragndrop, W(".iminttyrc"))
               )
              )
 #endif

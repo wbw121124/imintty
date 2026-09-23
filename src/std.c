@@ -1,4 +1,4 @@
-// std.c (part of mintty)
+// std.c (part of imintty)
 // Copyright 2010-11 Andy Koppe, 2025 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 

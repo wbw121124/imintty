@@ -34,8 +34,8 @@ printer_start_job(wstring printer_name)
   char n[11];
   sprintf(n, "%d", ++np);
 
-  // compose $tempdir/mintty.print.$USER.$$
-  char * pref = "mintty-print.";
+  // compose $tempdir/imintty.print.$USER.$$
+  char * pref = "imintty-print.";
   pf = malloc(strlen(tempdir) + strlen(pref) + strlen(user) + strlen(pid) + strlen(n) + 7);
   sprintf(pf, "%s/%s%s.%s-%s.prn", tempdir, pref, user, pid, n);
 

@@ -1,12 +1,12 @@
 
-## Mintty ReGIS vector graphics support ##
+## Imintty ReGIS vector graphics support ##
 
 The ReGIS remote graphics format was used in the 1980s for CAD and 
 data visualisation applications. It was supported by some DEC terminals 
 up to the VT340, so its support is a completion for emulation of 
 DEC terminals as well as xterm.
 
-The mintty home page shows two sample screenshots.
+The imintty home page shows two sample screenshots.
 An archive with [sample files](regis-samples.zip) is here for download.
 
 ReGIS features are supported with the following modifications:

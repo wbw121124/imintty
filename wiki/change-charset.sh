@@ -1,6 +1,6 @@
 # This function can be defined in your shell profile, e.g. $HOME/.bashrc
 # It can be invoked to change the character set of 
-# mintty and the shell environment and keep them synchronous.
+# imintty and the shell environment and keep them synchronous.
 
 changecs () {
 	# determine which locale environment variables are set
@@ -15,7 +15,7 @@ changecs () {
 	# get effective character set, checking locale environment variables 
 	# in order of precedence
 	lc="${LC_ALL:-${LC_CTYPE:-$LANG}}"
-	# now set mintty character set
+	# now set imintty character set
 	echo -en "\033]701;$lc\007"
 }
 

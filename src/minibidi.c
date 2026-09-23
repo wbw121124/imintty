@@ -1389,7 +1389,7 @@ do_bidi(bool autodir, int paragraphLevel, bool explicitRTL, bool box_mirror,
   * process, then the ordering of the marks and the base character must
   * be reversed.
   */
-  // This is not relevant for mintty as the combining characters are kept 
+  // This is not relevant for imintty as the combining characters are kept 
   // hidden from this algorithm and are maintained transparently to it.
 
   return resLevel;

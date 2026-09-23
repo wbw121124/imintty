@@ -1,4 +1,4 @@
-// child.c (part of mintty)
+// child.c (part of imintty)
 // Copyright 2008-11 Andy Koppe, 2015-2026 Thomas Wolff
 // Licensed under the terms of the GNU General Public License v3 or later.
 
@@ -578,7 +578,7 @@ child_create(char *argv[], struct winsize *winp)
     setenv("TERM_PROGRAM_VERSION", VERSION, true);
 
     // If option Locale is used, set locale variables?
-    // https://github.com/mintty/mintty/issues/116#issuecomment-108888265
+    // https://github.com/imintty/imintty/issues/116#issuecomment-108888265
     // Variables are now set in update_locale() which sets one of 
     // LC_ALL or LC_CTYPE depending on previous setting of 
     // LC_ALL or LC_CTYPE or LANG, stripping @cjk modifiers for WSL.
@@ -744,22 +744,22 @@ child_proc(void)
 
         // Decide whether we want to exit now or later
         if (killed || cfg.hold == HOLD_NEVER)
-          exit_mintty();
+          exit_imintty();
         else if (cfg.hold == HOLD_START) {
           if (WIFSIGNALED(status) || WEXITSTATUS(status) != mexit)
-            exit_mintty();
+            exit_imintty();
         }
         else if (cfg.hold == HOLD_ERROR) {
           if (WIFEXITED(status)) {
             if (WEXITSTATUS(status) == 0)
-              exit_mintty();
+              exit_imintty();
           }
           else {
             const int error_sigs =
               1 << SIGILL | 1 << SIGTRAP | 1 << SIGABRT | 1 << SIGFPE |
               1 << SIGBUS | 1 << SIGSEGV | 1 << SIGPIPE | 1 << SIGSYS;
             if (!(error_sigs & 1 << WTERMSIG(status)))
-              exit_mintty();
+              exit_imintty();
           }
         }
 
@@ -804,7 +804,7 @@ child_proc(void)
 #ifdef exit_WSL_after_closed_here
     if (support_wsl && killed)
       // force-close, as wsl.exe does not response to kill() in Windows 10
-      exit_mintty();
+      exit_imintty();
 #endif
 
     if (select(win_fd + 1, &fds, 0, 0, timeout_p) > 0) {
@@ -914,13 +914,13 @@ child_kill(bool point_blank)
   if (!pid ||
       kill(-pid, point_blank ? SIGKILL : SIGHUP) < 0 ||
       point_blank)
-    exit_mintty();
+    exit_imintty();
 
   if (support_wsl) {
     //if (killed) // limit to double-close? - rather not
 
     // force-close, as wsl.exe does not response to kill() in Windows 10
-    exit_mintty();
+    exit_imintty();
   }
 
   killed = true;
@@ -1293,24 +1293,24 @@ user_command(wstring commands, int n)
           char * _fgpid = 0;
           asprintf(&_fgpid, "%d", fgpid);
           if (_fgpid) {
-            setenv("MINTTY_PID", _fgpid, true);
+            setenv("IMINTTY_PID", _fgpid, true);
             free(_fgpid);
           }
         }
         char * fgp = foreground_prog();
         if (fgp) {
-          setenv("MINTTY_PROG", fgp, true);
+          setenv("IMINTTY_PROG", fgp, true);
           free(fgp);
         }
         char * fgd = foreground_cwd();
         if (fgd) {
-          setenv("MINTTY_CWD", fgd, true);
+          setenv("IMINTTY_CWD", fgd, true);
           free(fgd);
         }
         term_cmd(progp);
-        unsetenv("MINTTY_CWD");
-        unsetenv("MINTTY_PROG");
-        unsetenv("MINTTY_PID");
+        unsetenv("IMINTTY_CWD");
+        unsetenv("IMINTTY_PROG");
+        unsetenv("IMINTTY_PID");
         break;
       }
       n--;
@@ -1437,28 +1437,28 @@ setup_sync(bool in_tabs)
 {
   if (sync_level()) {
     if (win_is_fullscreen) {
-      setenvi("MINTTY_DX", 0);
-      setenvi("MINTTY_DY", 0);
+      setenvi("IMINTTY_DX", 0);
+      setenvi("IMINTTY_DY", 0);
     }
     else if (!IsZoomed(wnd)) {
       RECT r;
       GetWindowRect(wnd, &r);
-      setenvi("MINTTY_X", r.left);
-      setenvi("MINTTY_Y", r.top);
-      setenvi("MINTTY_DX", r.right - r.left);
-      setenvi("MINTTY_DY", r.bottom - r.top);
+      setenvi("IMINTTY_X", r.left);
+      setenvi("IMINTTY_Y", r.top);
+      setenvi("IMINTTY_DX", r.right - r.left);
+      setenvi("IMINTTY_DY", r.bottom - r.top);
     }
     if (cfg.tabbar) {
-      setenvi("MINTTY_TABBAR", cfg.tabbar);
-      setenvi("MINTTY_SYNC", cfg.geom_sync);
+      setenvi("IMINTTY_TABBAR", cfg.tabbar);
+      setenvi("IMINTTY_SYNC", cfg.geom_sync);
       // enforce proper grouping, i.e. either new tab or window, as requested
       if (in_tabs && *cfg.class) {
         char * class = cs__wcstoutf(cfg.class);
-        setenv("MINTTY_CLASS", class, true);
+        setenv("IMINTTY_CLASS", class, true);
         free(class);
       }
       else if (!in_tabs)
-        setenv("MINTTY_CLASS", "+", true);
+        setenv("IMINTTY_CLASS", "+", true);
     }
   }
 }
@@ -1553,12 +1553,12 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size, b
         // prevent shell startup from setting current directory to $HOME
         // unless cloned/Alt+F2 (!launch)
         if (!launch) {
-          setenv("CHERE_INVOKING", "mintty", true);
+          setenv("CHERE_INVOKING", "imintty", true);
           // if cloned and then launched from Windows shortcut (!shortcut) 
-          // (by sanitizing taskbar icon grouping, #784, mintty/wsltty#96) 
+          // (by sanitizing taskbar icon grouping, #784, imintty/wsltty#96) 
           // indicate to set proper directory
           if (shortcut)
-            setenv("MINTTY_PWD", set_dir, true);
+            setenv("IMINTTY_PWD", set_dir, true);
         }
 
         delete(set_dir);
@@ -1597,27 +1597,27 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size, b
 
     // provide environment to clone size
     if (!config_size) {
-      setenvi("MINTTY_ROWS", term.rows0);
-      setenvi("MINTTY_COLS", term.cols0);
+      setenvi("IMINTTY_ROWS", term.rows0);
+      setenvi("IMINTTY_COLS", term.cols0);
 #ifdef support_horizontal_scrollbar_with_tabbar
       // this does not work, so horizontal scrollbar is disabled with tabbar
 extern int horsqueeze(void);  // should become horsqueeze_cols in win.h
-      setenvi("MINTTY_SQUEEZE", horsqueeze() / cell_width);
+      setenvi("IMINTTY_SQUEEZE", horsqueeze() / cell_width);
 #endif
       // provide environment to maximise window
       if (win_is_fullscreen)
-        setenvi("MINTTY_MAXIMIZE", 2);
+        setenvi("IMINTTY_MAXIMIZE", 2);
       else if (IsZoomed(wnd))
-        setenvi("MINTTY_MAXIMIZE", 1);
+        setenvi("IMINTTY_MAXIMIZE", 1);
     }
     // provide environment to select monitor
     if (moni > 0)
-      setenvi("MINTTY_MONITOR", moni);
+      setenvi("IMINTTY_MONITOR", moni);
     // propagate shortcut-inherited icon
     if (icon_is_from_shortcut)
-      setenv("MINTTY_ICON", cs__wcstoutf(cfg.icon), true);
+      setenv("IMINTTY_ICON", cs__wcstoutf(cfg.icon), true);
 
-    //setenv("MINTTY_CHILD", "1", true);
+    //setenv("IMINTTY_CHILD", "1", true);
 
 #if CYGWIN_VERSION_DLL_MAJOR >= 1005
     if (cloning && shortcut) {
@@ -1656,7 +1656,7 @@ child_fork(int argc, char *argv[], int moni, bool config_size, bool in_cwd, bool
   setup_sync(in_tabs);
   do_child_fork(argc, argv, moni, false, config_size, in_cwd, true);
   // prevent wrong control of subsequent child_fork
-  unsetenv("MINTTY_CLASS");
+  unsetenv("IMINTTY_CLASS");
 }
 
 /*

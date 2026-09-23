@@ -1,4 +1,4 @@
-// termmouse.c (part of mintty)
+// termmouse.c (part of imintty)
 // Copyright 2008-2023 Andy Koppe, 2017-2025 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.

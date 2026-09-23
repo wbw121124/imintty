@@ -1,4 +1,4 @@
-// termline.c (part of mintty)
+// termline.c (part of imintty)
 // Copyright 2008-12 Andy Koppe, -2025 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -1195,7 +1195,7 @@ term_bidi_line(termline *line, int scr_y)
         // Handle initial combining characters, esp. directional markers
         termchar * bp = &line->chars[-1];
         // Unfold directional formatting characters which are handled 
-        // like combining characters in the mintty structures 
+        // like combining characters in the imintty structures 
         // (and would thus stay hidden from minibidi), and need to be 
         // exposed as separate characters for the minibidi algorithm
         while (bp->cc_next) {
@@ -1292,7 +1292,7 @@ term_bidi_line(termline *line, int scr_y)
 
       termchar * bp = &line->chars[it];
       // Unfold directional formatting characters which are handled 
-      // like combining characters in the mintty structures 
+      // like combining characters in the imintty structures 
       // (and would thus stay hidden from minibidi), and need to be 
       // exposed as separate characters for the minibidi algorithm.
       // Also unfold ALEF if handled like combining character for joining.

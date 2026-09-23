@@ -9,7 +9,7 @@
 static HANDLE printer;
 
 static const DOC_INFO_1 doc_info = {
-  .pDocName = "Mintty ANSI printer output",
+  .pDocName = "Imintty ANSI printer output",
   .pOutputFile = null,
   .pDatatype = "TEXT"
 };

@@ -1,12 +1,12 @@
-# Traductions françaises du paquet mintty.
-# Copyright (C) 2017 THE mintty'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the mintty package.
+# Traductions françaises du paquet imintty.
+# Copyright (C) 2017 THE imintty'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the imintty package.
 # Eric lassauge <lassauge@gmail.com>, 2017-2025.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"Project-Id-Version: imintty\n"
+"Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
 "POT-Creation-Date: 2026-06-09 00:32+0200\n"
 "PO-Revision-Date: 2025-11-14 17:30+0100\n"
 "Last-Translator: Eric Lassauge <lassauge@gmail.com>\n"
@@ -194,7 +194,7 @@ msgstr "@ Langue système @"
 msgid "* Locale environm. *"
 msgstr "* Locale environ. *"
 
-#. __ UI localization: use mintty configuration setting (Text - Locale)
+#. __ UI localization: use imintty configuration setting (Text - Locale)
 #: config.c:2466
 msgid "= cfg. Text Locale ="
 msgstr "= Langue caractères ="
@@ -1067,7 +1067,7 @@ msgstr "A&jouter aux couleurs personnalisées"
 msgid "Options"
 msgstr "Options"
 
-#. __ Options: dialog title: "mintty <release> available (for download)"
+#. __ Options: dialog title: "imintty <release> available (for download)"
 #: windialog.c:268
 msgid "available"
 msgstr "disponible"
@@ -1427,8 +1427,8 @@ msgid "Syntax error in geometry argument '%s'"
 msgstr "Erreur de syntaxe pour l’argument de taille et position « %s »"
 
 #: winmain.c:7506
-msgid "Mintty could not detach from caller, starting anyway"
-msgstr "Mintty ne peut se détacher de l’appelant, on démarre quand même"
+msgid "Imintty could not detach from caller, starting anyway"
+msgstr "Imintty ne peut se détacher de l’appelant, on démarre quand même"
 
 #: winmain.c:7889
 msgid "Using default title due to invalid characters in program name"
@@ -1487,12 +1487,12 @@ msgstr "Sans garantie aucune dans les limites permises par la loi."
 #: appinfo.h:69
 msgid ""
 "Please report bugs or request enhancements through the issue tracker on the "
-"mintty project page located at\n"
+"imintty project page located at\n"
 "%s.\n"
 "See also the Wiki there for further hints, thanks and credits."
 msgstr ""
 "Traductions © 2025 Éric Lassauge\n"
 "Reportez les bugs ou les demandes d’amélioration via le gestionnaire de "
-"problèmes de la page du projet mintty\n"
+"problèmes de la page du projet imintty\n"
 "à l’adresse « %s ».\n"
 "Voir également le wiki pour d’autres astuces, remerciements et crédits."

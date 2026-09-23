@@ -31,7 +31,7 @@ struct tekfont {
   void * f;
   short rows, cols;
   short hei, wid;
-} tekfonts[] = {        // Tek		VT240		mintty
+} tekfonts[] = {        // Tek		VT240		imintty
   {0, 35, 74, 88, 55},  // 35 × 74	35 × 74		35 × 74
   {0, 38, 81, 81, 50},  // 38 × 81	38 × 81		38 × 81
   {0, 58, 121, 53, 32}, // 58 × 121	58 × 128	58 × 128

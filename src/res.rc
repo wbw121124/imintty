@@ -32,7 +32,7 @@ BEGIN
     BEGIN
       VALUE "FileVersion", POINT_VERSION
       VALUE "FileDescription", APPDESC
-      VALUE "ProductName", APPNAME
+      VALUE "ProductName", APPFULL
       VALUE "ProductVersion", VERSION
       VALUE "CompanyName", AUTHOR
       VALUE "LegalCopyright", COPYRIGHT

@@ -1,4 +1,4 @@
-// ctrls.c (part of mintty)
+// ctrls.c (part of imintty)
 // Copyright 2008-11 Andy Koppe
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // (corresponds to putty:dialog.c)

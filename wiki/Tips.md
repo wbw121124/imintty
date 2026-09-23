@@ -1,47 +1,47 @@
 
-## Configuring mintty ##
+## Configuring imintty ##
 
-Mintty supports a number of common places to look for and save its 
+Imintty supports a number of common places to look for and save its 
 configuration and resources.
 
 For its configuration, it reads configuration files in this order:
-* `/etc/minttyrc`
-* `$APPDATA/mintty/config`
-* `~/.config/mintty/config`
-* `~/.minttyrc`
+* `/etc/iminttyrc`
+* `$APPDATA/imintty/config`
+* `~/.config/imintty/config`
+* `~/.iminttyrc`
 
 For resource files to configure a colour scheme, 
 wave file for the bell character, localization files, emoji graphics, 
 dynamic fonts, pointer shapes, it looks for subfolders 
 `themes`, `sounds`, `lang`, `emojis`, `fonts`, `pointers`, respectively, 
 in the directories
-* `~/.mintty`
-* `~/.config/mintty`
-* `$APPDATA/mintty`
-* `/usr/share/mintty`
+* `~/.imintty`
+* `~/.config/imintty`
+* `$APPDATA/imintty`
+* `/usr/share/imintty`
 
-The ```~/.config/mintty``` folder is the XDG default base directory.
-The ```$APPDATA/mintty``` folder is especially useful to share common configuration 
-for various installations of mintty (e.g. Cygwin 32/64 Bit, MSYS, Git Bash, WSL).
+The ```~/.config/imintty``` folder is the XDG default base directory.
+The ```$APPDATA/imintty``` folder is especially useful to share common configuration 
+for various installations of imintty (e.g. Cygwin 32/64 Bit, MSYS, Git Bash, WSL).
 An additional directory for a configuration file and configuration resources 
 can be given with command-line parameter ```--configdir```.
 
 
 ## Desktop integration ##
 
-### Using desktop shortcuts to start mintty ###
+### Using desktop shortcuts to start imintty ###
 
-The Cygwin [setup.exe](http://cygwin.com/setup.exe) package for mintty 
+The Cygwin [setup.exe](http://cygwin.com/setup.exe) package for imintty 
 installs a shortcut in the Windows start menu under _All Programs/Cygwin_.
-It starts mintty with a ‘-’ (i.e. a single dash) as its only argument, 
+It starts imintty with a ‘-’ (i.e. a single dash) as its only argument, 
 which tells it to invoke the user’s default shell as a login shell.
 
-Shortcuts are also a convenient way to start mintty with additional options and different commands. 
+Shortcuts are also a convenient way to start imintty with additional options and different commands. 
 For example, shortcuts for access to remote machines can be created by 
 invoking **[ssh](http://www.openssh.com)**. The command simply needs 
 to be appended to the target field of the shortcut’s properties:
 
-> Target: `C:\Cygwin64\bin\mintty.exe /bin/ssh server`
+> Target: `C:\Cygwin64\bin\imintty.exe /bin/ssh server`
 
 The **[cygutils](http://www.cygwin.com/cygwin-ug-net/using-effectively.html#using-cygutils)** package 
 provides the **mkshortcut** utility for creating shortcuts from the command line. 
@@ -49,8 +49,8 @@ See its manual page for details.
 
 ### Smart login mode ###
 
-If invoked from a Windows shortcut (desktop or start menu), mintty starts 
-the shell in login mode implicitly (since mintty 3.4.7) unless disabled 
+If invoked from a Windows shortcut (desktop or start menu), imintty starts 
+the shell in login mode implicitly (since imintty 3.4.7) unless disabled 
 with option `LoginFromShortcut`.
 
 ### Hotkey / Windows Shortcut key ###
@@ -60,24 +60,24 @@ modifiers can be defined as a system hotkey to start an application or
 bring it to the front.
 
 To have a new instance started with every usage of the hotkey, use the 
-command-line option ```-D``` for mintty in the shortcut target.
+command-line option ```-D``` for imintty in the shortcut target.
 
 ### Hotkey / "quake mode" ###
 
-Mintty detects if activated via hotkey and will use the same hotkey to 
+Imintty detects if activated via hotkey and will use the same hotkey to 
 minimize itself in turn, unless inhibited by shortcut override mode. 
 The preferred appearance of the hotkey-activated terminal window can 
 further be customized with options in the shortcut, e.g.
 
-> `C:\Cygwin64\bin\mintty.exe --pos top --size maxwidth -`
+> `C:\Cygwin64\bin\imintty.exe --pos top --size maxwidth -`
 
 ### Taskbar icons ###
 
-In a Windows desktop shortcut, (since mintty 2.2.3) it is suggested 
-to _not_ specify an icon in the command line, as mintty detects and uses 
+In a Windows desktop shortcut, (since imintty 2.2.3) it is suggested 
+to _not_ specify an icon in the command line, as imintty detects and uses 
 the icon from the invoking shortcut.
 If for any reason, an icon is to be specified, it should be the same 
-in the mintty command line (shortcut properties Target:) as in the 
+in the imintty command line (shortcut properties Target:) as in the 
 shortcut itself (Change Icon...).
 
 ### Taskbar icon grouping ###
@@ -90,7 +90,7 @@ with the same AppID are grouped together.
 
 The AppID supports placeholder parameters for a flexible grouping 
 configuration (see manual).
-The special value `AppID=@` causes mintty to derive an implicit AppID 
+The special value `AppID=@` causes imintty to derive an implicit AppID 
 from the WSL system name, in order to achieve WSL distribution-specific 
 taskbar grouping. This resolves taskbar grouping problems in some cases 
 (wsltty issue #96) but causes similar problems in other cases (issue #784).
@@ -99,22 +99,22 @@ _Warning:_ Using this option in a Windows desktop shortcut may
 cause trouble with taskbar grouping behaviour. If you need to do that, 
 the shortcut itself should also get attached with the same AppId.
 
-_Note:_ Since 2.9.6, if mintty is started via a Windows shortcut 
-which has its own AppID, it is reused for the new mintty window in order 
+_Note:_ Since 2.9.6, if imintty is started via a Windows shortcut 
+which has its own AppID, it is reused for the new imintty window in order 
 to achieve proper taskbar icon grouping. This takes precedence over an 
 explicit setting of the AppID option.
 
 _Explanation:_ Note that Windows shortcut files have their own AppID.
-Hence, if an AppID is specified in the mintty settings, but not on a 
-taskbar-pinned shortcut for invoking mintty, clicking the pinned 
-shortcut will result in a separate taskbar item for the new mintty window, 
+Hence, if an AppID is specified in the imintty settings, but not on a 
+taskbar-pinned shortcut for invoking imintty, clicking the pinned 
+shortcut will result in a separate taskbar item for the new imintty window, 
 rather than being grouped with the shortcut.
 
 _Hint:_ To avoid AppID inconsistence and thus ungrouped taskbar icons,
-the shortcut's AppID should to be set to the same string as the mintty AppID, 
+the shortcut's AppID should to be set to the same string as the imintty AppID, 
 which can be done using the `winappid` utility available in 
-the mintty [utils repository](https://github.com/mintty/utils).
-As noted above, since mintty 2.9.6, the mintty AppID does not need to be set 
+the imintty [utils repository](https://github.com/imintty/utils).
+As noted above, since imintty 2.9.6, the imintty AppID does not need to be set 
 anymore in this case.
 
 ### Taskbar launch commands ###
@@ -131,7 +131,7 @@ with setting `SessionCommands`.
 
 ### Taskbar pinning ###
 
-Taskbar pinning of a mintty window can be prevented with command line setting `--nopin`.
+Taskbar pinning of a imintty window can be prevented with command line setting `--nopin`.
 
 ### Taskbar bell indication ###
 
@@ -151,9 +151,9 @@ To enable progress indication e.g. for the MSYS2 package manager pacman:
 
 For grouping of window icons in the taskbar, Windows uses the intricate 
 AppID concept as explained above. For grouping of desktop windows, as used by 
-the mintty session switcher or tabbar, or external window manipulation tools, 
+the imintty session switcher or tabbar, or external window manipulation tools, 
 Windows uses the distinct but likewise intricate Class concept.
-Mintty provides flexible configuration to set up either of them, see manual.
+Imintty provides flexible configuration to set up either of them, see manual.
 
 
 ## Window icons ##
@@ -170,29 +170,29 @@ echo -e "\e]I;`printenv 'ProgramFiles(x86)'`/Mozilla Firefox/firefox.exe,4\a"
 
 ### Error: could not fork child process ###
 
-If you are frequently facing this problem, it is not really a mintty issue, 
+If you are frequently facing this problem, it is not really a imintty issue, 
 but it may reportedly help if you turn off the Windows ASLR feature 
-for cygwin-based programs; turn off Mandatory ASLR for mintty, 
+for cygwin-based programs; turn off Mandatory ASLR for imintty, 
 cygwin-console-helper, your shell and other programs as described in 
-[issue #493](https://github.com/mintty/mintty/issues/493#issuecomment-361281995)
+[issue #493](https://github.com/imintty/imintty/issues/493#issuecomment-361281995)
 or using Powershell commands as described in
-[wsltty issue #6](https://github.com/mintty/wsltty/issues/6#issuecomment-419589599).
+[wsltty issue #6](https://github.com/imintty/wsltty/issues/6#issuecomment-419589599).
 
 
 ## Supporting Linux/Posix subsystems ##
 
 If you have any Linux distribution for the Windows Subsystem for Linux (WSL) 
-installed, mintty can be called from cygwin to run a WSL terminal session:
-* `mintty --WSL=Ubuntu`
-* `mintty --WSL` (for the Default distribution as set with `wslconfig /s` or `wsl -s`)
+installed, imintty can be called from cygwin to run a WSL terminal session:
+* `imintty --WSL=Ubuntu`
+* `imintty --WSL` (for the Default distribution as set with `wslconfig /s` or `wsl -s`)
 
-A WSL terminal session can be configured for the mintty session launcher 
+A WSL terminal session can be configured for the imintty session launcher 
 in the config file, like:
 * `SessionCommands=Ubuntu:--WSL=Ubuntu`
 
 ### WSL support ###
 
-As also described in the manual, mintty adapts certain features 
+As also described in the manual, imintty adapts certain features 
 for WSL interaction:
 * Cygwin CJK extensions of locale modifiers are not applied.
 * Pathname handling for OSC 7 directory cloning.
@@ -207,10 +207,10 @@ for WSL interaction:
 * Display of start or exit error messages.
 * Handling of foreground working directory.
 
-Mintty adjusts its icon (including in the session launcher) according 
+Imintty adjusts its icon (including in the session launcher) according 
 to the selected WSL distribution.
 
-Mintty can adjust taskbar grouping as well as tab set grouping to 
+Imintty can adjust taskbar grouping as well as tab set grouping to 
 your preferences, for example:
 * `Class=wsl-class-%5$s` to group sessions of each WSL distribution
 
@@ -223,7 +223,7 @@ Option `WSLbridge` selects the WSL launcher / bridge gateway to be used.
 The `wslbridge2` or older `wslbridge` gateways need to be installed in 
 `/bin` for this purpose (see below for details).
 
-With 3.7.9, however, mintty supports WSL sessions out of the box, 
+With 3.7.9, however, imintty supports WSL sessions out of the box, 
 dropping the wslbridge gateways by default, since there were 
 notoriously frequent cases where they would have failed to work.
 Launching WSL with the Windows built-in default launcher, however, 
@@ -232,12 +232,12 @@ by hooking the Windows _conhost_ layer into the workflow.
 This deficiency can now be compensated by patching an updated `conhost.exe` 
 into Windows; see instructions about `conhost` further below.
 
-### WSLtty, the standalone WSL mintty terminal ###
+### WSLtty, the standalone WSL imintty terminal ###
 
-For a standalone mintty deployment as a WSL terminal, also providing 
+For a standalone imintty deployment as a WSL terminal, also providing 
 desktop and start menu shortcuts, command line launch scripts, and 
 optional Windows Explorer integration, install 
-[wsltty](https://github.com/mintty/wsltty),
+[wsltty](https://github.com/imintty/wsltty),
 using various installation options listed there.
 
 ### Manual setup of a WSL launcher / bridge gateway ###
@@ -250,14 +250,14 @@ To help reproduce the installation manually, for users of cygwin or msys2:
   * `wsl make RELEASE=1` or `wsl -d` _distro_ `make RELEASE=1` for the backends
 * From subdirectory `bin`, install the gateway tools `wslbridge2.exe` and `wslbridge2-backend` into your `/bin` directory
 * Make a desktop shortcut (Desktop right-click – New ▸ Shortcut) with
-  * Target: `X:\cygwin64\bin\mintty.exe --WSL=`_distro_` -`, with the desired WSL distro (or empty for default)
+  * Target: `X:\cygwin64\bin\imintty.exe --WSL=`_distro_` -`, with the desired WSL distro (or empty for default)
   * Icon location (Change Icon…) as appropriate; the wsltty installer will find the distro-specific icon
 
 Replace `X:\cygwin64` with your cygwin or msys2 root directory path 
 and `Linux_Distribution` with your preferred distribution. The suitable 
 icon location for each respective distribution is not easily found; the 
 standalone package would set that up for you in the shortcuts. For other 
-invocation (cygwin or Windows command line), mintty finds the suitable 
+invocation (cygwin or Windows command line), imintty finds the suitable 
 WSL icon itself.
 
 Note that older wslbridge2 backends used not to be interoperable among 
@@ -266,7 +266,7 @@ The _distro_ `Alpine` had been checked out to build a backend that works
 with all Linux distributions; builds of later wslbridge2 are reported 
 to be interoperable though.
 
-At the end of the `mintty --WSL` invocation line, you may add an explicit 
+At the end of the `imintty --WSL` invocation line, you may add an explicit 
 WSL shell invocation like `/bin/bash -l` to select your favourite shell or 
 ask for a login shell (`-l`), or set a start directory (`-C`, before any 
 shell command) if desired.
@@ -276,64 +276,64 @@ of the shortcut may be set to `%USERPROFILE%`.
 
 ### Interix ###
 
-On Windows 7, mintty may also be used as a terminal for the 
+On Windows 7, imintty may also be used as a terminal for the 
 Subsystem for UNIX-based applications (SUA), also known as Interix.
-For the mintty session launcher, this can be configured for the 
+For the imintty session launcher, this can be configured for the 
 available shells as follows (concatenated with ‘;’ separator for multiple targets):
 * `SessionCommands=Interix Korn Shell:/bin/winpty C:\Windows\posix.exe /u /c /bin/ksh -l`
 * `SessionCommands=Interix SVR-5 Korn Shell:/bin/winpty posix /u /p /svr-5/bin/ksh /c -ksh`
 * `SessionCommands=Interix C Shell:/bin/winpty posix /u /c /bin/csh -l`
 
 For a desktop or start menu shortcut, the respective target command would 
-look like `X:\cygwin\bin\mintty.exe winpty` …
+look like `X:\cygwin\bin\imintty.exe winpty` …
 (and may use the icon location 
 %SystemRoot%\Installer\{DB88A98A-792B-4441-8E60-05A6D3E2B2C0}\sh.exe).
 
 
-## Starting mintty from a batch file ##
+## Starting imintty from a batch file ##
 
-In order to start mintty from a batch file it needs to be invoked through the **[start](http://technet.microsoft.com/en-us/library/cc770297.aspx)** command. This avoids the batch file’s console window staying open while mintty is running. For example:
+In order to start imintty from a batch file it needs to be invoked through the **[start](http://technet.microsoft.com/en-us/library/cc770297.aspx)** command. This avoids the batch file’s console window staying open while imintty is running. For example:
 
 ```
-start mintty -
+start imintty -
 ```
 
-The console window for the batch file will still show up briefly, however. This can be avoided by invoking mintty from a shortcut instead, as described above.
+The console window for the batch file will still show up briefly, however. This can be avoided by invoking imintty from a shortcut instead, as described above.
 
 
 ## Starting in a particular directory ##
 
-The working directory for a mintty session can be set in the 
+The working directory for a imintty session can be set in the 
 _Start In_ field of a shortcut, 
 or by changing directory in an invoking script, or with option `--dir`.
 Note, however, that Cygwin’s _/etc/profile_ script for login shells automatically changes to the user’s home directory.
 The profile script can be told not to do this by setting a variable called _CHERE\_INVOKING_, like this:
 
 ```
-mintty /bin/env CHERE_INVOKING=1 /bin/bash -l
+imintty /bin/env CHERE_INVOKING=1 /bin/bash -l
 ```
 
-Note: If mintty is run from a shortcut with empty _Start In_ field and the 
-effective start directory is within the Windows system folder, mintty changes 
+Note: If imintty is run from a shortcut with empty _Start In_ field and the 
+effective start directory is within the Windows system folder, imintty changes 
 it in order to avoid failure when creating a log file.
 
 
-## Creating a folder context menu entry for mintty ##
+## Creating a folder context menu entry for imintty ##
 
 Cygwin’s **chere** package can be used to create folder context menu entries in Explorer, which allow a shell to be opened with the working directory set to the selected folder.
 
-The following command will create an entry called _Bash Prompt Here_ for the current user that will invoke bash running in mintty. See the chere manual (_man chere_) for all the options.
+The following command will create an entry called _Bash Prompt Here_ for the current user that will invoke bash running in imintty. See the chere manual (_man chere_) for all the options.
 
 ```
-chere -1 -i -c -t mintty
+chere -1 -i -c -t imintty
 ```
 
 Note, however, that context menu entries created by **chere** fail on non-ASCII directory names.
-Mintty option `--dir` comes to help, like in either of these registry entries 
-for registry keys like `/HKCU/Software/Classes/Directory/Shell/mintty-here/command/`:
+Imintty option `--dir` comes to help, like in either of these registry entries 
+for registry keys like `/HKCU/Software/Classes/Directory/Shell/imintty-here/command/`:
 ```
-C:\cygwin64\bin\mintty.exe --dir "%1" /bin/bash
-C:\cygwin64\bin\mintty.exe --dir "%1" /bin/env CHERE_INVOKING=1 /bin/bash -l
+C:\cygwin64\bin\imintty.exe --dir "%1" /bin/bash
+C:\cygwin64\bin\imintty.exe --dir "%1" /bin/env CHERE_INVOKING=1 /bin/bash -l
 ```
 
 
@@ -343,10 +343,10 @@ Unfortunately Windows shortcuts do not allow the setting of environment variable
 
 Alternatively, global variables can be set using the **[setx](http://technet.microsoft.com/en-us/library/cc755104.aspx)** command line utility. This comes pre-installed with some versions of Windows but is also available as part of the freely downloadable _Windows 2003 Resource Kit Tools_.
 
-The **[env](http://www.opengroup.org/onlinepubs/9699919799/utilities/env.html)** utility can be used to set variables specifically for the program to be run in mintty, e.g.:
+The **[env](http://www.opengroup.org/onlinepubs/9699919799/utilities/env.html)** utility can be used to set variables specifically for the program to be run in imintty, e.g.:
 
 ```
-mintty /bin/env DISPLAY=:0 /bin/ssh -X server
+imintty /bin/env DISPLAY=:0 /bin/ssh -X server
 ```
 
 
@@ -355,9 +355,9 @@ mintty /bin/env DISPLAY=:0 /bin/ssh -X server
 When interacting with programs that use a native Windows API for 
 command-line user interaction (“console mode”), a number of undesirable 
 effects used to be observed; this is the 
-[pty incompatibility problem](https://github.com/mintty/mintty/issues/56) 
+[pty incompatibility problem](https://github.com/imintty/imintty/issues/56) 
 and the 
-[character encoding incompatibility problem](https://github.com/mintty/mintty/issues/376).
+[character encoding incompatibility problem](https://github.com/imintty/imintty/issues/376).
 This would basically affect all programs not compiled in a cygwin or msys 
 environment (and note that MinGW is not msys in this context), and would 
 occur in all pty-based terminals (like xterm, rxvt etc).
@@ -367,7 +367,7 @@ On MSYS2, its usage can be enabled by setting the environment variable
 MSYS=enable_pcon (or selecting this setting when installing an older version).
 You can also later set `MSYS=enable_pcon` in file `/etc/git-bash.config`.
 MSYS2 releases since 2022-10-28 enable ConPTY by default.
-You can also set mintty option `ConPTY=true` to override the MSYS2 setting.
+You can also set imintty option `ConPTY=true` to override the MSYS2 setting.
 
 As a workaround on older versions of Cygwin or Windows, you can use 
 [winpty](https://github.com/rprichard/winpty) as a wrapper to invoke 
@@ -421,7 +421,7 @@ The same workaround handles interrupt signals, particularly Control+C,
 which does not otherwise function as expected with non-cygwin programs.
 
 
-## Terminal type detection – check if running inside mintty ##
+## Terminal type detection – check if running inside imintty ##
 
 Some applications, often text editors, want to know which terminal they 
 are running in, in order to make use of terminal-specific features that 
@@ -429,19 +429,19 @@ are not indicated by the terminfo/termcap mechanism.
 
 The most reliable way to determine the terminal type is to use the 
 Secondary Device Attributes report queried from the terminal.
-The script `terminal` in the mintty 
-[utils repository](https://github.com/mintty/utils) provides an implementation.
+The script `terminal` in the imintty 
+[utils repository](https://github.com/imintty/utils) provides an implementation.
 
-In addition, from mintty 3.1.5, an additional escape sequence causes mintty 
+In addition, from imintty 3.1.5, an additional escape sequence causes imintty 
 to report its name and version; furthermore, although using 
 environment variables for this purpose is not reliable (see 
-[issue #776](https://github.com/mintty/mintty/issues/776) for a discussion), 
-mintty sets environment variables TERM_PROGRAM and TERM_PROGRAM_VERSION 
+[issue #776](https://github.com/imintty/imintty/issues/776) for a discussion), 
+imintty sets environment variables TERM_PROGRAM and TERM_PROGRAM_VERSION 
 as various other terminals do.
 
 ### WSL terminal type ###
 
-In WSL mode, since 3.7.8, mintty does not propagate its TERM setting 
+In WSL mode, since 3.7.8, imintty does not propagate its TERM setting 
 to WSL anymore, in order to allow WSL local preferences 
 (often xterm-256color). Instead it sets environment variable HOSTTERM.
 
@@ -520,13 +520,13 @@ Anyone used to Windows key combinations for editing text might find the followin
 
 # Ctrl+Delete / Ctrl+Backarrow to delete whole words
 "\e[3;5~": kill-word
-"\C-_": backward-kill-word      # with mintty setting KeyFunctions=C+Back:"^_"
+"\C-_": backward-kill-word      # with imintty setting KeyFunctions=C+Back:"^_"
 
 # Ctrl+Shift+Delete to delete to end of the line
 "\e[3;6~": kill-line
 
 # Ctrl+Shift+Backarrow to delete to start of the line
-"\e[72;6~": backward-kill-line  # with mintty setting KeyFunctions=CS+Back:72
+"\e[72;6~": backward-kill-line  # with imintty setting KeyFunctions=CS+Back:72
 
 # Alt-Backarrow for undo
 "\e\d": undo                    # would be disabled by DECSET 67 sequence
@@ -573,10 +573,10 @@ option `FilterPasteControls` can drop control characters from paste contents.
 ## Unexpected behaviour with certain applications (e.g. vim) ##
 
 If for example the PgUp and PgDn keys do not work in your editor, the reason 
-may be that in the mintty Options, the Terminal Type was set to "vt100" 
+may be that in the imintty Options, the Terminal Type was set to "vt100" 
 and based on the resulting setting of the environment variable TERM, 
-the application expects other key sequences than mintty sends.
-(While mintty could be changed to send VT100 application keypad codes in 
+the application expects other key sequences than imintty sends.
+(While imintty could be changed to send VT100 application keypad codes in 
 that case, the current behaviour is compatible with xterm.)
 
 ### Control+H in emacs ###
@@ -591,14 +591,14 @@ It is recommended to leave this setting at its default.
 The escape sequences for Shift+up/down are mapped to scroll-backward/forward 
 virtual keys by the xterm terminfo entry.
 Follow the advice in 
-[How to fix emacs shift-up key...](https://stackoverflow.com/questions/18689655/how-to-fix-emacs-shift-up-key-for-text-selection-in-mintty-on-cygwin/#18689656)
+[How to fix emacs shift-up key...](https://stackoverflow.com/questions/18689655/how-to-fix-emacs-shift-up-key-for-text-selection-in-imintty-on-cygwin/#18689656)
 to create a fixed terminfo entry that removes this mapping,
 or use a suitable alternative setting for the environment variable TERM, 
 for example `TERM=xterm-color`.
 
 ### Mode-dependent cursor in vim ###
 
-Mintty supports control sequences for changing cursor style. These can be used to configure **[vim](http://www.vim.org/)** such that the cursor changes depending on mode. For example, with the following lines in _~/.vimrc_, vim will show a block cursor in normal mode and a line cursor in insert mode:
+Imintty supports control sequences for changing cursor style. These can be used to configure **[vim](http://www.vim.org/)** such that the cursor changes depending on mode. For example, with the following lines in _~/.vimrc_, vim will show a block cursor in normal mode and a line cursor in insert mode:
 
 ```
 let &t_ti.="\e[1 q"
@@ -609,7 +609,7 @@ let &t_te.="\e[0 q"
 
 ### Enabling full mouse functionality in vim ###
 
-Before vim 8.1.0566, full mouse mode is not automatically enabled in mintty.
+Before vim 8.1.0566, full mouse mode is not automatically enabled in imintty.
 Add this to _~/.vimrc_ for a workaround:
 
 ```
@@ -627,7 +627,7 @@ Some applications may reset cursor style, especially cursor blinking,
 after terminating, caused by the 
 [terminfo database](http://invisible-island.net/ncurses/man/terminfo.5.html) 
 including the corresponding reset sequence in the “normal cursor” setting.
-This is avoided with mintty option `SuppressDEC=12`, not needed from mintty 3.0.1.
+This is avoided with imintty option `SuppressDEC=12`, not needed from imintty 3.0.1.
 
 ### Avoiding escape timeout issues in vim ###
 
@@ -635,7 +635,7 @@ It’s a historical flaw of Unix terminals that the keycode of the escape key, i
 
 Therefore they tend to employ a timeout to decide. The delay on the escape key can be annoying though, particularly with the mode-dependent cursor above enabled.  The timeout approach can also fail on slow connections or a heavily loaded machine.
 
-Mintty’s “application escape key mode” can be used to avoid this by switching the escape key to an unambiguous keycode. Add the following to _~/.vimrc_ to employ it in vim:
+Imintty’s “application escape key mode” can be used to avoid this by switching the escape key to an unambiguous keycode. Add the following to _~/.vimrc_ to employ it in vim:
 
 ```
 let &t_ti.="\e[?7727h"
@@ -657,7 +657,7 @@ noremap! <Esc>O[ <C-c>
 
 Windows provides AltGr using two virtual key codes (Ctrl and Menu) 
 sharing the same timestamp. TeamViewer is buggy with respect to the 
-timestamp. As a workaround, mintty can detect AltGr also from the 
+timestamp. As a workaround, imintty can detect AltGr also from the 
 two key codes arriving with some delay. Setting 
 `CtrlAltDelayAltGr=16` or `CtrlAltDelayAltGr=20` is suggested.
 
@@ -671,7 +671,7 @@ as a workaround for buggy behaviour. Also `ClipShortcuts=true` (default) is advi
 
 The _Ctrl+Tab_ and _Ctrl+Shift+Tab_ key combinations can be used to 
 switch windows/panes/tabs in a terminal multiplexer session.
-In order to do so, their use as shortcuts for switching mintty windows 
+In order to do so, their use as shortcuts for switching imintty windows 
 needs to be disabled on the _Keys_ page of the options, 
 and their keycodes need to be mapped as shown below.
 
@@ -721,12 +721,12 @@ Since it is a waste of finger movement resources to have identical
 sequences for both, applications should benefit from being able to 
 distinguish the two keypads. Traditionally, this is only possible in 
 VT220 keyboard mode.
-Mintty until 3.8.2 had a special behaviour to also send 
+Imintty until 3.8.2 had a special behaviour to also send 
 VT220 application keypad codes in non-VT220 mode 
 with application keypad mode enabled but application cursor keys disabled 
 (a combination that does not occur with applications that control 
 their screen settings via terminfo) but this used to confuse some 
-applications [issue #1357](https://github.com/mintty/mintty/issues/1357).
+applications [issue #1357](https://github.com/imintty/imintty/issues/1357).
 From 3.8.3, this is no longer the default but can be enabled either by 
 setting option OldAppKeypad or if Escape key mode (DECSET 7727) is active, 
 based on the assumption that an application that uses Escape key mode 
@@ -734,7 +734,7 @@ should also be prepared to interpret VT220 keypad codes.
 
 ### Backarrow key configuration ###
 
-By default, mintty sends `^?` (ASCII DEL) as the keycode for the Backarrow key.
+By default, imintty sends `^?` (ASCII DEL) as the keycode for the Backarrow key.
 This is the Linux default (as opposed to sending `^H` which was the 
 default in many Unix environments).
 This can be changed with setting `BackspaceSendsBS=yes`.
@@ -777,12 +777,12 @@ set bind-tty-special-chars off
 
 ## Compose key ##
 
-Mintty uses the Windows keyboard layout system with its “dead key” mechanism 
+Imintty uses the Windows keyboard layout system with its “dead key” mechanism 
 for entering accented characters, enhanced by self-composed characters 
 for dead-key combinations that Windows does not support (e.g. ẃ).
 
-Mintty also provides a Compose key, using X11 compose data.
-(See also wiki page [Versions](https://github.com/mintty/mintty/wiki/Versions).)
+Imintty also provides a Compose key, using X11 compose data.
+(See also wiki page [Versions](https://github.com/imintty/imintty/wiki/Versions).)
 It is configurable to Control, Shift, Alt, Super or Hyper, or CapsLock, 
 or to any key combination with user-definable function `compose` in 
 setting `KeyFunctions`.
@@ -819,7 +819,7 @@ echo -ne '\e]11;#C0C0C0\a'  # Light gray background
 echo -ne '\e]12;#00FF00\a'  # Green cursor
 ```
 
-In mintty, the RGB colour values can also be specified using a comma-separated decimal notation, 
+In imintty, the RGB colour values can also be specified using a comma-separated decimal notation, 
 for example `255,0,0` instead of `#FF0000` for red. 
 [X11 colour names](http://en.wikipedia.org/wiki/X11_color_names) 
 are supported, too. See the examples below for all options.
@@ -827,7 +827,7 @@ are supported, too. See the examples below for all options.
 The 16 [ANSI colours](http://en.wikipedia.org/wiki/ANSI_escape_code#Colors) 
 can be set in the configuration file or on the command line using settings 
 such as _Blue_ or _BoldMagenta_. These are documented in the 
-[configuration section](http://mintty.github.io/mintty.1.html#CONFIGURATION) 
+[configuration section](http://imintty.github.io/imintty.1.html#CONFIGURATION) 
 of the manual. They can also be changed using xterm control sequences. 
 Here they are with their default values:
 
@@ -877,7 +877,7 @@ can be used in different ways:
 * Drag-and-drop a theme directly from a link as supported on some sites
 
 The default theme (since 3.6.0) is 
-[helmholtz](https://raw.githubusercontent.com/mintty/mintty/master/themes/helmholtz) 
+[helmholtz](https://raw.githubusercontent.com/imintty/imintty/master/themes/helmholtz) 
 which provides a colour scheme of well-balanced appearance and luminance;
 see the comments in the theme file about its crafting principles.
 
@@ -891,24 +891,24 @@ theme file, the name will be filled with its basename as a suggestion.
 As long as a colour scheme is loaded but not yet stored, and a name is 
 available in the Theme field, the “Store” button will be enabled.
 
-A number of colour schemes have been published for mintty, also 
-mintty supports direct drag-and-drop import of theme files in 
-iTerm2 format, Windows terminal format, or JSON-embedded mintty format.
+A number of colour schemes have been published for imintty, also 
+imintty supports direct drag-and-drop import of theme files in 
+iTerm2 format, Windows terminal format, or JSON-embedded imintty format.
 Look for the following repositories:
 * https://iterm2colorschemes.com/
 * https://github.com/mskyaxl/wsl-terminal/tree/master/src/etc/themes
-* https://github.com/pine2D/mintty-color-schemes
+* https://github.com/pine2D/imintty-color-schemes
 * [4bit Terminal Color Scheme Designer](http://ciembor.github.io/4bit/#)
 
 The [4bit Terminal Color Scheme Designer](http://ciembor.github.io/4bit/#) 
 lets you nicely craft and tune a colour scheme in various dimensions 
 (like hue, saturation, lightness) that affect colours consistently.
-Select “Download Scheme” – “mintty” for the mintty format,
-or drag-and-drop the tuned scheme from the URL bar onto the mintty Options theme field.
+Select “Download Scheme” – “imintty” for the imintty format,
+or drag-and-drop the tuned scheme from the URL bar onto the imintty Options theme field.
 
-Mintty also provides the command-line script ```mintheme``` which can 
-display the themes available in the mintty configuration directories or 
-activate one of them in the current mintty window.
+Imintty also provides the command-line script ```mintheme``` which can 
+display the themes available in the imintty configuration directories or 
+activate one of them in the current imintty window.
 
 Note that some theme files also define foreground/background or cursor colours, 
 which overrides manually changed settings of those. If you do not want that, 
@@ -916,7 +916,7 @@ simply make a copy of the theme file with those settings removed.
 
 ### Background image ###
 
-As an alternative to a background colour, mintty also supports graphic 
+As an alternative to a background colour, imintty also supports graphic 
 background. This can be configured with the option `Background` or 
 set dynamically using special syntax of the colour background OSC sequence.
 The respective parameter addresses an image file, preceded by a mode 
@@ -944,28 +944,28 @@ Note that relative pathnames depend on proper detection of the current directory
 of the foreground process.
 Note that absolute pathnames within the cygwin file system are likely 
 not to work among different cygwin installations. 
-To configure a background in `$APPDATA/mintty/config` (or 
+To configure a background in `$APPDATA/imintty/config` (or 
 `%APPDATA%/wsltty/config`), Windows pathname syntax should be used.
 
 
 ## Providing and selecting fonts ##
 
-To provide additional fonts for use with mintty, monospace fonts can be 
+To provide additional fonts for use with imintty, monospace fonts can be 
 installed in Windows. Note that font installation in X11 does not make 
-a font available for mintty as mintty is not an X windows application.
+a font available for imintty as imintty is not an X windows application.
 Some monospace fonts are not explicitly marked as such in the font file.
-In that case the font will not be listed in the mintty 
+In that case the font will not be listed in the imintty 
 Options – Text – Font selection menu. 
 It can still be used by explicit selection, e.g.:
 
 ```
-mintty -o Font="Linux Libertine Mono"
+imintty -o Font="Linux Libertine Mono"
 ```
 
 Also, Unicode font names are now supported, e.g.
 ```
-mintty -o Font=Sütterlin
-mintty -o Font=옹달샘
+imintty -o Font=Sütterlin
+imintty -o Font=옹달샘
 ```
 
 The font selection menu lists monospace fonts unless marked to Hide 
@@ -975,7 +975,7 @@ DotumChe, GulimChe, GungsuhChe, MingLiU, MS Gothic, MS Mincho, NSimSun,
 Simplified Arabic Fixed), do either of:
 * Uncheck “Hide fonts based on language settings” in Fonts ▸ Font settings
 * Hide/Show fonts individually from their context menu
-* Set the mintty hidden setting ShowHiddenFonts=true
+* Set the imintty hidden setting ShowHiddenFonts=true
 
 The latter setting also includes fonts with an OEM or SYMBOL character set.
 
@@ -993,16 +993,16 @@ a collection of such fonts can be found at [Nerd Fonts](http://nerdfonts.com/).
 
 ### Alternative fonts ###
 
-Mintty supports up to 10 alternative fonts that can be selected as 
+Imintty supports up to 10 alternative fonts that can be selected as 
 character attributes (see Text attributes below). They are configured 
 in the config file (see manual page), except for font 10 which has a 
-default preference; mintty will try to find a Fraktur or Blackletter font 
+default preference; imintty will try to find a Fraktur or Blackletter font 
 for it on your system.
-<img align=top src=https://github.com/mintty/mintty/wiki/mintty-alternative-fonts.png>
+<img align=top src=https://github.com/imintty/imintty/wiki/imintty-alternative-fonts.png>
 
 ### Secondary fonts ###
 
-Mintty can select alternative fonts for specific Unicode script ranges.
+Imintty can select alternative fonts for specific Unicode script ranges.
 With this feature, you can e.g. use a different font for CJK characters.
 
 Script names are as specified in the Unicode file Scripts.txt, listed in 
@@ -1051,7 +1051,7 @@ font substitution as automatically determined by glyph coverage:
 
 ### Font substitution ###
 
-For character glyphs missing in the selected font, mintty can check 
+For character glyphs missing in the selected font, imintty can check 
 a configured sequence of other fonts to substitute.
 The sequence also refers to configured alternative fonts 
 (like secondary fonts configured with FontChoice, but using other criteria).
@@ -1069,7 +1069,7 @@ Font3=Jigmo3
 ### Box Drawing characters ###
 
 For Box Drawing characters (U+2500..U+257F), most fonts do not provide 
-proper glyphs for seamless box drawing. Mintty handles this by drawing 
+proper glyphs for seamless box drawing. Imintty handles this by drawing 
 those characters itself (and also some other graphic characters, from 
 VT100 and VT52 line drawing graphic characters, DEC Technical characters, 
 and Powerline symbols in the private range).
@@ -1085,20 +1085,20 @@ Font3=DejaVu Sans Mono
 
 ### Dynamic fonts ###
 
-Mintty supports on-the-fly temporary font installation, especially for use 
+Imintty supports on-the-fly temporary font installation, especially for use 
 in a portable terminal application.
-Place font files into the subdirectory `fonts` of the mintty configuration 
-directory. All will be made available for mintty usage, there is currently 
+Place font files into the subdirectory `fonts` of the imintty configuration 
+directory. All will be made available for imintty usage, there is currently 
 no mechanism to configure dynamic fonts explicitly. The number of font files 
 should be limited to avoid significant startup delay.
 To avoid having to set up an explicit `--configdir` invocation parameter, 
-fonts can be placed in the /usr/share/mintty/fonts folder of the portable 
+fonts can be placed in the /usr/share/imintty/fonts folder of the portable 
 installation.
 
 
 ## Character width ##
 
-By default, mintty adjusts character width to the width assumption of the 
+By default, imintty adjusts character width to the width assumption of the 
 locale mechanism (function `wcwidth`).
 Character width can be modified by a number of configuration or dynamic settings:
 * `Locale`: change locale, stays consistent with system locales
@@ -1108,16 +1108,16 @@ Character width can be modified by a number of configuration or dynamic settings
 * `Font`: may affect CJK ambiguous-width handling if locale support fails
 * `PrintableControls`: makes C1 or C0 control characters visible (width 1)
 * `EmojiWidth`: sets default of emoji width mode
-* [DECSET 2027](https://github.com/mintty/mintty/wiki/CtrlSeqs#emoji-width-mode): “emoji width” mode, enforcing 2-cell wide emojis
-* [DECSET 2521](https://github.com/mintty/mintty/wiki/CtrlSeqs#lamalef-joining): renders Arabic LAM/ALEF ligatures in single-cell width
-* [OSC 701](https://github.com/mintty/mintty/wiki/CtrlSeqs#locale): changes locale/charset, may affect ambiguous width handling
+* [DECSET 2027](https://github.com/imintty/imintty/wiki/CtrlSeqs#emoji-width-mode): “emoji width” mode, enforcing 2-cell wide emojis
+* [DECSET 2521](https://github.com/imintty/imintty/wiki/CtrlSeqs#lamalef-joining): renders Arabic LAM/ALEF ligatures in single-cell width
+* [OSC 701](https://github.com/imintty/imintty/wiki/CtrlSeqs#locale): changes locale/charset, may affect ambiguous width handling
 * OSC 50: changes font, may affect ambiguous width handling (with `Locale`)
-* [OSC 77119](https://github.com/mintty/mintty/wiki/CtrlSeqs#wide-characters): turns some character ranges to wide characters
-* [PEC](https://github.com/mintty/mintty/wiki/CtrlSeqs#explicit-character-width): explicit character width attribute
+* [OSC 77119](https://github.com/imintty/imintty/wiki/CtrlSeqs#wide-characters): turns some character ranges to wide characters
+* [PEC](https://github.com/imintty/imintty/wiki/CtrlSeqs#explicit-character-width): explicit character width attribute
 * Appending variation selectors 15 or 16 (U+FE0E, U+FE0F) in emoji width mode.
 
-See the [mintty manual](http://mintty.github.io/mintty.1.html) and
-[Control Sequences](https://github.com/mintty/mintty/wiki/CtrlSeqs)
+See the [imintty manual](http://imintty.github.io/imintty.1.html) and
+[Control Sequences](https://github.com/imintty/imintty/wiki/CtrlSeqs)
 for more details.
 
 Note that with any of these settings, actual width properties as 
@@ -1127,7 +1127,7 @@ screen applications (such as editors) that rely on `wcwidth` information.
 
 ### Unicode version enquiry ###
 
-If mintty is configured to use its own width tables (rather than the locale 
+If imintty is configured to use its own width tables (rather than the locale 
 API), the Secondary Device Attributes request (escape sequence `^[[>c`) 
 can be used to request the Unicode version which will be reported as the 
 third parameter of the response.
@@ -1139,26 +1139,26 @@ legacy issues with dedicated CJK fonts, meaning they can be narrow
 (single-cell width) or wide (double-cell width) in a terminal.
 
 To select ambiguous-width characters to appear wide (as some applications 
-may expect), mintty should be run in a CJK locale (character encoding does 
+may expect), imintty should be run in a CJK locale (character encoding does 
 not need to be CJK), e.g.:
 
 ```
-LC_CTYPE=zh_SG.utf8 mintty &
+LC_CTYPE=zh_SG.utf8 imintty &
 ```
 
 If the locale is selected via the Locale setting, however, it is necessary 
-to choose an ambiguous-wide font in addition (CJK font), or mintty will 
+to choose an ambiguous-wide font in addition (CJK font), or imintty will 
 enforce the ambiguous-narrow mode of rendering by appending the 
 “@cjknarrow” locale modifier:
 
 ```
-mintty -o Locale=zh_CN -o Font=FangSong &
+imintty -o Locale=zh_CN -o Font=FangSong &
 ```
 
 If it is not desired to set a specific base locale in order to enable 
 ambiguous-wide mode, option `Charwidth=ambig-wide` can be used.
 It implies `Charwidth=unicode` behaviour, with the same caveats as above.
-Mintty indicates this mode by appending the `@cjkwide` modifier to the 
+Imintty indicates this mode by appending the `@cjkwide` modifier to the 
 `LC_CTYPE` locale variable.
 
 Single-width CJK character rendering can be enforced, with proper glyph 
@@ -1166,7 +1166,7 @@ scaling, with settings `Charwidth=single` or `Charwidth=single-unicode`,
 following a 
 [proposal](https://gitlab.freedesktop.org/terminal-wg/specifications/issues/9#note_406682) 
 in the Terminals Working Group Specifications.
-Mintty indicates this mode by appending the `@cjksingle` modifier to the 
+Imintty indicates this mode by appending the `@cjksingle` modifier to the 
 `LC_CTYPE` locale variable.
 
 ### Remote locale width mismatch ###
@@ -1178,7 +1178,7 @@ This is particularly the case if
 * the cygwin locale is a CJK locale with UTF-8 encoding in cygwin before 3.2.0 (which makes ambiguous width narrow for all UTF-8 locales to be consistent with other systems)
 
 The script `localejoin` in the 
-mintty [utils repository](https://github.com/mintty/utils) adjusts these 
+imintty [utils repository](https://github.com/imintty/utils) adjusts these 
 mismatches by switching the terminal locale temporarily and thus joining 
 its width properties with those of typical remote systems.
 Direct invocation of the script just runs a shell with a locale setting.
@@ -1189,14 +1189,14 @@ Example (with `localejoin` renamed/linked/copied as `minssh`):
 
 ### Selective double character width ###
 
-While mintty fully supports double-width characters (esp. CJK) as well 
+While imintty fully supports double-width characters (esp. CJK) as well 
 as ambiguous-width characters, there are also characters of fuzzy 
 width property, because their rendered glyph is wider than one 
 terminal character cell in most fonts, but yet they are defined as 
 single-width by Unicode. Such characters often appear to be clipped 
-on the screen. Mintty has an experimental feature to display semi-wide 
+on the screen. Imintty has an experimental feature to display semi-wide 
 Indic and some other characters at double-cell width
-(see [Control Sequences – Wide characters](https://github.com/mintty/mintty/wiki/CtrlSeqs#wide-characters)),
+(see [Control Sequences – Wide characters](https://github.com/imintty/imintty/wiki/CtrlSeqs#wide-characters)),
 but not all such characters are handled, and there is no perfect solution 
 that would also comply with the locale mechanism unless the terminal would 
 support proportional fonts.
@@ -1212,12 +1212,12 @@ if the character is followed by an adjacent single-width space character.
 
 ### Line reflow ###
 
-Mintty automatically readjusts auto-wrap line breaking after resize 
+Imintty automatically readjusts auto-wrap line breaking after resize 
 by default. (This may however spoil image display.)
 
 ### Bidi support ###
 
-Mintty support birectional rendering by default, with automatic 
+Imintty support birectional rendering by default, with automatic 
 direction detection (according to the Unicode Bidi algorithm), 
 including support for Arabic joining formatters for Arabic shaping.
 
@@ -1233,11 +1233,11 @@ or DEC line drawing.
 
 ## Font rendering and geometry ##
 
-Mintty can make use of advanced Windows font fallback as provided via the Uniscribe API, 
+Imintty can make use of advanced Windows font fallback as provided via the Uniscribe API, 
 achieving improved character/glyph substitution for characters not provided in the selected font.
 Option `-o FontRender=uniscribe` is now the default, `-o FontRender=textout` disables it.
 Note that Uniscribe is not applied to right-to-left text as it would 
-interfere with mintty’s own bidi transformation.
+interfere with imintty’s own bidi transformation.
 
 ### Window geometry, rows and columns ###
 
@@ -1255,7 +1255,7 @@ to adjust line spacing.
 
 ## Text attributes and rendering ##
 
-Mintty supports a maximum of usual and unusual text attributes, 
+Imintty supports a maximum of usual and unusual text attributes, 
 settable with “Select Graphic Rendition” (SGR) escape sequences.
 For underline styles and some other values, colon-separated 
 ECMA-48 sub-parameters are supported.
@@ -1336,28 +1336,28 @@ Note: Text attributes can be disabled with option SuppressSGR (see manual).
 Note: Combined SGR 73;74 results in small characters at normal position.
 This does not apply to the alternative DEC private SGRs ?4 and ?5.
 
-As a fancy add-on feature for text attributes, mintty supports distinct 
+As a fancy add-on feature for text attributes, imintty supports distinct 
 (colour) attributes for combining characters, so a combined character 
 can be displayed in multiple colours. Attributes considered for this 
 purpose are default and ANSI foreground colours, palette and true-colour 
 foreground colours, dim mode and manual bold mode (BoldAsFont=false), 
 and blinking; background colours and inverse mode are ignored.
-<img align=top src=https://github.com/mintty/mintty/wiki/mintty-coloured-combinings.png>
+<img align=top src=https://github.com/imintty/imintty/wiki/imintty-coloured-combinings.png>
 
 
 ## Emojis ##
 
-Mintty supports display of emojis as defined by Unicode using 
+Imintty supports display of emojis as defined by Unicode using 
 emoji presentation, emoji style variation and emoji sequences.
 (Note that the tty must be in a UTF-8 locale to support emoji codes.)
 Extended flag emojis (not listed by Unicode) are supported dynamically.
 
-<img align=right src=https://github.com/mintty/mintty/wiki/mintty-emojis.png>
+<img align=right src=https://github.com/imintty/imintty/wiki/imintty-emojis.png>
 
 The option `Emojis` can choose among sets of emoji graphics if 
-deployed in a mintty configuration directory.
-With this option, mintty emoji support is enabled and the emoji graphics style is chosen. 
-Mintty will match output for valid emoji sequences, 
+deployed in a imintty configuration directory.
+With this option, imintty emoji support is enabled and the emoji graphics style is chosen. 
+Imintty will match output for valid emoji sequences, 
 emoji style selectors and emoji presentation forms.
 
 For characters with default text style but optional emoji graphics,
@@ -1370,14 +1370,14 @@ by the cumulated width of the emoji sequence characters. The option
 `EmojiPlacement` can adjust the location of emoji graphics within that area.
 You can use the escape sequence PEC to tune emoji width.
 
-Since mintty 3.7.5, there is also “emoji width” mode (DECSET 2027) to 
+Since imintty 3.7.5, there is also “emoji width” mode (DECSET 2027) to 
 enforce 2-cell display width of emojis.
 
 ### Installing emoji resources ###
 
-Mintty does not bundle actual emoji graphics with its package.
+Imintty does not bundle actual emoji graphics with its package.
 You will have to download and deploy them yourself.
-Mintty would however use emojis as installed by a distinct package 
+Imintty would however use emojis as installed by a distinct package 
 in a subdirectory of /usr/share/emojis.
 Expert options are described here, see also the next section 
 for a Quick Guide to emoji installation.
@@ -1430,38 +1430,38 @@ or a more complex command combination of git, for example:
   * `mv png/128 ../noto`
 
 “Deploy” above means move, link, copy or hard-link the respective subdirectory 
-into mintty configuration resource subdirectory `emojis`, e.g.
-* `mv noto-emoji/png/128 ~/.config/mintty/emojis/noto`
-* `ln -s "$PWD"/noto-emoji/png/128 ~/.config/mintty/emojis/noto`
-* `cp -rl noto-emoji/png/128 ~/.config/mintty/emojis/noto`
+into imintty configuration resource subdirectory `emojis`, e.g.
+* `mv noto-emoji/png/128 ~/.config/imintty/emojis/noto`
+* `ln -s "$PWD"/noto-emoji/png/128 ~/.config/imintty/emojis/noto`
+* `cp -rl noto-emoji/png/128 ~/.config/imintty/emojis/noto`
 
 Use your preferred configuration directory, e.g.
-* `cp -rl noto-emoji/png/128 "$APPDATA"/mintty/emojis/noto`
-* `cp -rl noto-emoji/png/128 /usr/share/mintty/emojis/noto`
+* `cp -rl noto-emoji/png/128 "$APPDATA"/imintty/emojis/noto`
+* `cp -rl noto-emoji/png/128 /usr/share/imintty/emojis/noto`
 
 Note: If the configuration directory is on a network drive 
 (e.g. your home directory may be on a network in enterprise or lab environments),
 loading emoji icons may be noticeably slow. Better deploy them to one 
-of the other options in that case, e.g. $APPDATA/mintty or /usr/share/mintty.
+of the other options in that case, e.g. $APPDATA/imintty or /usr/share/imintty.
 Deploying into $APPDATA further has the advantage of a common deployment 
 for multiple installations of cygwin, MSYS2, Git-for-Windows, or embedded 
 cygwin-based packages.
 
-In addition to emojis subdirectories of the mintty configuration directories, 
+In addition to emojis subdirectories of the imintty configuration directories, 
 emojis are also looked up in /usr/share/emojis, so emojis packages can 
 provide much simpler installation.
 Emojis of the Google Noto Emoji font seem to be most popular and well 
-available, therefore mintty 3.8.1 sets emoji style “noto” as default.
+available, therefore imintty 3.8.1 sets emoji style “noto” as default.
 
 ### Quick Guide to emoji installation ###
 
 With default emoji style setting `Emojis=noto`, it is sufficient to also 
 install package _emojis-noto_ to enable graphic emojis display.
 
-In the cygwin or MSYS2 mintty packages, the emoji download and deployment 
-scripts are installed in /usr/share/mintty/emojis, so do this for a common 
+In the cygwin or MSYS2 imintty packages, the emoji download and deployment 
+scripts are installed in /usr/share/imintty/emojis, so do this for a common 
 all-users deployment of the emojis listed at Unicode.org and the flags emojis:
-* `cd /usr/share/mintty/emojis`
+* `cd /usr/share/imintty/emojis`
 * `./getemojis -d`
 * `./getflags -de`
 * or `./getnoto`
@@ -1469,14 +1469,14 @@ all-users deployment of the emojis listed at Unicode.org and the flags emojis:
 You may also use the scripts for deployment in your preferred config directory.
 
 To deploy in your personal local resource folder:
-* `mkdir -p ~/.config/mintty/emojis; cd ~/.config/mintty/emojis`
-* `/usr/share/mintty/emojis/getemojis -d`
-* `/usr/share/mintty/emojis/getflags -de`
+* `mkdir -p ~/.config/imintty/emojis; cd ~/.config/imintty/emojis`
+* `/usr/share/imintty/emojis/getemojis -d`
+* `/usr/share/imintty/emojis/getflags -de`
 
 To deploy in your personal common resource folder (shared e.g. by cygwin/MSYS2):
-* `mkdir -p "$APPDATA"/mintty/emojis; cd "$APPDATA"/mintty/emojis`
-* `/usr/share/mintty/emojis/getemojis -d`
-* `/usr/share/mintty/emojis/getflags -de`
+* `mkdir -p "$APPDATA"/imintty/emojis; cd "$APPDATA"/imintty/emojis`
+* `/usr/share/imintty/emojis/getemojis -d`
+* `/usr/share/imintty/emojis/getflags -de`
 
 
 ## Searching in the text and scrollback buffer ##
@@ -1495,16 +1495,16 @@ sequences, see the [[CtrlSeqs]] wiki page.
 ## Character encoding ##
 
 Character encoding (or character set) is normally determined via the 
-locale mechanism. To run mintty in a specific locale case-by-case, 
+locale mechanism. To run imintty in a specific locale case-by-case, 
 you would set the LC_CTYPE locale category (using environment variables 
-LC_ALL, LC_CTYPE, LANG in this precedence) to configure both mintty and 
+LC_ALL, LC_CTYPE, LANG in this precedence) to configure both imintty and 
 its child process (shell) consistently, for example:
 
 ```
-LC_CTYPE=zh_CN.gbk mintty &
+LC_CTYPE=zh_CN.gbk imintty &
 ```
 
-However, as a legacy option, it is also possible to configure mintty with 
+However, as a legacy option, it is also possible to configure imintty with 
 distinct options `Locale` and `Charset`; note that despite the name, the 
 `Locale` parameter must *not* include an encoding suffix in this case.
 Note that combining `Locale` with an empty `Charset` setting results in 
@@ -1515,50 +1515,50 @@ character encoding as the terminal in this scenario.
 
 ### Unicode support ###
 
-For character width and character name information, mintty supports 
+For character width and character name information, imintty supports 
 Unicode data also internally. Unicode with information is used if 
 option `Charwidth` is set to anthing other than the default `locale`.
-(See also wiki page [Versions](https://github.com/mintty/mintty/wiki/Versions).)
+(See also wiki page [Versions](https://github.com/imintty/imintty/wiki/Versions).)
 
 ### GB18030 support ###
 
 Note: This special support is only applied for cygwin versions < 3.5 from 
 which cygwin supports GB18030 natively.
 
-Mintty has special support for the GB18030 character encoding which was not 
+Imintty has special support for the GB18030 character encoding which was not 
 supported by cygwin and therefore not available for interactive configuration 
 of the `Charset` setting in the Options dialog.
 Setting `Charset=GB18030` in a config file or on the command line invokes 
 this support (setting `Locale` too is necessary).
-Mintty will fallback to the GBK character encoding for the locale 
+Imintty will fallback to the GBK character encoding for the locale 
 setup of its child process in this case, to provide at least 
 consistence with a maximum subset of GB18030. GB18030 is fully 
 supported for terminal output/input. Example:
 
 ```
-mintty -o Locale=zh_CN -o Charset=GB18030 &
+imintty -o Locale=zh_CN -o Charset=GB18030 &
 ```
 Add setting `-o Charwidth=ambig-wide` if desired.
 
-If mintty is used as a WSL terminal, the WSL side can be configured to run 
+If imintty is used as a WSL terminal, the WSL side can be configured to run 
 a GB18030 locale as well to achieve full GB18030 support.
 
 ```
-mintty --WSL[=...] -o Locale=zh_CN -o Charset=GB18030
+imintty --WSL[=...] -o Locale=zh_CN -o Charset=GB18030
 ```
 
 ### Passing arguments from an environment with different character set ###
 
-To pass non-ASCII parameters to a command run from mintty using a specific 
+To pass non-ASCII parameters to a command run from imintty using a specific 
 character encoding, proper conversion must be crafted.
-See [issue #463](https://github.com/mintty/mintty/issues/463) 
+See [issue #463](https://github.com/imintty/imintty/issues/463) 
 for a discussion.
-For example, for a desktop shortcut to start a GBK-encoded mintty 
+For example, for a desktop shortcut to start a GBK-encoded imintty 
 starting in a specific directory with a non-ASCII name, 
 use this command line as a shortcut target:
 
 ```
-C:\cygwin64\bin\mintty.exe -o Locale=C -o Charset=GBK /bin/bash -l -c "cd `echo D:/桌面 | iconv -f UTF-8`; exec bash"
+C:\cygwin64\bin\imintty.exe -o Locale=C -o Charset=GBK /bin/bash -l -c "cd `echo D:/桌面 | iconv -f UTF-8`; exec bash"
 ```
 
 So the initial shell, interpreting its ```cd``` parameters already in GBK 
@@ -1567,7 +1567,7 @@ encoding, will see it properly converted.
 
 ## Spawning a new terminal window in the same directory ##
 
-With Alt+F2, normally another mintty window would be opened in the 
+With Alt+F2, normally another imintty window would be opened in the 
 home directory (or where the current window was started), while it may 
 be desirable to open it in the same directory as the current working 
 directory. This can be achieved with some interaction between the shell 
@@ -1593,7 +1593,7 @@ is likely to reset the working directory to the home directory.
 
 ## Virtual Tabs and Tabbar ##
 
-The Virtual Tabs feature provides a list of all running mintty sessions 
+The Virtual Tabs feature provides a list of all running imintty sessions 
 as well as configurable launch parameters for new sessions.
 The session list is shown when right-clicking the title bar (if 
 virtual tabs mode is configured or with Ctrl) or ctrl+left-clicking it.
@@ -1641,17 +1641,17 @@ launcher in the extended context menu (see manual) are also targeted
 to the tab set.
 
 Note that hotkey or other software may have remapped some of the 
-function key combinations for other purposes, hiding them from mintty.
+function key combinations for other purposes, hiding them from imintty.
 
 
 ## Multi-monitor support ##
 
-Mintty supports multiple monitors with two features:
+Imintty supports multiple monitors with two features:
 
-A mintty window can be placed on a specific monitor with the 
+A imintty window can be placed on a specific monitor with the 
 command-line option `-p @N` where N is the number of the monitor.
 
-A new mintty window cloned with Alt+F2 can be placed on a selected monitor 
+A new imintty window cloned with Alt+F2 can be placed on a selected monitor 
 while F2 is being held; press cursor and other keys on the numeric keypad 
 to navigate the monitor grid to the desired target monitor, then release F2.
 
@@ -1661,7 +1661,7 @@ the left or right neighbour monitor: Win+Shift+cursor-left/right.
 
 ## Embedding graphics in terminal output ##
 
-Mintty supports Sixel and ReGIS graphics output and image output (see below).
+Imintty supports Sixel and ReGIS graphics output and image output (see below).
 
 ### Sixel graphics ###
 
@@ -1702,24 +1702,24 @@ See the [[ReGIS]] wiki page for a list.
 
 ### Image support ###
 
-In addition to the legacy Sixel feature, mintty supports graphic image display 
+In addition to the legacy Sixel feature, imintty supports graphic image display 
 (using iTerm2 controls). Image formats supported comprise
 PNG, JPEG, GIF, TIFF, BMP, Exif.
 
 The script `showimg` in the 
-mintty [utils repository](https://github.com/mintty/utils) supports 
+imintty [utils repository](https://github.com/imintty/utils) supports 
 interactive image display.
 
 
 ## Tektronix 4014 vector graphics ##
 
-Mintty can emulate the Tektronix 4014 vector graphics terminal. 
+Imintty can emulate the Tektronix 4014 vector graphics terminal. 
 It switches to Tek emulation on the xterm sequence DECSET 38 (`\e[?38h`). 
 It is suggested to adjust the window size to the Tektronix 4010 resolution and aspect ratio before:
 * `echo -en "\e[4;780;1024t"`
 
-The script `tek` in the mintty 
-[utils repository](https://github.com/mintty/utils) supports switching 
+The script `tek` in the imintty 
+[utils repository](https://github.com/imintty/utils) supports switching 
 to Tek mode and optional output of Tek plot files.
 It also sets the environment variables **TERM** and **GNUTERM** properly.
 When leaving the sub-shell, it restores DEC/ANSI terminal mode.
@@ -1727,7 +1727,7 @@ When leaving the sub-shell, it restores DEC/ANSI terminal mode.
 
 ## Localization ##
 
-Mintty facilitates localization of its user interface, the Options dialog, 
+Imintty facilitates localization of its user interface, the Options dialog, 
 menus, message boxes, and terminal in-line error messages.
 The localization language can be selected with the option `Language`, 
 see manual page for details.
@@ -1736,14 +1736,14 @@ Example:
 Assume setting `Language=*`, environment variables 
 `LANGUAGE=de_CH:français:de:fr_FR` and `LC_MESSAGES=en_GB.UTF-8`, 
 environment variable `LC_ALL` not set:
-mintty tries to find localization files (in this order) for 
+imintty tries to find localization files (in this order) for 
 `de_CH`, `français`, `de`, `fr_FR`, `en_GB`, 
 then (as generic fallback) `fr` and `en`, 
 each in all resource configuration folders (subfolder `lang`).
 
 Note that Windows may already have localized the default entries of the 
 system menu, which makes the system menu language inconsistent because 
-mintty adds a few items here. Choose `Language=en` or `en_US` to 
+imintty adds a few items here. Choose `Language=en` or `en_US` to 
 “reverse-localize” this, as well as the font and colour chooser dialogs.
 Choose `Language=en_US` to change `Colour` to `Color` in the menus.
 
@@ -1751,7 +1751,7 @@ Choose `Language=en_US` to change `Colour` to `Color` in the menus.
 
 Localization files for various language or language/region codes 
 are looked up in the resource configuration folders, subfolder `lang`.
-Mintty uses a simplified `gettext` file format but not the `gettext` library;
+Imintty uses a simplified `gettext` file format but not the `gettext` library;
 all messages must be encoded in UTF-8, the Content-Type charset is ignored.
 
 To add a new language, copy `messages.pot` to the desired `.po` file 
@@ -1760,7 +1760,7 @@ To add a new language, copy `messages.pot` to the desired `.po` file
 be used but remember to use UTF-8 encoding.
 Check the translations for strings that may be too long and get clipped 
 by a careful walkthrough of the Options dialog, opening all popups and 
-sub-dialogs (colours and font) and also checking `mintty -o FontMenu=0`.
+sub-dialogs (colours and font) and also checking `imintty -o FontMenu=0`.
 
 _Note:_ For setting values in popup menus of some of the options 
 in the Options dialog, localization is also supported. Note however 
@@ -1788,7 +1788,7 @@ version of the `uniq` tool is needed to cover non-ASCII keyboard shortcuts.
 To support speech output of a text selection, configure a key combination 
 to invoke a speech generation program:
 ```
-KeyFunctions=F12:`espeak "$MINTTY_SELECT"`
+KeyFunctions=F12:`espeak "$IMINTTY_SELECT"`
 ```
 
 
@@ -1796,8 +1796,8 @@ KeyFunctions=F12:`espeak "$MINTTY_SELECT"`
 
 Diagnostic display of current character information can be toggled 
 from the extended context menu (Ctrl+right-click).
-* _Unicode character codes_ at the current cursor position will then be displayed in the window title bar. (Note that mintty may precompose a combining character sequence into a combined character which is then displayed.)
-* _Unicode character names_ will be included in the display if the **unicode-ucd** package is installed in `/usr/share` (or the file `charnames.txt` generated by the mintty script `src/mknames` is installed in the mintty resource subfolder `info`).
+* _Unicode character codes_ at the current cursor position will then be displayed in the window title bar. (Note that imintty may precompose a combining character sequence into a combined character which is then displayed.)
+* _Unicode character names_ will be included in the display if the **unicode-ucd** package is installed in `/usr/share` (or the file `charnames.txt` generated by the imintty script `src/mknames` is installed in the imintty resource subfolder `info`).
 * _Emoji sequence “short names”_ will be indicated if Emojis display is enabled.
 Note that the “normal” window title setting sequence 
 and the character information output simply overwrite each other.
@@ -1805,7 +1805,7 @@ and the character information output simply overwrite each other.
 
 ## User-defined behaviour ##
 
-Mintty supports a few extension features:
+Imintty supports a few extension features:
 * Application-specific drag-and-drop transformations (option `DropCommands`)
 * User-defined commands and filters for context menu (options `UserCommands` / `CtxMenuFunctions`)
 * User-defined functions for key combinations (option `KeyFunctions`)
@@ -1821,7 +1821,7 @@ terminal foreground process (in case it is stalled). This can be done by
 including a user command:
 
 ```
-UserCommands=Kill foreground process:kill -9 $MINTTY_PID
+UserCommands=Kill foreground process:kill -9 $IMINTTY_PID
 ```
 
 ### Terminating the foreground program, the smart way ###
@@ -1833,7 +1833,7 @@ if the window is instructed to "Close" from its menu or close button.
 _Note:_ Detection of terminal foreground processes works only locally; 
 this features does not work with WSL or after remote login.
 
-_Note:_ This feature potentially makes mintty vulnerable against command injection.
+_Note:_ This feature potentially makes imintty vulnerable against command injection.
 Be careful what strings you configure!
 
 Example:
@@ -1842,25 +1842,25 @@ ExitCommands=bash:exit^M;mined:^[q;emacs:^X^C
 ```
 
 
-## Running mintty stand-alone ##
+## Running imintty stand-alone ##
 
-To install mintty outside a cygwin environment, follow a few rules:
-* Compile mintty statically.
-* Install mintty.exe together with cygwin1.dll and cygwin-console-helper.exe.
-* Call the directory in which to install mintty and libraries `bin` (optional).
-* The parent directory of `bin` will be considered the mintty root directory.
-* Aside the `bin` directory (in the root directory), install folder tree `usr/share/mintty` with subdirectories for mintty resources, e.g. `lang/*.po`, `themes/*`, `sounds/*` etc.
+To install imintty outside a cygwin environment, follow a few rules:
+* Compile imintty statically.
+* Install imintty.exe together with cygwin1.dll and cygwin-console-helper.exe.
+* Call the directory in which to install imintty and libraries `bin` (optional).
+* The parent directory of `bin` will be considered the imintty root directory.
+* Aside the `bin` directory (in the root directory), install folder tree `usr/share/imintty` with subdirectories for imintty resources, e.g. `lang/*.po`, `themes/*`, `sounds/*` etc.
 
-### Bundling mintty with dedicated software ###
+### Bundling imintty with dedicated software ###
 
-To bundle an application which is not natively compiled on cygwin with mintty,
+To bundle an application which is not natively compiled on cygwin with imintty,
 cygwin 3.1.0 provides the ConPTY support to bridge the terminal interworking incompatiblity problems 
-([pty incompatibility problem](https://github.com/mintty/mintty/issues/56) and
-[character encoding incompatibility problem](https://github.com/mintty/mintty/issues/376)).
+([pty incompatibility problem](https://github.com/imintty/imintty/issues/56) and
+[character encoding incompatibility problem](https://github.com/imintty/imintty/issues/376)).
 
 In order to ensure pty functionality and thus an interactive terminal 
 interface (rather than just pipe-based terminal access), the relevant 
-terminfo entries should be bundled with mintty, as they are needed by 
+terminfo entries should be bundled with imintty, as they are needed by 
 cygwin to properly support the Windows ConPTY layer.
 
 For software that is aware of Posix terminal conventions, it may be a feasible 

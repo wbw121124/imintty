@@ -1,12 +1,12 @@
-# Traditional Chinese translations for mintty package
+# Traditional Chinese translations for imintty package
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the mintty package.
+# This file is distributed under the same license as the imintty package.
 # lcy0321 <u900011@gmail.com>, 2018.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"Project-Id-Version: imintty\n"
+"Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
 "POT-Creation-Date: 2026-06-09 00:32+0200\n"
 "PO-Revision-Date: 2019-10-16 12:32+0800\n"
 "Last-Translator: lcy0321 <u900011@gmail.com>\n"
@@ -189,7 +189,7 @@ msgstr "@ Windows 語言 @"
 msgid "* Locale environm. *"
 msgstr "* Locale 環境變數 *"
 
-#. __ UI localization: use mintty configuration setting (Text - Locale)
+#. __ UI localization: use imintty configuration setting (Text - Locale)
 #: config.c:2466
 msgid "= cfg. Text Locale ="
 msgstr "= 已設定的語言 ="
@@ -1062,7 +1062,7 @@ msgstr "新增自訂色彩(&D)"
 msgid "Options"
 msgstr "選項"
 
-#. __ Options: dialog title: "mintty <release> available (for download)"
+#. __ Options: dialog title: "imintty <release> available (for download)"
 #: windialog.c:268
 msgid "available"
 msgstr "可用"
@@ -1404,8 +1404,8 @@ msgid "Syntax error in geometry argument '%s'"
 msgstr "Geometry 參數「%s」有語法錯誤"
 
 #: winmain.c:7506
-msgid "Mintty could not detach from caller, starting anyway"
-msgstr "Mintty 無法自 caller 分離，仍開始啟動"
+msgid "Imintty could not detach from caller, starting anyway"
+msgstr "Imintty 無法自 caller 分離，仍開始啟動"
 
 #: winmain.c:7889
 msgid "Using default title due to invalid characters in program name"
@@ -1462,10 +1462,10 @@ msgstr "除法律規定外，不承擔任何責任"
 #: appinfo.h:69
 msgid ""
 "Please report bugs or request enhancements through the issue tracker on the "
-"mintty project page located at\n"
+"imintty project page located at\n"
 "%s.\n"
 "See also the Wiki there for further hints, thanks and credits."
 msgstr ""
-"請回報問題或功能改進至 mintty 專案頁面的問題追蹤系統：\n"
+"請回報問題或功能改進至 imintty 專案頁面的問題追蹤系統：\n"
 "%s\n"
 "可參閱 Wiki 以取得更多提示、致謝與許可。"

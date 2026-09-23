@@ -1,13 +1,13 @@
-# Simplified Chinese translations for mintty package
+# Simplified Chinese translations for imintty package
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the mintty package.
+# This file is distributed under the same license as the imintty package.
 # Gore Liu <goreliu@126.com>, 2017.
 # GeekDuanLian <dl@pbstu.com>, 2024.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"Project-Id-Version: imintty\n"
+"Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
 "POT-Creation-Date: 2026-06-09 00:32+0200\n"
 "PO-Revision-Date: 2024-06-28 23:51+0200\n"
 "Last-Translator: GeekDuanLian <dl@pbstu.com>\n"
@@ -193,7 +193,7 @@ msgstr "@ Windows 语言 @"
 msgid "* Locale environm. *"
 msgstr "* Locale 环境变量 *"
 
-#. __ UI localization: use mintty configuration setting (Text - Locale)
+#. __ UI localization: use imintty configuration setting (Text - Locale)
 #: config.c:2466
 msgid "= cfg. Text Locale ="
 msgstr "= 已配置的 Locale ="
@@ -1066,7 +1066,7 @@ msgstr "添加到自定义颜色(&D)"
 msgid "Options"
 msgstr "选项"
 
-#. __ Options: dialog title: "mintty <release> available (for download)"
+#. __ Options: dialog title: "imintty <release> available (for download)"
 #: windialog.c:268
 msgid "available"
 msgstr "可用"
@@ -1408,8 +1408,8 @@ msgid "Syntax error in geometry argument '%s'"
 msgstr "geometry 选项的参数 '%s' 有语法错误"
 
 #: winmain.c:7506
-msgid "Mintty could not detach from caller, starting anyway"
-msgstr "Mintty 不能从调用者分离，但继续启动"
+msgid "Imintty could not detach from caller, starting anyway"
+msgstr "Imintty 不能从调用者分离，但继续启动"
 
 #: winmain.c:7889
 msgid "Using default title due to invalid characters in program name"
@@ -1466,10 +1466,10 @@ msgstr "在法律许可的情况下特此明示，本软件不提供任何担保
 #: appinfo.h:69
 msgid ""
 "Please report bugs or request enhancements through the issue tracker on the "
-"mintty project page located at\n"
+"imintty project page located at\n"
 "%s.\n"
 "See also the Wiki there for further hints, thanks and credits."
 msgstr ""
-"在 mintty 项目主页的 Issues 版块反馈问题或者提交功能改进\n"
+"在 imintty 项目主页的 Issues 版块反馈问题或者提交功能改进\n"
 "地址：%s\n"
 "Wiki 页面中有更多帮助、鸣谢和许可等信息。"

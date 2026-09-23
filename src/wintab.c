@@ -1,4 +1,4 @@
-// visual tabbar implementation (part of mintty)
+// visual tabbar implementation (part of imintty)
 // initially provided 2020 by Xiaohui Duan (#944)
 
 #include "winpriv.h"
@@ -527,7 +527,7 @@ win_toggle_tabbar(bool show)
     ShowWindow(bar_wnd, SW_HIDE);
   }
 
-  // propagate tabbar offset throughout mintty positioning
+  // propagate tabbar offset throughout imintty positioning
   OFFSET = TABBAR_HEIGHT;
 }
 

@@ -1,8 +1,9 @@
 #ifndef APPINFO_H
 #define APPINFO_H
 
-#define APPNAME "mintty"
-#define WEBSITE "http://mintty.github.io/"
+#define APPNAME "imintty"
+#define APPFULL "Improved MinTTY"
+#define WEBSITE "http://imintty.github.io/"
 
 #define MAJOR_VERSION  3
 #define MINOR_VERSION  8
@@ -10,7 +11,7 @@
 #define BUILD_NUMBER   0
 
 // needed for res.rc
-#define APPDESC "Terminal"
+#define APPDESC "Improved MinTTY Terminal"
 #define AUTHOR  "Thomas Wolff, Andy Koppe"
 #define YEAR    "2026"
 
@@ -44,7 +45,7 @@
 #define DECIMAL_VERSION \
   (MAJOR_VERSION * 10000 + MINOR_VERSION * 100 + PATCH_NUMBER)
 
-// needed for mintty -V and Options... - About...
+// needed for imintty -V and Options... - About...
 #ifdef VERSION_SUFFIX
 #define VERSION_APPENDIX " (" STRINGIFY(TARGET) ") " STRINGIFY(VERSION_SUFFIX)
 #define VERSION_TEXT \
@@ -67,7 +68,7 @@
 //__ %s: WEBSITE (URL)
 #define ABOUT_TEXT \
   __("Please report bugs or request enhancements through the " \
-  "issue tracker on the mintty project page located at" \
+  "issue tracker on the imintty project page located at" \
   "\n%s.\n" \
   "See also the Wiki there for further hints, thanks and credits.")
 

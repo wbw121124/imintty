@@ -15,11 +15,11 @@ catch (e) {
 }
 
 cwd = sh.CurrentDirectory;
-link = sh.CreateShortcut("mintty.lnk");
-link.TargetPath = cwd + "\\mintty.exe";
+link = sh.CreateShortcut("imintty.lnk");
+link.TargetPath = cwd + "\\imintty.exe";
 link.Arguments = "-";
 link.WorkingDirectory = cygbase + "\\bin";
-link.IconLocation = cwd + "\\mintty.exe,0";
+link.IconLocation = cwd + "\\imintty.exe,0";
 
 try { link.Save(); }
 catch (e) {

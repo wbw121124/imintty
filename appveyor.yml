@@ -1,6 +1,6 @@
-# This file is part of mintty project
+# This file is part of imintty project
 
-# Build image; of course mintty has nothing to do with Visual Studio -
+# Build image; of course imintty has nothing to do with Visual Studio -
 # this is just the name of Appveyor's build environment image
 # that also contains cygwin
 image: Visual Studio 2022
@@ -22,6 +22,6 @@ build_script:
 
 test_script:
 - cmd: |
-    bin\mintty.exe --log mintty.log --exec echo hello mintty
-    grep hello mintty.log
-    bin\mintty.exe --log - --exec echo hello stdout | grep hello
+    bin\imintty.exe --log imintty.log --exec echo hello imintty
+    grep hello imintty.log
+    bin\imintty.exe --log - --exec echo hello stdout | grep hello

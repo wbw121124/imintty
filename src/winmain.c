@@ -1,4 +1,4 @@
-// winmain.c (part of mintty)
+// winmain.c (part of imintty)
 // Copyright 2008-13 Andy Koppe, 2015-2026 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -8,7 +8,7 @@
 FILE * mtlog = 0;
 #endif
 
-char * mintty_debug;
+char * imintty_debug;
 
 #define dont_debug_resize
 
@@ -409,7 +409,7 @@ wslwinpath(string path)
     // this used to be wrapped into a WSL `sh -c` but for obscure reason, 
     // invoking wsl directly here injected some nasty escape sequences, 
     // among them a device attributes request, which would embed the 
-    // response after exiting mintty if invoked from another terminal -
+    // response after exiting imintty if invoked from another terminal -
     // to prevent this, the whole invocation could be wrapped into another 
     // outer `sh -c`; fortunately, it turns out the both `sh` 
     // wrappers are not needed (anymore)
@@ -601,7 +601,7 @@ guardpath(string path, int level)
 #ifdef consider_WSL_OSC7
 #warning exemption from path guarding is not proper
       // if the WSL bridge/gateway could be used to transport the 
-      // current working directory back to mintty, we could enable this
+      // current working directory back to imintty, we could enable this
       if (child_dir && *child_dir) {
         char * cwd = wslwinpath(child_dir);
         if (cwd) {
@@ -1089,7 +1089,7 @@ strip_title(wchar * title)
 }
 
 /*
-  Enumerate all windows of the mintty class.
+  Enumerate all windows of the imintty class.
   ///TODO: Maintain a local list of them.
   To be used for tab bar display.
  */
@@ -1140,7 +1140,7 @@ refresh_tabinfo(bool trace)
 }
 
 /*
-  Update list of windows in all windows of the mintty class.
+  Update list of windows in all windows of the imintty class.
  */
 static void
 update_tab_titles()
@@ -1687,7 +1687,7 @@ wnd_enum_proc(HWND curr_wnd, LPARAM unused(lp))
 #endif
 
 /*
-   Cycle mintty windows. Skip iconized windows, unless second parameter true.
+   Cycle imintty windows. Skip iconized windows, unless second parameter true.
  */
 void
 win_switch(bool back, bool alternate)
@@ -2539,7 +2539,7 @@ static void
 win_update_blur(bool opaque)
 {
 // This feature is disabled in config.c as it does not seem to work,
-// see https://github.com/mintty/mintty/issues/501
+// see https://github.com/imintty/imintty/issues/501
   if (pDwmEnableBlurBehindWindow) {
     bool blur =
       cfg.transparency && cfg.blurred && !win_is_fullscreen &&
@@ -3835,10 +3835,10 @@ win_update_transparency(int trans, bool opaque)
       // in order to catch weird behaviour of Windows;
       // if the window is resized while it does not have focus, 
       // as via Windows 11 grid snap resizing 
-      // (mintty/wsltty#348, transferred to #1256), 
+      // (imintty/wsltty#348, transferred to #1256), 
       // transparency is lost although configuration settings 
       // (GWL_EXSTYLE, Layered alpha attribute) do not get changed;
-      // this workaround at least recovers the configured mintty setting 
+      // this workaround at least recovers the configured imintty setting 
       // after the window gets focus again; it is, however, not called 
       // immediately during this resize
       SetLayeredWindowAttributes(wnd, 0, 255, LWA_ALPHA);
@@ -4440,7 +4440,7 @@ static struct {
 # ifdef debug_only_input_messages
     if (strstr(wm_name, "MOUSE") || strstr(wm_name, "BUTTON") || strstr(wm_name, "CURSOR") || strstr(wm_name, "KEY"))
 # endif
-    if (strchr(mintty_debug, 'M'))
+    if (strchr(imintty_debug, 'M'))
       printf("[%d]->%8p %04X %s (%08X %08X)\n", (int)time(0), wnd, message, wm_name, (unsigned)wp, (unsigned)lp);
 #endif
 
@@ -4613,7 +4613,7 @@ static struct {
           idm_name = idm_names[i].idm_name;
           break;
         }
-      if (strchr(mintty_debug, 'M'))
+      if (strchr(imintty_debug, 'M'))
         printf("                           %04X %s\n", (int)wp, idm_name);
 # endif
       if ((wp & ~0xF) >= 0xF000)
@@ -4792,7 +4792,7 @@ static struct {
           when SB_TOP:      term_scroll(+1, 0);
           when SB_BOTTOM:   term_scroll(-1, 0);
           //when SB_ENDSCROLL: ;
-          // these two may be used by mintty keyboard shortcuts (not by Windows)
+          // these two may be used by imintty keyboard shortcuts (not by Windows)
           when SB_PRIOR:    term_scroll(SB_PRIOR, 0);
           when SB_NEXT:     term_scroll(SB_NEXT, 0);
         }
@@ -5228,7 +5228,7 @@ static struct {
         // adapt window frame colours
         win_dark_mode(wnd);  // causes WM_THEMECHANGED sent
 
-        // adapt mintty theme (do not apply_config(false); it would crash)
+        // adapt imintty theme (do not apply_config(false); it would crash)
         if (*cfg.dark_theme && is_win_dark_mode())
           load_theme(cfg.dark_theme);
         else if (*cfg.theme_file)
@@ -5412,7 +5412,7 @@ static int olddelta;
         eratically (fixed in f1712).
       • After taskbar grouping of the tabset, restoring the tab shown there 
         did not restore the background tabs, so they were not accessible 
-        as usual; while they could be activated on the mintty tabbar, 
+        as usual; while they could be activated on the imintty tabbar, 
         a noticeable delay exposed that they were just being restored; also 
         it was not possible to switch to them with Ctrl+TAB (#1242 step 5).
         To fix this, 4 strategies have been considered:
@@ -5643,7 +5643,7 @@ static int olddelta;
 
         if (dpi_changed && cfg.handle_dpichanged) {
           // remaining glitch:
-          // start mintty -p @1; move it to other monitor;
+          // start imintty -p @1; move it to other monitor;
           // columns will be less
           //win_init_fonts(cfg.font.size, true);
           font_cs_reconfig(true);
@@ -5766,7 +5766,7 @@ static int olddelta;
       DWORD new = ((STYLESTRUCT *)lp)->styleNew;
       DWORD off = old & ~new;
       DWORD on = new & ~old;
-      if (strchr(mintty_debug, 'M'))
+      if (strchr(imintty_debug, 'M'))
         printf("%sSTYLE%s %08X -> %08X, off %08X on %08X\n", which, what, old, new, off, on);
 
 typedef struct {
@@ -5879,7 +5879,7 @@ hookprockbll(int nCode, WPARAM wParam, LPARAM lParam)
       ShowWindow(wnd, SW_MINIMIZE);
       ShowWindow(wnd, SW_RESTORE);
     }
-    // Return to prevent multiple mintty windows from flickering
+    // Return to prevent multiple imintty windows from flickering
     // Return 1 to swallow hotkey
     return 1;
   }
@@ -6104,7 +6104,7 @@ report_pos(void)
 }
 
 void
-exit_mintty(void)
+exit_imintty(void)
 {
   child_close_log();
 
@@ -6452,7 +6452,7 @@ getlxssinfo(bool list, wstring wslname, uint * wsl_ver,
         // alternatively, icons can also be in Assets/*.png but those
         // are not in .ico file format, or in *.exe;
         // however, as the whole directory is not readable for non-admin,
-        // mintty cannot check that here
+        // imintty cannot check that here
       }
     }
     else {  // imported or legacy distro
@@ -6650,7 +6650,7 @@ select_WSL(char * wsl)
       set_arg_option("Charset", strdup("UTF-8"));
     }
     if (0 == wcscmp(cfg.app_id, W("@")))
-      // setting an implicit AppID fixes mintty/wsltty#96 but causes #784
+      // setting an implicit AppID fixes imintty/wsltty#96 but causes #784
       // so an explicit config value derives AppID from wsl distro name
       set_arg_option("AppID", asform("%s.%s", APPNAME, wsl ?: "WSL"));
   }
@@ -7070,8 +7070,8 @@ main(int argc, char *argv[])
 {
   main_argv = argv;
   main_argc = argc;
-  mintty_debug = getenv("MINTTY_DEBUG") ?: "";
-  if (strchr(mintty_debug, 'C'))
+  imintty_debug = getenv("IMINTTY_DEBUG") ?: "";
+  if (strchr(imintty_debug, 'C'))
     report_config = true;
 #ifdef debuglog
   mtlog = fopen("/tmp/mtlog", "a");
@@ -7170,11 +7170,11 @@ main(int argc, char *argv[])
 
   // Load config files
   // try global config file
-  load_config("/etc/minttyrc", true);
+  load_config("/etc/iminttyrc", true);
 #if CYGWIN_VERSION_API_MINOR >= 74
   // try Windows APPX local config location (wsltty.appx#3)
   if (wsltty_appx && lappdata && *lappdata) {
-    string rc_file = asform("%s/.minttyrc", lappdata);
+    string rc_file = asform("%s/.iminttyrc", lappdata);
     load_config(rc_file, 2);
     delete(rc_file);
   }
@@ -7182,40 +7182,40 @@ main(int argc, char *argv[])
   // try Windows config location (#201)
   char * appdata = getenv("APPDATA");
   if (appdata && *appdata) {
-    string rc_file = asform("%s/mintty/config", appdata);
+    string rc_file = asform("%s/imintty/config", appdata);
     load_config(rc_file, true);
     delete(rc_file);
   }
   if (!support_wsl && access(home, X_OK) == 0) {
     // try XDG config base directory default location (#525)
-    string rc_file = asform("%s/.config/mintty/config", home);
+    string rc_file = asform("%s/.config/imintty/config", home);
     load_config(rc_file, true);
     delete(rc_file);
     // try home config file
-    rc_file = asform("%s/.minttyrc", home);
+    rc_file = asform("%s/.iminttyrc", home);
     load_config(rc_file, 2);
     delete(rc_file);
   }
 
-  if (getenv("MINTTY_ICON")) {
-    //cfg.icon = strdup(getenv("MINTTY_ICON"));
-    cfg.icon = cs__utftowcs(getenv("MINTTY_ICON"));
+  if (getenv("IMINTTY_ICON")) {
+    //cfg.icon = strdup(getenv("IMINTTY_ICON"));
+    cfg.icon = cs__utftowcs(getenv("IMINTTY_ICON"));
     icon_is_from_shortcut = true;
-    unsetenv("MINTTY_ICON");
+    unsetenv("IMINTTY_ICON");
   }
-  if (getenv("MINTTY_PWD")) {
+  if (getenv("IMINTTY_PWD")) {
     // if cloned and then launched from Windows shortcut 
-    // (by sanitizing taskbar icon grouping, #784, mintty/wsltty#96) 
+    // (by sanitizing taskbar icon grouping, #784, imintty/wsltty#96) 
     // set proper directory
-    chdir(getenv("MINTTY_PWD"));
-    trace_dir(asform("MINTTY_PWD: %s", getenv("MINTTY_PWD")));
-    unsetenv("MINTTY_PWD");
+    chdir(getenv("IMINTTY_PWD"));
+    trace_dir(asform("IMINTTY_PWD: %s", getenv("IMINTTY_PWD")));
+    unsetenv("IMINTTY_PWD");
   }
 
   bool wdpresent = true;
   if (invoked_from_shortcut && sui.lpTitle) {
     shortcut = wcsdup(sui.lpTitle);
-    setenv("MINTTY_SHORTCUT", path_win_w_to_posix(shortcut), true);
+    setenv("IMINTTY_SHORTCUT", path_win_w_to_posix(shortcut), true);
     wchar * icon = get_shortcut_icon_location(sui.lpTitle, &wdpresent);
 # ifdef debuglog
     fprintf(mtlog, "icon <%ls>\n", icon); fflush(mtlog);
@@ -7226,11 +7226,11 @@ main(int argc, char *argv[])
     }
   }
   else {
-    // In case we've inherited a MINTTY_SHORTCUT setting 
+    // In case we've inherited a IMINTTY_SHORTCUT setting 
     // from a previous invocation, unset it.
     // We could check whether the referred shortcut actually runs the 
     // same binary as we're running, and keep it in that case.
-    unsetenv("MINTTY_SHORTCUT");
+    unsetenv("IMINTTY_SHORTCUT");
   }
 
   for (;;) {
@@ -7283,7 +7283,7 @@ main(int argc, char *argv[])
             }
         }
         if (res == 0)
-          setenv("CHERE_INVOKING", "mintty", true);
+          setenv("CHERE_INVOKING", "imintty", true);
       }
       when '':
         if (config_dir)
@@ -7598,42 +7598,42 @@ static int dynfonts = 0;
 
   int term_rows = cfg.rows;
   int term_cols = cfg.cols;
-  if (getenv("MINTTY_ROWS")) {
-    term_rows = atoi(getenv("MINTTY_ROWS"));
+  if (getenv("IMINTTY_ROWS")) {
+    term_rows = atoi(getenv("IMINTTY_ROWS"));
     if (term_rows < 1)
       term_rows = cfg.rows;
-    unsetenv("MINTTY_ROWS");
+    unsetenv("IMINTTY_ROWS");
   }
-  if (getenv("MINTTY_COLS")) {
-    term_cols = atoi(getenv("MINTTY_COLS"));
+  if (getenv("IMINTTY_COLS")) {
+    term_cols = atoi(getenv("IMINTTY_COLS"));
     if (term_cols < 1)
       term_cols = cfg.cols;
-    unsetenv("MINTTY_COLS");
+    unsetenv("IMINTTY_COLS");
   }
 #ifdef support_horizontal_scrollbar_with_tabbar
-  if (getenv("MINTTY_SQUEEZE")) {
+  if (getenv("IMINTTY_SQUEEZE")) {
     // this does not work, so horizontal scrollbar is disabled with tabbar
-    _horcols = min(max(atoi(getenv("MINTTY_SQUEEZE")), 0), term_cols - 10);
-    unsetenv("MINTTY_SQUEEZE");
+    _horcols = min(max(atoi(getenv("IMINTTY_SQUEEZE")), 0), term_cols - 10);
+    unsetenv("IMINTTY_SQUEEZE");
     horbar = 3;
   }
 #endif
-  if (getenv("MINTTY_MONITOR")) {
-    monitor = atoi(getenv("MINTTY_MONITOR"));
-    unsetenv("MINTTY_MONITOR");
+  if (getenv("IMINTTY_MONITOR")) {
+    monitor = atoi(getenv("IMINTTY_MONITOR"));
+    unsetenv("IMINTTY_MONITOR");
   }
   int run_max = 0;
-  if (getenv("MINTTY_MAXIMIZE")) {
-    run_max = atoi(getenv("MINTTY_MAXIMIZE"));
-    unsetenv("MINTTY_MAXIMIZE");
+  if (getenv("IMINTTY_MAXIMIZE")) {
+    run_max = atoi(getenv("IMINTTY_MAXIMIZE"));
+    unsetenv("IMINTTY_MAXIMIZE");
   }
-  if (getenv("MINTTY_TABBAR")) {
-    cfg.tabbar = max(cfg.tabbar, atoi(getenv("MINTTY_TABBAR")));
-    unsetenv("MINTTY_TABBAR");
+  if (getenv("IMINTTY_TABBAR")) {
+    cfg.tabbar = max(cfg.tabbar, atoi(getenv("IMINTTY_TABBAR")));
+    unsetenv("IMINTTY_TABBAR");
   }
-  if (getenv("MINTTY_SYNC")) {
-    cfg.geom_sync = max(cfg.geom_sync, atoi(getenv("MINTTY_SYNC")));
-    unsetenv("MINTTY_SYNC");
+  if (getenv("IMINTTY_SYNC")) {
+    cfg.geom_sync = max(cfg.geom_sync, atoi(getenv("IMINTTY_SYNC")));
+    unsetenv("IMINTTY_SYNC");
   }
 #ifndef support_horizontal_scrollbar_with_tabbar
   if (cfg.tabbar)
@@ -7655,7 +7655,7 @@ static int dynfonts = 0;
   if (daemonize) {  // detach from parent process and terminal
     pid_t pid = fork();
     if (pid < 0)
-      print_error(_("Mintty could not detach from caller, starting anyway"));
+      print_error(_("Imintty could not detach from caller, starting anyway"));
     if (pid > 0)
       exit(0);  // exit parent process
 
@@ -7860,7 +7860,7 @@ static int dynfonts = 0;
 #endif
 
     // prevent HOME from being propagated back to Windows applications 
-    // if called from WSL (mintty/wsltty#76)
+    // if called from WSL (imintty/wsltty#76)
     wchar * HOME = getregstr(HKEY_CURRENT_USER, W("Environment"), W("HOME"));
     if (HOME && *HOME){
       char * _HOME = cs__wcstoutf(HOME);
@@ -8006,9 +8006,9 @@ static int dynfonts = 0;
     wclass = cs__utftowcs(asform("%d", getpid()));
 #endif
 
-  char * tabclass = getenv("MINTTY_CLASS");
+  char * tabclass = getenv("IMINTTY_CLASS");
   if (tabclass) {
-    unsetenv("MINTTY_CLASS");
+    unsetenv("IMINTTY_CLASS");
     if (0 == strcmp(tabclass, "+"))
       cfg.new_tabs = 2;
     else {
@@ -8390,14 +8390,14 @@ static int dynfonts = 0;
     trace_winsize("border_style");
   }
 
-  if (cfg.tabbar && !getenv("MINTTY_DX") && !getenv("MINTTY_DY")) {
+  if (cfg.tabbar && !getenv("IMINTTY_DX") && !getenv("IMINTTY_DY")) {
     HWND wnd_other = FindWindowExW(NULL, wnd,
         (LPCWSTR)(uintptr_t)class_atom, NULL);
     if (wnd_other && FindWindowExA(wnd_other, NULL, TABBARCLASS, NULL)) {
       if (IsZoomed(wnd_other)) {
         if ((GetWindowLong(wnd_other, GWL_STYLE) & WS_THICKFRAME) == 0) {
-          setenvi("MINTTY_DX", 0);
-          setenvi("MINTTY_DY", 0);
+          setenvi("IMINTTY_DX", 0);
+          setenvi("IMINTTY_DY", 0);
         }
         else {
           run_max = 1;
@@ -8406,10 +8406,10 @@ static int dynfonts = 0;
       else {
         RECT r;
         GetWindowRect(wnd_other, &r);
-        setenvi("MINTTY_X", r.left);
-        setenvi("MINTTY_Y", r.top);
-        setenvi("MINTTY_DX", r.right - r.left);
-        setenvi("MINTTY_DY", r.bottom - r.top);
+        setenvi("IMINTTY_X", r.left);
+        setenvi("IMINTTY_Y", r.top);
+        setenvi("IMINTTY_DX", r.right - r.left);
+        setenvi("IMINTTY_DY", r.bottom - r.top);
       }
     }
   }
@@ -8418,24 +8418,24 @@ static int dynfonts = 0;
     // INT16 to handle multi-monitor negative coordinates properly
     INT16 sx = 0, sy = 0, sdx = 1, sdy = 1;
     short si = 0;
-    if (getenv("MINTTY_X")) {
-      sx = atoi(getenv("MINTTY_X"));
-      unsetenv("MINTTY_X");
+    if (getenv("IMINTTY_X")) {
+      sx = atoi(getenv("IMINTTY_X"));
+      unsetenv("IMINTTY_X");
       si++;
     }
-    if (getenv("MINTTY_Y")) {
-      sy = atoi(getenv("MINTTY_Y"));
-      unsetenv("MINTTY_Y");
+    if (getenv("IMINTTY_Y")) {
+      sy = atoi(getenv("IMINTTY_Y"));
+      unsetenv("IMINTTY_Y");
       si++;
     }
-    if (getenv("MINTTY_DX")) {
-      sdx = atoi(getenv("MINTTY_DX"));
-      unsetenv("MINTTY_DX");
+    if (getenv("IMINTTY_DX")) {
+      sdx = atoi(getenv("IMINTTY_DX"));
+      unsetenv("IMINTTY_DX");
       si++;
     }
-    if (getenv("MINTTY_DY")) {
-      sdy = atoi(getenv("MINTTY_DY"));
-      unsetenv("MINTTY_DY");
+    if (getenv("IMINTTY_DY")) {
+      sdy = atoi(getenv("IMINTTY_DY"));
+      unsetenv("IMINTTY_DY");
       si++;
     }
     if (sync_level()) {
@@ -8485,7 +8485,7 @@ static int dynfonts = 0;
   // If term_reset tries to align the status line before 
   // term.marg_bot is defined in term_resize 
   // (as called from win_adapt_term_size after WM_SIZE), 
-  // mintty -o StatusLine=on will crash in call sequence
+  // imintty -o StatusLine=on will crash in call sequence
   // term_reset - term_set_status_type - term_do_scroll - assert
   // Happens with dpi == 96...
   // So we'll have to call term_reset after term_resize:
@@ -8603,7 +8603,7 @@ static int dynfonts = 0;
   // Finally show the window.
   ShowWindow(wnd, show_cmd);
   // and grab focus again, just in case and for Windows 11
-  // (https://github.com/mintty/mintty/issues/1113#issuecomment-1210278957)
+  // (https://github.com/imintty/imintty/issues/1113#issuecomment-1210278957)
   // Skip when hidden (-w hide) to avoid spurious foreground activation.
   if (cfg.window)
     SetFocus(wnd);
@@ -8806,7 +8806,7 @@ static int dynfonts = 0;
   // Finally show the window.
   ShowWindow(wnd, show_cmd);
   // and grab focus again, just in case and for Windows 11
-  // (https://github.com/mintty/mintty/issues/1113#issuecomment-1210278957)
+  // (https://github.com/imintty/imintty/issues/1113#issuecomment-1210278957)
   // Skip when hidden (-w hide) to avoid spurious foreground activation.
   if (cfg.window)
     SetFocus(wnd);

@@ -1,4 +1,4 @@
-// winctrls.c (part of mintty)
+// winctrls.c (part of imintty)
 // Copyright 2008-11 Andy Koppe, 2015-2024 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // (corresponds to putty:windows/winctrls.c)
@@ -26,7 +26,7 @@ trace_ctrl(int line, int ev, control * ctrl)
 {
 static char * debugopt = 0;
   if (!debugopt) {
-    debugopt = getenv("MINTTY_DEBUG");
+    debugopt = getenv("IMINTTY_DEBUG");
     if (!debugopt)
       debugopt = "";
   }
@@ -1031,12 +1031,12 @@ static bool
 init_debug()
 {
   if (!dout) {
-    char * debugopt = getenv("MINTTY_DEBUG");
+    char * debugopt = getenv("IMINTTY_DEBUG");
     if (debugopt && strchr(debugopt, 'x'))
       return false;
     if (debugopt && strchr(debugopt, 'h')) {
       chdir(getenv("TEMP"));
-      dout = fopen("mintty.debug", "w");
+      dout = fopen("imintty.debug", "w");
       if (strchr(debugopt, 'n'))
         do_next_hook = false;
     }

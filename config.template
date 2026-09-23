@@ -1,12 +1,12 @@
 #############################################################################
-# Mintty configuration template, with some useful examples -
+# Imintty configuration template, with some useful examples -
 # uncomment, change settings or add options to your preference.
 # This sample config template mainly contains settings that 
 # cannot be configured in the interactive Options dialog.
 # The config file should best be placed in one of these locations:
-#	$HOME/.minttyrc
-#	$HOME/.config/mintty/config
-#	$APPDATA/mintty/config
+#	$HOME/.iminttyrc
+#	$HOME/.config/imintty/config
+#	$APPDATA/imintty/config
 #	(see manual for further options)
 
 # enable a Compose key
@@ -34,7 +34,7 @@
 # enable terminal reflow on resize (also configurable in Options)
 #RewrapOnResize=yes
 
-# enable single-dash long options, e.g. mintty -WSL
+# enable single-dash long options, e.g. imintty -WSL
 #ShortLongOpts=on
 
 # enable wslbridge2 as a WSL launcher
@@ -46,14 +46,14 @@
 #SixelClipChars=▒
 
 # place image or HTML screenshot files in common location
-#default SaveFilename=mintty.%Y-%m-%d_%H-%M-%S
-#SaveFilename=~/mintty.%Y-%m-%d_%H-%M-%S
-#SaveFilename=$USERPROFILE/Pictures/mintty/mintty.%Y-%m-%d_%H-%M-%S
+#default SaveFilename=imintty.%Y-%m-%d_%H-%M-%S
+#SaveFilename=~/imintty.%Y-%m-%d_%H-%M-%S
+#SaveFilename=$USERPROFILE/Pictures/imintty/imintty.%Y-%m-%d_%H-%M-%S
 
 # place terminal log files in common location
-#default Log=mintty.$h.%Y-%m-%d_%H-%M-%S.$p.log
-#Log=~/mintty.$h.%Y-%m-%d_%H-%M-%S.$p.log
-#Log=/tmp/mintty.$h.%Y-%m-%d_%H-%M-%S.$p.log
+#default Log=imintty.$h.%Y-%m-%d_%H-%M-%S.$p.log
+#Log=~/imintty.$h.%Y-%m-%d_%H-%M-%S.$p.log
+#Log=/tmp/imintty.$h.%Y-%m-%d_%H-%M-%S.$p.log
 
 # add some useful actions to the extended context menu
 #CtxMenuFunctions=Reverse Video:toggle-reverse-video;\

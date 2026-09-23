@@ -1,12 +1,12 @@
-# Mintty
+# Imintty
 # Copyright (C) 2019
-# This file is distributed under the same license as the mintty package.
+# This file is distributed under the same license as the imintty package.
 # JSJ <jsj666@hotmail.com>, 2019.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"Project-Id-Version: imintty\n"
+"Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
 "POT-Creation-Date: 2026-06-09 00:32+0200\n"
 "PO-Revision-Date: 2019-01-29 16:00+0200\n"
 "Last-Translator: JSJ <jsj666@hotmail.com>\n"
@@ -190,7 +190,7 @@ msgstr "@ Idioma de Windows @"
 msgid "* Locale environm. *"
 msgstr "* Entorno local *"
 
-#. __ UI localization: use mintty configuration setting (Text - Locale)
+#. __ UI localization: use imintty configuration setting (Text - Locale)
 #: config.c:2466
 msgid "= cfg. Text Locale ="
 msgstr "= cfg. Texto Local ="
@@ -1063,7 +1063,7 @@ msgstr "Aña&dir color personal."
 msgid "Options"
 msgstr "Opciones"
 
-#. __ Options: dialog title: "mintty <release> available (for download)"
+#. __ Options: dialog title: "imintty <release> available (for download)"
 #: windialog.c:268
 msgid "available"
 msgstr "disponible"
@@ -1421,8 +1421,8 @@ msgid "Syntax error in geometry argument '%s'"
 msgstr "Error de sintaxis en arg. tamaño y posición '%s'"
 
 #: winmain.c:7506
-msgid "Mintty could not detach from caller, starting anyway"
-msgstr "Mintty no se pudo liberar, inciando de todas formas"
+msgid "Imintty could not detach from caller, starting anyway"
+msgstr "Imintty no se pudo liberar, inciando de todas formas"
 
 #: winmain.c:7889
 msgid "Using default title due to invalid characters in program name"
@@ -1481,11 +1481,11 @@ msgstr "No hay garantías, dentro de lo permitido por la ley."
 #: appinfo.h:69
 msgid ""
 "Please report bugs or request enhancements through the issue tracker on the "
-"mintty project page located at\n"
+"imintty project page located at\n"
 "%s.\n"
 "See also the Wiki there for further hints, thanks and credits."
 msgstr ""
 "Por favor informe de los fallos o peticiones de mejora a través del sistema "
-"de informe de errores en la página del proyecto mintty localizada en\n"
+"de informe de errores en la página del proyecto imintty localizada en\n"
 "%s.\n"
 "Consultar también la Wiki para más ayuda, agradecimientos y créditos."

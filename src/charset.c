@@ -1,4 +1,4 @@
-// charset.c (part of mintty)
+// charset.c (part of imintty)
 // Copyright 2008-11 Andy Koppe, 2024-2025 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -478,7 +478,7 @@ set_locale_env(string loc)
       // alternative approaches:
       // - fix LANG only if it was set before and leave all unset otherwise;
       //   this triggers bad behaviour in shell startup scripts; see
-      //   https://github.com/mintty/mintty/issues/1050#issuecomment-719635747
+      //   https://github.com/imintty/imintty/issues/1050#issuecomment-719635747
       //   resulting in locale setting inconsistent with requested Locale
       // - if LANG is null or not set properly, fix it with LC_CTYPE (3.4.2);
       //   this prevents setting from system locale in bash profile
@@ -487,13 +487,13 @@ set_locale_env(string loc)
       // - set LANG unconditionally; this would however impose locale 
       //   setting on other (i.e. non-LC_CTYPE) locale categories, which 
       //   is not the concern of a terminal; see
-      //   https://github.com/mintty/mintty/issues/1050#issuecomment-719365620
+      //   https://github.com/imintty/imintty/issues/1050#issuecomment-719365620
       // - set LANG unconditionally and clear the others (until 3.4.0)
     }
   }
 
   // if parameter Locale is used, always set LANG additionally;
-  // see https://github.com/mintty/mintty/issues/1050#issuecomment-719931484
+  // see https://github.com/imintty/imintty/issues/1050#issuecomment-719931484
   if (*cfg.locale)
     setlocenv("LANG", loc);
 
@@ -706,7 +706,7 @@ cs_init(void)
   if (!cfg.old_locale && !getlocenvcat("LC_CTYPE")) {
     // anticipate system-derived locale setting to be done in 
     // /etc/profile.d/lang.* 
-    // in order to make mintty and shell locales consistent
+    // in order to make imintty and shell locales consistent
     LCID lcid = GetUserDefaultUILanguage ();
     char iso639[10];
     if (GetLocaleInfoA(lcid, LOCALE_SISO639LANGNAME, iso639, 10)) {

@@ -1,4 +1,4 @@
-// winimg.c (part of mintty)
+// winimg.c (part of imintty)
 // Licensed under the terms of the GNU General Public License v3 or later.
 
 #include <stdlib.h>

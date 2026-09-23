@@ -34,21 +34,21 @@
 ..
 .char ^ \(ha
 .char ~ \(ti
-.TH mintty 1 mintty
+.TH imintty 1 imintty
 
 .ad l
 
 .SH NAME
 
-mintty \(en Cygwin Terminal Emulator
+imintty \(en Cygwin Terminal Emulator
 
 .SH SYNOPSIS
 
-\fBmintty\fP [\fIOPTION\fP]... [ \fB\-\fP | \fIPROGRAM\fP [\fIARG\fP]... ]
+\fBimintty\fP [\fIOPTION\fP]... [ \fB\-\fP | \fIPROGRAM\fP [\fIARG\fP]... ]
 
 .SH DESCRIPTION
 
-\fBMintty\fP is a terminal emulator for Cygwin with a native Windows user
+\fBImintty\fP is a terminal emulator for Cygwin with a native Windows user
 interface and minimalist design.
 Its terminal emulation is largely compatible with \fBxterm\fP, but it does not
 require an X server.
@@ -57,7 +57,7 @@ require an X server.
 
 If a program name is supplied on the command line, this is executed with any
 additional arguments given.
-Otherwise, mintty looks for a shell to execute in the \fISHELL\fP environment
+Otherwise, imintty looks for a shell to execute in the \fISHELL\fP environment
 variable.
 If that is not set, it reads the user's default shell setting from
 \fI/etc/passwd\fP.
@@ -65,18 +65,18 @@ As a last resort, it falls back to \fI/bin/sh\fP.
 
 If a single dash is specified instead of a program name, the shell is invoked
 as a login shell.
-If mintty is started from a Windows shortcut (desktop or start menu), by 
+If imintty is started from a Windows shortcut (desktop or start menu), by 
 default the shell is also invoked as a login shell unless disabled by an option.
 
 Invocation by a name of \fBwsl*\fP\fI[\-distro]\fP 
 implies a \fB\-\-WSL\fP\fI[=distro]\fP parameter.
 
-Mintty supports being started from a Windows desktop shortcut; it honours
+Imintty supports being started from a Windows desktop shortcut; it honours
 window and icon settings of the shortcut, aligns taskbar grouping with the 
 shortcut, disables daemonizing, and sets environment variable 
-MINTTY_SHORTCUT to its pathname.
+IMINTTY_SHORTCUT to its pathname.
 
-Before starting the child program, mintty trims the environment from other 
+Before starting the child program, imintty trims the environment from other 
 variables set by launchers, other terminals, or shells, that might indicate 
 incorrect information and lead to confusing behaviour.
 
@@ -111,7 +111,7 @@ in addition to the default config files, and save configuration changes here.
 .TQ
 \fB\-\-dir\fP \fIdirectory\fP
 Change initial directory to start in. This is especially useful for 
-invocation of mintty from a Windows context menu via registry entry.
+invocation of imintty from a Windows context menu via registry entry.
 
 .TQ
 \fB\-e\fP, \fB\-\-exec\fP \fIPROGRAM\fP [\fIARG\fP ...]
@@ -145,7 +145,7 @@ multiple icons.
 
 \fINote:\fP About interaction problems of icon, shortcut, and the Windows taskbar:
 In a Windows desktop shortcut, it is suggested not to use this option in the 
-Target command line, as mintty will detect and use the icon 
+Target command line, as imintty will detect and use the icon 
 from the invoking shortcut (Change Icon...), 
 also resolving a leading Windows environment variable (like %SystemRoot%).
 
@@ -167,7 +167,7 @@ Like \fB\-\-log\fP but with logging initially disabled, so just
 specifying a potential log file name in case logging is enabled from 
 the extended context menu.
 (Equivalent to combining \fB\-\-log\fP with \fB\-o Logging=no\fP.)
-Note that since mintty 3.7.9 a default log file name pattern is preset, 
+Note that since imintty 3.7.9 a default log file name pattern is preset, 
 which can be overridden with this setting. See option \fBLog\fP.
 
 .TQ
@@ -202,10 +202,10 @@ address space as provided by Windows.
 Combination of this option with options \fBX\fP or \fBY\fP is not 
 supported; to place a window for example at the left or right screen border 
 with a certain top offset, use 
-\fBmintty \-p left \-p 0,50\fP or \fBmintty \-p right \-p 0,50\fP.
+\fBimintty \-p left \-p 0,50\fP or \fBimintty \-p right \-p 0,50\fP.
 ./ul
 
-\fINote:\fP For another option to select the monitor for a new mintty window, 
+\fINote:\fP For another option to select the monitor for a new imintty window, 
 see the description of Alt+F2.
 
 .TQ
@@ -216,7 +216,7 @@ Instead of coordinates, "maxwidth" or "maxheight" can be specified;
 this can be combined with another parameter \fB\-s\fP for the other dimension.
 The dimension for which "max" is applied is ignored in further \fB\-s\fP or 
 \fB\-p\fP parameters.
-For example, \fBmintty \-s maxwidth \-p 0,0 \-s 0,10\fP will start a window 
+For example, \fBimintty \-s maxwidth \-p 0,0 \-s 0,10\fP will start a window 
 at full screen width, positioned at the top of the screen, with 10 lines.
 
 .TQ
@@ -272,61 +272,61 @@ or hidden.
 \fB\-\-class\fP \fICLASS\fP
 Use \fICLASS\fP as the window class name of the main window.
 This allows window grouping or setup of different tab sets, 
-and it allows scripting tools to distinguish different mintty instances.
-The default is "mintty\fI_N\fP", including tabbed window sync level if > 1.
+and it allows scripting tools to distinguish different imintty instances.
+The default is "imintty\fI_N\fP", including tabbed window sync level if > 1.
 
 .TQ
 \fB\-d\fP, \fB\-\-nodaemon\fP
 Do not apply "daemonizing".
-By default, mintty tries to detach itself from the invoking terminal when 
+By default, imintty tries to detach itself from the invoking terminal when 
 started from a Cygwin Console in order to avoid disabled signal reception, 
 and when cloning the window (Alt+F2) in order to avoid a remaining zombie process.
 
 .TQ
 \fB\-D\fP, \fB\-\-daemon\fP
 Enforce "daemonizing".
-By default, mintty tries to detach itself from the invoking terminal only 
+By default, imintty tries to detach itself from the invoking terminal only 
 as described above. With this option, it tries to detach always.
 This makes a difference if a Windows "Shortcut key" is configured in a 
-Windows desktop shortcut for starting mintty. Without daemonizing, the 
-shortcut key will focus an already running instance of mintty, with 
+Windows desktop shortcut for starting imintty. Without daemonizing, the 
+shortcut key will focus an already running instance of imintty, with 
 daemonizing it always starts a new instance.
 
 .TQ
 \fB\-R\fP, \fB\-\-Report\fP \fIinfo/mode\fP
 Report requested information.
 
-With values "s" or "o", mintty reports the position and size of the window 
+With values "s" or "o", imintty reports the position and size of the window 
 when it exits. This can be used to manage last window positions and reopen 
-mintty windows accordingly.
+imintty windows accordingly.
 .br
 Reporting mode is "s" or "o" to choose short or long option syntax for the 
 restored (i.e. neither maximized nor minimized) geometry; 
 min/max/fullscreen information is added.
 
-With value "m", mintty reports the system's monitor configuration 
+With value "m", imintty reports the system's monitor configuration 
 (listing all connected monitors and their geometry and position in 
 Windows' virtual monitor coordinate system), and exits.
 
-With value "f", mintty reports the monospace fonts installed on the system 
-as determined by mintty, and exits.
+With value "f", imintty reports the monospace fonts installed on the system 
+as determined by imintty, and exits.
 
-With value "W", mintty lists installed WSL distributions and properties, 
+With value "W", imintty lists installed WSL distributions and properties, 
 and exits.
 
-With value "t", mintty reports the tty name of the child process / shell.
+With value "t", imintty reports the tty name of the child process / shell.
 .br
-With value "p", mintty reports the PID of the child process (e.g. the shell).
+With value "p", imintty reports the PID of the child process (e.g. the shell).
 .br
-With value "P", mintty reports the cygwin PID and the Windows PID 
-of the mintty process (i.e. running the terminal).
+With value "P", imintty reports the cygwin PID and the Windows PID 
+of the imintty process (i.e. running the terminal).
 .br
-With value "w", mintty reports its Windows window id.
+With value "w", imintty reports its Windows window id.
 .br
-With value "R", mintty reports the available printers.
+With value "R", imintty reports the available printers.
 
-Note also the invocation \fIMINTTY_DEBUG=C mintty ...\fP; it will list 
-all config files loaded by mintty and whether they are also considered 
+Note also the invocation \fIMINTTY_DEBUG=C imintty ...\fP; it will list 
+all config files loaded by imintty and whether they are also considered 
 for saving - the last one will be saved to. (This cannot be a \fB\-R\fP 
 option as most config files are read before command line parameters are evaluated.)
 
@@ -342,7 +342,7 @@ options AppName and AppLaunchCmd.
 
 .TQ
 \fB\-\-nopin\fP
-Prevent pinning of the mintty window to the Windows taskbar.
+Prevent pinning of the imintty window to the Windows taskbar.
 
 .TQ
 \fB\-P\fP, \fB\-\-pcon\fP [\fBon\fP|\fBoff\fP]
@@ -353,13 +353,13 @@ Enforce enabling or disabling of ConPTY support.
 Adjust to WSL (the Windows Subsystem for Linux, or Bash/Ubuntu on Windows):
 .ul
 .bu
-When dragging a Windows file or folder into mintty, it will be pasted 
+When dragging a Windows file or folder into imintty, it will be pasted 
 using the Linux path name.
 .bu
 When Ctrl+clicking a file name, it will be interpreted in the Linux 
 namespace and converted before opening in Windows.
 .bu
-Options DropCommands, ExitCommands, and setting MINTTY_PROG for UserCommands are disabled.
+Options DropCommands, ExitCommands, and setting IMINTTY_PROG for UserCommands are disabled.
 .bu
 The working directory of the current foreground process 
 (for click-opening pathnames) cannot be detected.
@@ -456,14 +456,14 @@ Sets ScrollbackLines; effectively limited by \fBMaxScrollbackLines\fP.
 
 .SH USAGE
 
-Mintty tries to adhere to both Windows and Unix usage conventions.
+Imintty tries to adhere to both Windows and Unix usage conventions.
 Where they conflict, an option is usually provided.
 This section primarily describes the default configuration;
 see the \fBCONFIGURATION\fP section on how it can be customized.
 
 .SS Font rendering
 
-Mintty uses Windows Uniscribe font rendering to display a wider range 
+Imintty uses Windows Uniscribe font rendering to display a wider range 
 of characters; the TextOut API is automatically used instead if suitable.
 
 .TQ
@@ -474,7 +474,7 @@ changed font selection. This is especially useful for a portable installation.
 
 .SS Font selection
 
-Different fonts can be selected by different criteria. Mintty supports 
+Different fonts can be selected by different criteria. Imintty supports 
 explicit alternative font selection (using SGR character attributes), 
 script-dependent alternative font selection (option FontChoice), 
 glyph-support-dependent font substitution (option FontSubst), and more.
@@ -483,24 +483,24 @@ glyph-support-dependent font substitution (option FontSubst), and more.
 
 In addition to its default implicit bidirectional rendering with automatic 
 direction detection (according to the Unicode Bidi algorithm), 
-mintty supports ECMA-48 bidi modes and private bidi modes to control 
+imintty supports ECMA-48 bidi modes and private bidi modes to control 
 switchable bidi behaviour per line and partially per paragraph (i.e. within 
 an auto-wrapped line), as listed in 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#bidirectional\-rendering\fP.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#bidirectional\-rendering\fP.
 They follow the current status of the bidi mode model of the 
 \fBBiDi in Terminal Emulators\fP recommendation 
 (\fIhttps://terminal\-wg.pages.freedesktop.org/bidi/\fP).
 
 .TQ
 .B Arabic joining formatters
-Mintty considers zero-width joining/non-joining formatters for Arabic shaping.
+Imintty considers zero-width joining/non-joining formatters for Arabic shaping.
 
 .TQ
 .B LAM/ALEF single-cell joining
-Mintty supports a switchable terminal mode so that Arabic LAM/ALEF ligatures 
+Imintty supports a switchable terminal mode so that Arabic LAM/ALEF ligatures 
 are rendered in a single terminal cell.
-See \fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#lamalef\-joining\fP.
+See \fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#lamalef\-joining\fP.
 
 .TQ
 .B Box layout with right-to-left text
@@ -519,10 +519,10 @@ be opened, with some additional entries.
 The context menu and its modified variants (with Ctrl etc) can be customized;
 see section on Menu configuration for details.
 
-Mintty also adds a couple of items to the window menu, which can be accessed 
+Imintty also adds a couple of items to the window menu, which can be accessed 
 by clicking on the program icon or pressing \fBAlt+Space\fP.
 
-Both menus have an entry that leads to the Options dialog for changing mintty's
+Both menus have an entry that leads to the Options dialog for changing imintty's
 configuration.
 
 .SS Text selection, copy & paste
@@ -589,7 +589,7 @@ by the mouse dragging, like many GUI applications do.
 
 .SS Drag & drop
 
-Text, files and directories can be dropped into the mintty window.
+Text, files and directories can be dropped into the imintty window.
 They are inserted in the same way as if they were pasted from the clipboard.
 
 .SS Opening files, directories and URLs
@@ -607,10 +607,10 @@ directory of the terminal foreground process if that can be determined,
 overridden by the working directory interactively communicated by the 
 respective control sequence (OSC\ 7).
 
-Mintty also supports the OSC\ 8 control to embed explicit hyperlinks 
+Imintty also supports the OSC\ 8 control to embed explicit hyperlinks 
 (similar to links on web pages), see 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#hyperlinks\fP.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#hyperlinks\fP.
 
 \fINote:\fP While application mouse modes are enabled (as used by many 
 screen oriented applications), \fBCtrl+Shift+click\fP can be used to 
@@ -659,7 +659,7 @@ is not a precise operation.
 
 .SS Reflow / Line rebreaking after resize
 
-If the terminal is resized to a different width, mintty can 
+If the terminal is resized to a different width, imintty can 
 automatically rebreak and rewrap lines that had been auto-wrapped.
 This feature can be enabled by setting \fBRewrapOnResize\fP or in the 
 Options dialog.
@@ -668,8 +668,8 @@ Note that rewrapping can also be disabled per line by an escape sequence.
 .SS DPI change
 
 When DPI setting changes (by reconfiguration of display properties 
-"what's on your screen ... smaller/medium/larger" or moving the mintty window 
-between monitors with different DPI settings), mintty adapts its screen 
+"what's on your screen ... smaller/medium/larger" or moving the imintty window 
+between monitors with different DPI settings), imintty adapts its screen 
 size to avoid Windows blurred auto-adaptation. If Shift is also held during 
 the change, the font will be scaled too, roughly maintaining the screen 
 dimensions.
@@ -696,13 +696,13 @@ may help.
 
 .SS Touch screen support
 
-Mintty supports touch screen gestures for scrolling vertically or horizontally, 
+Imintty supports touch screen gestures for scrolling vertically or horizontally, 
 also in application mouse modes. Setting \fBTouchScroll\fP can configure details.
 Speed of touch scrolling is affected by finger distance.
 
 .SS Scrolling and the scrollback buffer
 
-Mintty has a scrollback buffer that can hold up to 10000 lines in the default
+Imintty has a scrollback buffer that can hold up to 10000 lines in the default
 configuration.
 It can be accessed using the scrollbar, the mouse wheel, or the keyboard.
 Hold the \fBShift\fP key while pressing the \fBUp\fP and \fBDown\fP arrow keys
@@ -740,15 +740,15 @@ However, there are two historic features that could be associated with
 "ScrollLock". One is the VT100 NoScroll key which would hold output 
 via the terminal, the other is a Windows function to switch cursor keys 
 to screen scrolling as still used by the Excel program.
-Mintty provides both features as user-definable functions, in two variants each. 
+Imintty provides both features as user-definable functions, in two variants each. 
 Functions are no-scroll and scroll-mode (referring to those two features) 
 which would be reset by any key input, and toggle-no-scroll and 
 toggle-scroll-mode which would switch the respective feature on or off.
 These functions can be attached to any user-assignable function key or 
 special key, including the ScrollLock key, with setting \fBKeyFunctions\fP.
-Mintty manages the ScrollLock keyboard light to reflect either of these 
+Imintty manages the ScrollLock keyboard light to reflect either of these 
 functions activated, trying to decouple the light indication from the 
-ScrollLock key while in a mintty window.
+ScrollLock key while in a imintty window.
 
 .SS Searching in the text and scrollback buffer
 
@@ -767,7 +767,7 @@ are marked with scroll markers they navigate to the previous/next prompt, to
 provide a better orientation among the output of previously invoked commands.
 See the Control Sequences wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#scroll\-markers\fP for details.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#scroll\-markers\fP for details.
 
 .SS Flip screen
 
@@ -783,12 +783,12 @@ For example, this allows to refer to past commands while editing a file.
 .SS Switching session
 
 The \fBCtrl+Tab\fP and \fBCtrl+Shift+Tab\fP shortcuts can be used to 
-cycle through mintty windows.
+cycle through imintty windows.
 Minimized windows are skipped unless both \fBCtrl\fP keys are used.
 
 .SS Virtual Tabs
 
-The Virtual Tabs feature provides a list of all running mintty sessions (session switcher) 
+The Virtual Tabs feature provides a list of all running imintty sessions (session switcher) 
 as well as configurable launch parameters for new sessions (session launcher).
 The session list is shown when right-clicking the title bar (if 
 virtual tabs mode is configured or with Ctrl) or ctrl+left-clicking it.
@@ -803,7 +803,7 @@ Distinct sets of sessions can be set up with the setting \fB\-o Class=...\fP.
 Virtual Tabs can be switched quickly with user-defined key assignments, 
 using user-definable functions switch\-[visible\-](prev|next).
 
-Mintty manages tabs in order to hide background tabs from appearing 
+Imintty manages tabs in order to hide background tabs from appearing 
 while moving the window, and (since 3.6.5) to support transparency 
 (avoiding cumulation of opaqueness), and keep the tabbar consistent 
 in case a tab gets terminated irregularly.
@@ -821,7 +821,7 @@ or interactively via drag-and-drop on the tabs.
 
 .TQ
 .B Tab session management
-Mintty can be launched with tab experience using command-line option 
+Imintty can be launched with tab experience using command-line option 
 \fB\-\-tabbar\fP which can also be added in desktop shortcuts, or the 
 following two settings can be added to the config file to set up 
 tabbed invocation by default:
@@ -836,38 +836,38 @@ Within a tab set, \fBAlt+F2\fP will launch the new terminal session
 in the same tab set.
 See wiki page
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#tab\-session\-management\fP 
+\fIhttps://github.com/imintty/imintty/wiki/Tips#tab\-session\-management\fP 
 for more details.
 
 .SS WSL support
 
-Mintty supports Windows Subsystem for Linux sessions. See command-line 
+Imintty supports Windows Subsystem for Linux sessions. See command-line 
 parameter \fB\-\-WSL\fP for invocation.
 
-With 3.7.9, mintty supports WSL sessions out of the box, 
+With 3.7.9, imintty supports WSL sessions out of the box, 
 using the Windows-native wsl.exe gateway to run a WSL session.
 (For older Windows systems, the previous wslbridge gateways can be 
 configured with option \fBWSLbridge\fP.)
 However, for fully transparent application access to all terminal features, 
 a recent version of the Windows conhost layer is needed, as provided 
 by the \fIOpenConsole\fP conhost replacement as described in the Tips 
-wiki page \fIhttps://github.com/mintty/mintty/wiki/Tips\fP.
+wiki page \fIhttps://github.com/imintty/imintty/wiki/Tips\fP.
 (This needs to be patched manually into Windows 11 until the updated 
 version gets released with Windows 11, or into Windows 10.)
 
-Mintty adapts certain features for WSL interaction, particularly 
+Imintty adapts certain features for WSL interaction, particularly 
 pathname handling for copy/paste. See the wiki Tips page for details.
 
-Mintty adjusts its icon (including in the session launcher) according 
+Imintty adjusts its icon (including in the session launcher) according 
 to the selected WSL distribution.
 
-Mintty can adjust taskbar grouping as well as tab set grouping to 
+Imintty can adjust taskbar grouping as well as tab set grouping to 
 your preferences, using options \fBClass\fP or \fBAppID\fP.
-Special setting \fBAppID=@\fP groups mintty sessions by each WSL distribution.
+Special setting \fBAppID=@\fP groups imintty sessions by each WSL distribution.
 
 .SS Horizontal scrolling of terminal view and horizontal scrollbar
 
-Mintty provides an optional horizontal scrollbar, which can be enabled 
+Imintty provides an optional horizontal scrollbar, which can be enabled 
 by a \fB\-\-horbar\fP command-line option.
 The window view can then be narrowed to be a partial view within 
 the actual terminal width, 
@@ -894,7 +894,7 @@ see there for an example.
 
 Clicking the window's close button, pressing \fBAlt+F4\fP, or choosing
 \fBClose\fP from the window menu sends a \fISIGHUP\fP signal to the process
-running in mintty, which normally causes it to exit.
+running in imintty, which normally causes it to exit.
 
 That signal can be ignored, though, in which case the program might have to be
 forced to terminate by sending a \fISIGKILL\fP signal instead.
@@ -911,7 +911,7 @@ device (pty) or can be ignored by an application by catching the SIGINT signal.
 For more forceful interruption of the terminal client application, 
 see the Tips wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#terminating\-the\-foreground\-program\-the\-hard\-way\fP.
+\fIhttps://github.com/imintty/imintty/wiki/Tips#terminating\-the\-foreground\-program\-the\-hard\-way\fP.
 
 Note that Ctrl+C is often configured to raise a SIGINT signal. However, 
 this is not a terminal feature and can also be reconfigured (stty), so 
@@ -919,7 +919,7 @@ in fact BRK and Ctrl+C are inherently different functions.
 The user-definable function intr can be used to send the character that 
 is currently assigned to the SIGINT signal via stty settings; note however, 
 this does not work e.g. through ssh if the pty setting is changed, as the 
-remote side does not change the client side towards mintty.
+remote side does not change the client side towards imintty.
 
 .SS Mouse tracking
 
@@ -931,12 +931,12 @@ Holding down \fBShift\fP overrides mouse tracking mode and sends mouse
 events to the window instead, so that e.g. text can be selected and the 
 context menu can be accessed.
 
-Mintty supports 5-button mice, handling mouse buttons 4 / 5 like 
+Imintty supports 5-button mice, handling mouse buttons 4 / 5 like 
 Alt+click-left / right in most mouse modes.
 
 .SS Character input
 
-Mintty supports input of characters that are not directly mapped in the 
+Imintty supports input of characters that are not directly mapped in the 
 keyboard layout: Numeric input, Unicode input, and composed characters 
 entered after a configurable Compose key.
 Visual feedback displays numeric or composing input modes and their input.
@@ -975,7 +975,7 @@ input described above.)
 
 .TQ
 .B Compose key
-Mintty supports a Compose key like on some traditional keyboards, using 
+Imintty supports a Compose key like on some traditional keyboards, using 
 compose character sequences from X11.
 It can be assigned to a modifier key in the Options menu, section Keys, 
 or to the CapsLock key.
@@ -983,7 +983,7 @@ The Compose key function can also be assigned to another key combination
 using user-definable function \fBcompose\fP in setting \fBKeyFunctions\fP.
 Since 3.8.3, shortcut override mode no longer disables a user-assigned Compose key.
 
-Details: Mintty extracts a list of compose key combinations from the 
+Details: Imintty extracts a list of compose key combinations from the 
 current X11 cygwin package, file 
 /usr/share/X11/locale/en_US.UTF-8/Compose, where "Multi_key" 
 combinations can be resolved using key name definitions from 
@@ -1223,7 +1223,7 @@ See option \fBKeyFunctions\fP for details.
 .B Startup hotkey ("quake mode")
 In a Windows shortcut (desktop or Start menu), a "Shortcut key" with 
 modifiers can be defined as a system hotkey to start an application or 
-bring it to the front. Mintty detects if activated via hotkey and will 
+bring it to the front. Imintty detects if activated via hotkey and will 
 use the same hotkey to minimize itself in turn, unless inhibited by 
 shortcut override mode.
 
@@ -1249,21 +1249,21 @@ The ReGIS vector graphics support feature completes feature compatibility
 with DEC VT340 and xterm.
 Details on ReGIS features (limitations, modifications, extensions) are 
 listed on the wiki page
-\fIhttps://github.com/mintty/mintty/wiki/ReGIS\fP.
+\fIhttps://github.com/imintty/imintty/wiki/ReGIS\fP.
 
 .TQ
 .B Image support
-In addition to the legacy Sixel and ReGIS graphics features, mintty 
+In addition to the legacy Sixel and ReGIS graphics features, imintty 
 supports graphic image display (using iTerm2 controls). 
 Image formats supported comprise PNG, JPEG, GIF, TIFF, BMP, Exif.
 
 .SS Vector graphics terminal emulation
 
-Mintty supports Tektronix 4014 mode. It switches to Tek emulation on the 
+Imintty supports Tektronix 4014 mode. It switches to Tek emulation on the 
 xterm sequence DECSET 38 (`\\e[?38h`). It is suggested to adjust the window 
 size to the Tektronix 4010 resolution and aspect ratio before 
 (`echo \-en "\\e[4;780;1024t"`). The \fBtek\fP utility available in 
-the mintty utils repository \fIhttps://github.com/mintty/utils\fP helps to 
+the imintty utils repository \fIhttps://github.com/imintty/utils\fP helps to 
 enter Tek mode and set up some environment information properly.
 
 While in Tek mode, the context menu provides the Tektronix mode functions 
@@ -1274,10 +1274,10 @@ Tek mode text output supports Unicode.
 
 .SS Emoji display support
 
-Mintty supports display of emojis as defined by Unicode using 
+Imintty supports display of emojis as defined by Unicode using 
 emoji presentation, emoji style variation and emoji sequences.
 The option \fBEmojis\fP can choose among sets of emoji graphics if 
-deployed in a mintty configuration directory, or if deployed as 
+deployed in a imintty configuration directory, or if deployed as 
 common emoji data in \fI/usr/share/emojis\fP.
 Extended flag emojis (not listed by Unicode) are supported dynamically.
 .br
@@ -1286,15 +1286,15 @@ graphic emojis display in default configuration.
 .br
 See the Tips wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#emojis\fP 
-about deployment of emoji graphics for mintty.
+\fIhttps://github.com/imintty/imintty/wiki/Tips#emojis\fP 
+about deployment of emoji graphics for imintty.
 
 .SS HTML Screen dump
 
-Mintty can create an HTML representation of the screen, from the extended 
+Imintty can create an HTML representation of the screen, from the extended 
 context menu or using the respective xterm Media Copy escape sequence.
-The HTML page is created in the start directory of mintty and uses a 
-filename pattern of \fBmintty.date_time.html\fP. Screen layout and 
+The HTML page is created in the start directory of imintty and uses a 
+filename pattern of \fBimintty.date_time.html\fP. Screen layout and 
 character attributes are reproduced as closely as possible.
 If there is a current selection, the selected text will be included in the 
 HTML dump, otherwise the current screen view is used. In the latter case, 
@@ -1307,8 +1307,8 @@ Filename pattern and location are configurable (setting \fBSaveFilename\fP).
 
 .SS Image dump of terminal contents
 
-Mintty can save the visual contents of the terminal screen in an image file 
-\fBmintty.date_time.png\fP. This is supported from the context menu or via 
+Imintty can save the visual contents of the terminal screen in an image file 
+\fBimintty.date_time.png\fP. This is supported from the context menu or via 
 user-definable key functions. The current terminal dimensions are used for 
 the image size except in Tek mode, where one of the original Tek sizes is 
 used (depending on whether 12-bit pixel addresses are in effect).
@@ -1319,7 +1319,7 @@ Filename pattern and location are configurable (setting \fBSaveFilename\fP).
 
 .SS Audio support
 
-Mintty supports audio output for the warning bell (^G character), 
+Imintty supports audio output for the warning bell (^G character), 
 margin bell, a private escape sequence for explicit output of a sound file, 
 and the DECPS tone playing escape sequence.
 A number of settings are available to configure the bell sound, also in 
@@ -1331,7 +1331,7 @@ Tone playing by DECPS is supported via the \fIlibao\fP audio output library
 if installed. Setting \fBPlayTone\fP can preselect a tone style.
 See the Control Sequences wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#audio\-support\fP.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#audio\-support\fP.
 
 .SS Diagnostic support
 
@@ -1342,7 +1342,7 @@ A couple of options are available to enable logging initially
 a log file name for later logging (\fBLog=...\fP combined with \fBLogging=no\fP, 
 or \fB\-\-logfile ...\fP on the command line).
 In either case, logging can be toggled from the extended context menu.
-Since mintty 3.7.9 a default log file name pattern is preset.
+Since imintty 3.7.9 a default log file name pattern is preset.
 See option \fBLog\fP for details.
 
 .TQ
@@ -1351,9 +1351,9 @@ Diagnostic display of current character information can be toggled
 from the extended context menu.
 .ul
 .bu
-\fIUnicode character codes\fP at the current cursor position will then be displayed in the window title bar. (Note that mintty may precompose a combining character sequence into a combined character which is then displayed.)
+\fIUnicode character codes\fP at the current cursor position will then be displayed in the window title bar. (Note that imintty may precompose a combining character sequence into a combined character which is then displayed.)
 .bu
-\fIUnicode character names\fP will be included in the display if the \fBunicode\-ucd\fP package is installed in \fI/usr/share\fP (or the file \fIcharnames.txt\fP generated by the mintty script \fIsrc/mknames\fP is installed in the mintty resource subfolder \fIinfo\fP).
+\fIUnicode character names\fP will be included in the display if the \fBunicode\-ucd\fP package is installed in \fI/usr/share\fP (or the file \fIcharnames.txt\fP generated by the imintty script \fIsrc/mknames\fP is installed in the imintty resource subfolder \fIinfo\fP).
 .bu
 \fIEmoji sequence "short names"\fP will be indicated if Emojis display is enabled.
 ./ul
@@ -1362,7 +1362,7 @@ and the character information output simply overwrite each other.
 
 .SH CONFIGURATION
 
-Mintty has a graphical Options dialog that can be reached via the context menu
+Imintty has a graphical Options dialog that can be reached via the context menu
 or the window menu.  It has the following action buttons:
 .ul
 .en
@@ -1370,23 +1370,23 @@ or the window menu.  It has the following action buttons:
 .en
 \fBSave\fP: applies and saves changes and closes the dialog.
 .en
-\fBApply\fP: applies changes to the current instance of mintty 
+\fBApply\fP: applies changes to the current instance of imintty 
 but does not save them to the configuration file.
 .br
 So using \fBApply\fP then \fBCancel\fP, local changes can be applied 
-(and tested) without affecting further instances of mintty.
+(and tested) without affecting further instances of imintty.
 ./ul0
 
 In configuration files, settings are stored as \fINAME\fP=\fIVALUE\fP pairs,
 with one per line.  By default, they are read from any file of 
-\fI/etc/minttyrc\fP, \fI$APPDATA/mintty/config\fP, 
-\fI~/.config/mintty/config\fP, \fI~/.minttyrc\fP, in this order.
+\fI/etc/iminttyrc\fP, \fI$APPDATA/imintty/config\fP, 
+\fI~/.config/imintty/config\fP, \fI~/.iminttyrc\fP, in this order.
 Additional configuration files can be specified using the
 \fB\-c\fP/\fB\-\-config\fP or \fB\-C\fP/\fB\-\-loadconfig\fP command line options.
 These are read in order after the default config files, 
 with settings in later files overriding those in earlier ones.
 Configuration changes are saved to the last writable file 
-read by default or \fI~/.minttyrc\fP if none is given, 
+read by default or \fI~/.iminttyrc\fP if none is given, 
 or (with precedence) to a configuration file specified with 
 \fB\-c\fP/\fB\-\-config\fP or \fB\-\-configdir\fP.
 Individual settings can also be specified on the command line using the 
@@ -1411,19 +1411,19 @@ Class, AppID, AppName, AppLaunchCmd,
 DropCommands, ExitCommands, UserCommands, SessionCommands, TaskCommands, 
 KeyFunctions, SysMenuFunctions, CtxMenuFunctions, UserCommandsPath.
 
-Be careful when running multiple instances of mintty. If options are saved 
+Be careful when running multiple instances of imintty. If options are saved 
 from different instances, or the config file is edited manually, 
-options can obviously be overwritten; if older mintty versions are run 
+options can obviously be overwritten; if older imintty versions are run 
 (e.g. from cygwin and msys sharing the same home directory), options 
-may even get dropped from the configuration file; mintty versions since 
+may even get dropped from the configuration file; imintty versions since 
 261 preserve unknown options and comment lines.
 
 Additional resource files are used for colour schemes (options 
 \fBThemeFile\fP and \fBThemeDark\fP, subdirectory \fIthemes\fP), 
 wave files (option \fBBellFile\fP, subdirectory \fIsounds\fP), 
 and localization translation files (option \fBLanguage\fP, subdirectory \fIlang\fP) 
-within the mintty resource directories \fI/usr/share/mintty\fP, 
-\fI$APPDATA/mintty\fP, \fI~/.config/mintty\fP, \fI~/.mintty\fP, 
+within the imintty resource directories \fI/usr/share/imintty\fP, 
+\fI$APPDATA/imintty\fP, \fI~/.config/imintty\fP, \fI~/.imintty\fP, 
 or as specified with command line option \fB\-\-configdir\fP.
 Emoji icons are additionally looked up in \fI/usr/share/emojis\fP 
 to support common emoji data installed by distinct packages.
@@ -1438,7 +1438,7 @@ no GUI configuration facility for that option
 (see also Hidden settings below).
 
 .SS Looks
-Settings affecting mintty's appearance.
+Settings affecting imintty's appearance.
 
 .TQ
 .B Colours
@@ -1466,15 +1466,15 @@ Also X11 color names are supported.
 \fBTheme\fP (ThemeFile=): 
 The popup menu offers theme files as stored in a resource subdirectory 
 \fIthemes\fP for selection as a colour scheme.
-The option can also be set to a filename (like D:/.../solarized\-light.minttyrc).
+The option can also be set to a filename (like D:/.../solarized\-light.iminttyrc).
 
 The field can also be used as a drag-and-drop target for downloaded 
-colour schemes of types .itermcolors, .json, or .minttyrc as for example 
+colour schemes of types .itermcolors, .json, or .iminttyrc as for example 
 provided by the Color Scheme Designer. From some sources, the download 
 link can also be dragged onto the field directly, without downloading first.
 See the Tips wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#using\-colour\-schemes\-themes\fP 
+\fIhttps://github.com/imintty/imintty/wiki/Tips#using\-colour\-schemes\-themes\fP 
 about this mechanism.
 
 Note: When dragging a scheme file onto the field, its value is temporarily 
@@ -1488,9 +1488,9 @@ Storing the colour scheme creates a file in a config directory, subdirectory
 \fIthemes\fP. This fails if a theme file of that name already exists, 
 or if no name is available in the setting and none was typed in.
 
-Note: Mintty also provides the command-line script \fBmintheme\fP which can 
-display the themes available in the mintty configuration directories or 
-activate one of them in the current mintty window.
+Note: Imintty also provides the command-line script \fBmintheme\fP which can 
+display the themes available in the imintty configuration directories or 
+activate one of them in the current imintty window.
 
 .en
 \fBDarkmode Theme\fP (ThemeDark=): 
@@ -1540,7 +1540,7 @@ The Options dialog also offers a numeric input option with slider buttons.
 Use Shift or Control to adjust their step width.
 
 Since 3.6.5, when overlaying multiple tabs (SessionGeomSync modes), 
-mintty manages tab window transparency to avoid cumulation of opaqueness.
+imintty manages tab window transparency to avoid cumulation of opaqueness.
 
 .TQ
 \fBOpaque when focused\fP (OpaqueWhenFocused=no)
@@ -1568,7 +1568,7 @@ control panel / Ease of Access Center, mouse panel or Optimize visual display.
 \fBCursor size\fP (CursorSize=0)
 This option sets the default width of underscore and vertical line cursors, 
 using values as defined for the dynamic cursor size escape sequence 
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#cursor\-size\fP, 
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#cursor\-size\fP, 
 which would in turn override the configured default.
 The default (value 0) determines a suitable size based on the 
 system-configured caret width.
@@ -1625,7 +1625,7 @@ config file or on the command line for font selection. Typical weights
 are \fBNormal\fP/\fBRegular\fP (FontWeight=400) and \fBBold\fP (FontWeight=700 
 or FontIsBold=yes) but if a font family has a different scheme or more than 
 2 font weights, the weight value can be used for more specific selection.
-If a font family has no bold weight but boldness was requested, mintty 
+If a font family has no bold weight but boldness was requested, imintty 
 does not adhere to this scheme but enforces bold font selection; however, 
 in this case the bold attribute may not be effective.
 .en
@@ -1634,7 +1634,7 @@ With these settings, up to 10 alternative fonts (and optionally weights)
 can be configured which would then be selectable via ECMA-48 SGR character attributes 
 (see Tips wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#text\-attributes\-and\-rendering\fP).
+\fIhttps://github.com/imintty/imintty/wiki/Tips#text\-attributes\-and\-rendering\fP).
 .br
 They can also be used as secondary fonts with option \fBFontChoice\fP.
 To support size alignment of secondary fonts with the main font size, 
@@ -1642,7 +1642,7 @@ alternative font specifications can be preceded with "+" which increases
 their font size slightly.
 .br
 \fINote:\fP Font10 has a special preference property; if it is not configured, 
-mintty will try to activate it anyway, looking for an installed 
+imintty will try to activate it anyway, looking for an installed 
 Fraktur or Blackletter font (ECMA-48 "Gothic").
 .br
 \fINote:\fP The control sequence for alternative font 1 overrides the identical 
@@ -1651,7 +1651,7 @@ Configuring alternative font 1 is therefore discouraged.
 .en
 \fBRight-to-left fallback font\fP \%(FontRTL=Courier\ New) and weight \%(FontRTLWeight=400):
 Fallback font in case the selected font does not include right-to-left scripts, 
-as mintty does not make use of Windows font substitution in this case.
+as imintty does not make use of Windows font substitution in this case.
 For RTL scripts, this is superior to a workaround using the FontChoice 
 setting, as it works implicitly and provides real fallback behaviour.
 .en
@@ -1769,7 +1769,7 @@ value 0 selects a built-in inline font chooser.
 With this hidden setting, text attributes underline, doubly underline, 
 strikeout and overline are drawn manually. 
 Setting this to false uses Windows font variants for strikeout and for 
-underline, unless mintty detects that the underlined font would not 
+underline, unless imintty detects that the underlined font would not 
 display properly. However, mixing font-generated and manual lines 
 (e.g. when some are coloured) results in inconsistent placement, 
 so the default was changed to true in 3.7.9.
@@ -1777,8 +1777,8 @@ Note that font smoothing may be affected by Windows-generated underline modes.
 
 .TQ
 \fBEmoji support\fP (Emojis=noto)
-With this option, mintty emoji support is enabled and the emojis style 
-is chosen. Mintty will match output for valid emoji sequences, 
+With this option, imintty emoji support is enabled and the emojis style 
+is chosen. Imintty will match output for valid emoji sequences, 
 presentation forms and emoji style selectors.
 (Note that up to cygwin 2.10 it may be useful to set \fBCharwidth=unicode\fP in addition.)
 
@@ -1807,14 +1807,14 @@ Supported styles are:
 ./ul
 
 Note that all style options only work if the respective emoji graphics repository 
-is deployed in a mintty resource directory, subdirectory \fIemojis\fP.
+is deployed in a imintty resource directory, subdirectory \fIemojis\fP.
 .br
 With default setting \fIEmojis=noto\fP, it is suggested to also install 
 package \fIemojis-noto\fP to enable graphic emojis display.
 .br
 See the Tips wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#emojis\fP 
+\fIhttps://github.com/imintty/imintty/wiki/Tips#emojis\fP 
 for details.
 
 .TQ
@@ -1911,7 +1911,7 @@ background. Overrides BoldAsFont. This is a fun option, use at your own risk.
 
 .TQ
 .B Note: Bold Behaviour
-When the bold text attribute is set, mintty distinguishes three classes of colours:
+When the bold text attribute is set, imintty distinguishes three classes of colours:
 .ul
 .en
 \fBDefault\fP: The default terminal foreground colour.
@@ -1926,7 +1926,7 @@ The colour classes are affected by the bold text attribute as follows:
 .bu
 Extended colours are always shown with a boldened font only.
 .bu
-When both BoldAsFont and BoldAsColour are disabled, mintty engages a mode
+When both BoldAsFont and BoldAsColour are disabled, imintty engages a mode
 similar to the xterm default behaviour: ANSI-8 is displayed with a bold font and
 a different colour, Default colour only uses a bold font.
 .bu
@@ -1981,9 +1981,9 @@ disables Uniscribe, including ligatures support.
 \fBInteractive Ligatures support\fP (LigaturesSupport=0):
 By default, ligatures, as supported by the selected font, are rendered 
 if they are output to the terminal in one chunk. When this option is 
-set =1, mintty redisplays the left part of the line whenever a character 
+set =1, imintty redisplays the left part of the line whenever a character 
 is output, so ligatures are also supported while being input.
-With LigaturesSupport=2, mintty also redisplays the previous cursor line 
+With LigaturesSupport=2, imintty also redisplays the previous cursor line 
 after the cursor is moved.
 .en
 \fBLigatures supported\fP (Ligatures=1):
@@ -2023,16 +2023,16 @@ code followed by a two-letter country code, for instance \fBen_US\fP or
 drop-down list for this setting.  Alternatively, the language-neutral "C"
 locale can be selected.
 
-If no locale is set here, which is the default, mintty uses the locale and
+If no locale is set here, which is the default, imintty uses the locale and
 character set specified via the environment variables \fILC_ALL\fP,
 \fILC_CTYPE\fP or \fILANG\fP.
 
 The major purpose of setting \fBLocale\fP, as far as the terminal is 
 concerned, is to enable setting \fBCharset\fP. Therefore, after revision 
-of locale handling in mintty 3.4.1, mintty restrains itself to setting 
+of locale handling in imintty 3.4.1, imintty restrains itself to setting 
 the LC_CTYPE category of the locale mechanism if possible and not 
 overwrite other categories if they are set in the environment.
-In addition, however, if Locale is set, mintty also sets the LANG variable.
+In addition, however, if Locale is set, imintty also sets the LANG variable.
 
 If you prefer basic locale setup for all categories to be affected by 
 the LC_CTYPE locale, whether setting Locale is used or not, it is 
@@ -2040,7 +2040,7 @@ suggested to add the following to the shell startup scripts:
 .br
 	export LANG="${LC_ALL:\-${LC_CTYPE:\-$LANG}}"
 
-Until mintty 3.4.0 or with option OldLocale set, if the locale option 
+Until imintty 3.4.0 or with option OldLocale set, if the locale option 
 is set, however, it would override any environment variable setting:
 \fILC_ALL\fP and the \fILC_*\fP variables for specific locale categories 
 are cleared, while \fILANG\fP is set according to the selected locale 
@@ -2058,7 +2058,7 @@ By default, the locale selected by options \fBLocale\fP and \fBCharset\fP
 also determines the character width assumptions used for screen rendering. 
 Exceptions are enabled by some settings, particularly \fBCharwidth\fP,
 and some control sequences; for an overview see
-(\fIhttps://github.com/mintty/mintty/wiki/Tips#character\-width\fP).
+(\fIhttps://github.com/imintty/imintty/wiki/Tips#character\-width\fP).
 
 \fINote:\fP
 Setting \fBLocale\fP and combining this with an empty or (Default) 
@@ -2069,17 +2069,17 @@ which is not UTF-8 in most cases and may lead to unexpected behaviour.
 \fINote:\fP
 When changing the character set interactively in the Options dialog, 
 it takes effect immediately for text input and ouput, but it does not 
-affect the processes already running in mintty.
+affect the processes already running in imintty.
 This is because the environment variables of a running process cannot be
 changed from outside that process.
-Therefore mintty should be restarted for a character set change to take full
+Therefore imintty should be restarted for a character set change to take full
 effect, or the locale environment of the shell should be changed accordingly.
 
 \fINote:\fP
 The locale and character set can also be changed with an escape sequence, 
 see the Control Sequences wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#locale\fP.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#locale\fP.
 .br
 That setting takes precedence; changes from the Options menu will silently 
 have no effect unless an escape sequence with empty locale is sent 
@@ -2112,14 +2112,14 @@ with built-in width properties to determine combining characters.
 ./ul
 
 \fINote:\fP With setting \fBambig\-wide\fP, if the effective locale does not define 
-ambiguous-width characters wide already, mintty appends the "@cjkwide" 
+ambiguous-width characters wide already, imintty appends the "@cjkwide" 
 locale modifier, in order to adapt the selected locale to the width preference.
 With setting \fBambig\-narrow\fP, if the effective locale does not define 
-ambiguous-width characters narrow already, mintty appends the "@cjknarrow" 
+ambiguous-width characters narrow already, imintty appends the "@cjknarrow" 
 locale modifier, in order to adapt the selected locale to the width preference.
 
 \fINote:\fP With settings \fBsingle\fP or \fBsingle\-unicode\fP, 
-mintty appends the "@cjksingle" locale modifier, 
+imintty appends the "@cjksingle" locale modifier, 
 in order to adapt the selected locale to the width preference.
 
 \fINote:\fP If this option selects using built-in width properties, 
@@ -2138,7 +2138,7 @@ screen applications (such as editors) that rely on \fBwcwidth\fP information.
 .TQ
 \fBOld character locale handling\fP (OldLocale=false)
 This setting reverts determination and handling of character encoding and 
-character width from locale and options mostly to mintty up to 3.4.0.
+character width from locale and options mostly to imintty up to 3.4.0.
 
 .SS Keys
 Settings controlling keyboard behaviour.
@@ -2151,7 +2151,7 @@ Note that the repeat rate can be adjusted dynamically by an escape sequence.
 
 .TQ
 \fBBackarrow sends ^H\fP (BackspaceSendsBS=no)
-By default, mintty sends \fB^?\fP (ASCII DEL) as the keycode for the \fBBackspace\fP key.
+By default, imintty sends \fB^?\fP (ASCII DEL) as the keycode for the \fBBackspace\fP key.
 If this option is enabled, \fB^H\fP is sent instead.
 This also changes the \fBCtrl+Backspace\fP code from \fB^H\fP to \fB^?\fP.
 
@@ -2164,7 +2164,7 @@ cannot interpret the explicit Ctrl+h command anymore.
 
 .TQ
 \fBDelete sends DEL\fP (DeleteSendsDEL=no)
-By default, mintty sends VT100 Remove as the keycode for the keypad Del key.
+By default, imintty sends VT100 Remove as the keycode for the keypad Del key.
 If this option is enabled, \fB^?\fP (ASCII DEL) is sent instead.
 .br
 (Corresponds to the xterm resource \fBdeleteIsDEL\fP.)
@@ -2179,7 +2179,7 @@ Some programs, however, chief among them Microsoft's very own Office, do not
 treat Ctrl+LeftAlt as AltGr, so that Ctrl+LeftAlt combinations can be used in
 command shortcuts even when a key has an AltGr character binding.
 
-By default, mintty follows Office's approach, because a number of terminal
+By default, imintty follows Office's approach, because a number of terminal
 programs make use of Ctrl+Alt shortcuts.
 The "standard" Windows behaviour can be restored by ticking the checkbox here.
 
@@ -2222,13 +2222,13 @@ Until 3.8.2, VT220-style application keypad keys would also be sent
 in non-VT220 mode if application keypad mode is enabled and application 
 cursor keys mode is disabled.
 This behaviour is no longer the default but heuristically enabled 
-(see \fIhttps://github.com/mintty/mintty/wiki/Tips#keypad-usage\fP).
+(see \fIhttps://github.com/imintty/imintty/wiki/Tips#keypad-usage\fP).
 With this option, the previous default can be restored.
 
 .TQ
 \fBOld modified special keys\fP (OldModifyKeys=0)
 This setting can selectively restore behaviour of certain modified 
-special keys from older versions of mintty. The value may be \-1 to 
+special keys from older versions of imintty. The value may be \-1 to 
 restore all former modified keys, or a logical sum of the following flags:
 .ul
 .en
@@ -2277,7 +2277,7 @@ showing the window menu and toggling full screen mode.
 .TQ
 \fBSwitch window shortcuts\fP (SwitchShortcuts=yes)
 Checkbox for enabling the \fBCtrl+Tab\fP shortcuts 
-for switching between mintty windows cyclically.
+for switching between imintty windows cyclically.
 
 .TQ
 \fBZoom shortcuts\fP (ZoomShortcuts=yes)
@@ -2368,12 +2368,12 @@ support it, e.g. word processors.
 the extended context menu.
 
 The font used in RTF may be changed by the settings \fBCopyAsRTFFont\fP and 
-\fBCopyAsRTFFontHeight\fP, to accommodate the case that the configured mintty 
+\fBCopyAsRTFFontHeight\fP, to accommodate the case that the configured imintty 
 font is not available when reading the contents (e.g. after sending it by mail).
 
 .TQ
 \fBCopy as HTML\fP (CopyAsHTML=0)
-With this option, mintty also copies text in HTML format, using flexible 
+With this option, imintty also copies text in HTML format, using flexible 
 levels of HTML formatting, when applying the normal copy function.
 .ul
 .en
@@ -2486,7 +2486,7 @@ link opening without modifier) overrides double and triple click functions.
 
 .TQ
 \fBMouse auto-hiding\fP (HideMouse=on)
-By default, mintty automatically hides the cross-hair mouse cursor when 
+By default, imintty automatically hides the cross-hair mouse cursor when 
 keyboard input is being entered. Setting this option =false keeps the cursor.
 .br
 (Corresponds to the xterm resource value \fBpointerMode:2\fP.)
@@ -2515,16 +2515,16 @@ current size.
 
 .TQ
 \fBReflow / Line rewrap when terminal is resized\fP (RewrapOnResize=yes)
-This setting enables mintty to automatically rebreak and rewrap 
+This setting enables imintty to automatically rebreak and rewrap 
 lines that had been auto-wrapped.
 Rewrapping can also be disabled per line by an escape sequence.
 
 .TQ
 \fBVertical spacing automatic adjustment strategy\fP (AutoLeading=2)
 Vertical spacing / row height is determined from font parameters.
-Mintty can apply some heuristic automatic adjustment to catch weird 
+Imintty can apply some heuristic automatic adjustment to catch weird 
 font spacing values. Setting 0 disables this feature, setting 1 uses 
-the algorithm in effect until mintty 3.4.6, setting 2 uses a tweaked 
+the algorithm in effect until imintty 3.4.6, setting 2 uses a tweaked 
 algorithm that avoids clipped descenders in some fonts.
 The manual tuning setting \fBRowSpacing\fP is applied after auto-leading.
 
@@ -2532,7 +2532,7 @@ The manual tuning setting \fBRowSpacing\fP is applied after auto-leading.
 \fBVertical spacing adjustment\fP (RowSpacing=0)
 Additional row padding.
 
-\fINote:\fP Mintty adjusts row spacing according to the font metrics, to 
+\fINote:\fP Imintty adjusts row spacing according to the font metrics, to 
 compensate for tight or tall spacing of some fonts (e.g. Courier, Consolas, FreeMono, Monaco).
 The RowSpacing value is added to that.
 .br
@@ -2565,8 +2565,8 @@ This hidden setting limits the maximum number of lines to keep in the
 scrollback buffer even if \fBScrollbackLines\fP is configured higher, 
 e.g. interactively. Note that increasing the scrollback buffer size to 
 a larger value may cause the menu function "Select all" to become 
-very slow and let mintty appear unresponsive for a while. Increasing to 
-a very large value may even cause mintty to crash; use at own risk.
+very slow and let imintty appear unresponsive for a while. Increasing to 
+a very large value may even cause imintty to crash; use at own risk.
 
 .TQ
 \fBScrollbar\fP (Scrollbar=right)
@@ -2624,7 +2624,7 @@ This option does not affect the arrow keys or Home/End keys.
 .TQ
 \fBUI localization language\fP (Language=)
 This selects the language or language/region code to use for 
-localization of the mintty user interface, the Options dialog, 
+localization of the imintty user interface, the Options dialog, 
 menus, message boxes, and terminal in-line error messages.
 .ul
 .en
@@ -2641,12 +2641,12 @@ menus, message boxes, and terminal in-line error messages.
 
 See the Tips wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#localization\fP 
+\fIhttps://github.com/imintty/imintty/wiki/Tips#localization\fP 
 about how to configure localization.
 
 Note that Windows may already have localized the default entries of the 
 system menu, which makes the system menu language inconsistent because 
-mintty adds a few items here. Select \fILanguage=en\fP to 
+imintty adds a few items here. Select \fILanguage=en\fP to 
 "reverse-localize" this.
 
 .SS Terminal
@@ -2655,10 +2655,10 @@ Terminal emulation settings.
 .TQ
 \fBTerminal type\fP (Term=xterm)
 The terminal type.  This determines the setting of the TERM environment variable
-at mintty startup.
+at imintty startup.
 Choices available from the dropdown list are \fBxterm\fP, \fBxterm\-256color\fP,
 \fBxterm\-vt220\fP, \fBvt100\fP, \fBvt220\fP, \fBvt340\fP, \fBvt420\fP, \fBvt525\fP,
-\fBxterm\-direct\fP, \fBmintty\fP, \fBmintty\-direct\fP.
+\fBxterm\-direct\fP, \fBimintty\fP, \fBimintty\-direct\fP.
 
 The last three options are only offered if the respective terminfo entries 
 are installed in the system (WSL distribution with options \-\-wsl/\-\-WSL).
@@ -2672,11 +2672,11 @@ If the setting contains "vt220" or higher, xterm VT220-style function
 key mode is enabled instead of the default PC-style function key mode.
 (This can otherwise be set with the DECSET 1061 control sequence.)
 
-Apart from that, this setting has no effect on mintty's terminal emulation,
+Apart from that, this setting has no effect on imintty's terminal emulation,
 i.e. all the features are always available. However, the TERM setting 
 may be used by applications to choose what features they can use, 
 alternatively to the preferrable device attributes queries
-(see \fIhttps://github.com/mintty/mintty/wiki/Tips\fP for hints).
+(see \fIhttps://github.com/imintty/imintty/wiki/Tips\fP for hints).
 
 The \fBxterm\-256color\fP setting enables 256-color mode in some applications,
 but may not be recognised at all by others, which is why plain \fBxterm\fP
@@ -2713,7 +2713,7 @@ are enabled initially. This can be changed later dynamically (DECSET 40).
 .TQ
 \fBApply old wraparound behaviour\fP (OldWrapModes=false)
 Setting this compatibility option disables some tweaks and fixes of 
-mintty 2.7.5:
+imintty 2.7.5:
 .ul
 .bu
 Backspace after pending Wraparound goes to previous column
@@ -2768,7 +2768,7 @@ could spy on your clipboard.
 .B Bell		
 The options here determine what effects the bell character \fB^G\fP has.
 Default beep and taskbar highlighting are enabled by default.
-Mintty can also play wave sounds or frequency beeps.
+Imintty can also play wave sounds or frequency beeps.
 .ul
 .en
 \fBBell system sound\fP (BellType=1): Preferred system sound, values:
@@ -2823,13 +2823,13 @@ terminal or window; this is a bitmask composed of the following values:
 \fB12\fP: (combining 4 and 8) classic bright full flash
 .RE
 .en
-\fBHighlight in taskbar\fP (BellTaskbar=yes): Change the colour of mintty's
-taskbar entry if the mintty window is not active.
+\fBHighlight in taskbar\fP (BellTaskbar=yes): Change the colour of imintty's
+taskbar entry if the imintty window is not active.
 .br
 (Corresponds to the xterm resource \fBbellIsUrgent\fP, 
 switchable by an escape sequence.)
 .en
-\fBPopup on bell\fP (BellPopup=no): Popup mintty to desktop foreground.
+\fBPopup on bell\fP (BellPopup=no): Popup imintty to desktop foreground.
 .br
 (Corresponds to the xterm resource \fBpopOnBell\fP, 
 switchable by an escape sequence.)
@@ -2871,9 +2871,9 @@ will be continued with the previous printer.
 .TQ
 \fBPrompt about running processes on close\fP (ConfirmExit=yes)
 If enabled, ask for confirmation when the close button or \fIAlt+F4\fP is 
-pressed and the command invoked by mintty still has child processes.
+pressed and the command invoked by imintty still has child processes.
 This is intended to help avoid closing programs accidentally.
-If possible, mintty also displays a list of running child processes, 
+If possible, imintty also displays a list of running child processes, 
 using the procps command if installed, or the ps command.
 
 .TQ
@@ -2884,7 +2884,7 @@ interactively via \fIAlt+F8\fP or from the menu.
 .TQ
 \fBPrompt when pasting multi-line contents\fP (ConfirmMultiLinePasting=no)
 If multi-line clipboard contents is about to be pasted (and lineends 
-are not filtered via \fBFilterPasteControls\fP), mintty prompts for 
+are not filtered via \fBFilterPasteControls\fP), imintty prompts for 
 confirmation of the pasting. This is a security measure against 
 pasting malicious contents on the command line.
 Note that shells often implement a similar feature which result in 
@@ -2906,7 +2906,7 @@ complain about side effects.
 .en
 (SuppressOSC=) Window configuration commands (OSC ... ST).
 ./ul
-See \fIhttps://github.com/mintty/mintty/wiki/Tips#text\-attributes\-and\-rendering\fP
+See \fIhttps://github.com/imintty/imintty/wiki/Tips#text\-attributes\-and\-rendering\fP
 for an overview of SGR attributes.
 .br
 See \fIhttp://invisible\-island.net/xterm/ctlseqs/ctlseqs.txt\fP
@@ -2971,19 +2971,19 @@ the window icon from an executable, DLL, or icon file.
 The optional comma-separated index can be used to select a particular icon in
 a file with multiple icons.
 
-If the setting is empty, as it is by default, mintty's program icon is used, 
-unless mintty was invoked from a desktop shortcut in which case it uses 
+If the setting is empty, as it is by default, imintty's program icon is used, 
+unless imintty was invoked from a desktop shortcut in which case it uses 
 the shortcut icon.
 
 For interaction problems of icon, shortcut, and the Windows taskbar, 
 see the note for the \-i option above.
 
 .TQ
-\fBLog file\fP (Log=mintty.$h.%Y-%m-%d_%H-%M-%S.$p.log)
+\fBLog file\fP (Log=imintty.$h.%Y-%m-%d_%H-%M-%S.$p.log)
 The \fBLog\fP setting can be used to specify a log file that all output is
 copied into.  If it is empty, no logging is done.
-Since mintty 3.7.9 a default log file name pattern is preset, 
-which creates a log file in the working directory from which mintty was 
+Since imintty 3.7.9 a default log file name pattern is preset, 
+which creates a log file in the working directory from which imintty was 
 started as soon as logging is enabled from the extended context menu.
 If it contains a single \fB%d\fP it will be substituted with the process ID.
 If it contains \fB%\fP placeholders other than a single \fB%d\fP, 
@@ -2995,19 +2995,19 @@ or the process ID respectively.
 Example, using only a timestamp and placing the logs in the home directory:
 .ul
 .ex
-Log=~/mintty.%Y\-%m\-%d_%H\-%M\-%S.log
+Log=~/imintty.%Y\-%m\-%d_%H\-%M\-%S.log
 ./ul
 
 If the log file name is a relative path name, it is relative from the 
-working directory mintty was started in. To avoid failure to create a 
+working directory imintty was started in. To avoid failure to create a 
 log file (especially when starting from the Start menu), the following 
-tweak is applied: If mintty was started from a Windows shortcut with 
+tweak is applied: If imintty was started from a Windows shortcut with 
 no working directory ("Start in:") specified and the effective start 
 directory is within the Windows system directory hierarchy, 
-mintty changes to the user's home directory first, 
+imintty changes to the user's home directory first, 
 except in WSL support mode where %LOCALAPPDATA%/Temp is used.
 
-Note: If the requested log file exists already, mintty does not overwrite it 
+Note: If the requested log file exists already, imintty does not overwrite it 
 but reports an error. To configure logging in the config file, use some 
 \fB%\fP placeholders to create distinct log files.
 Note that logging can be toggled from the extended context menu.
@@ -3018,7 +3018,7 @@ See also the \fIscript\fP(1) utility for a more flexible logging solution.
 \fBLogging initially enabled\fP (Logging=no)
 This setting selects whether logging is enabled initially.
 If a log file name is specified with \fBLog=...\fP and \fBLogging=no\fP 
-(the default since mintty 3.7.9),
+(the default since imintty 3.7.9),
 logging can be enabled (and toggled) from the extended context menu.
 
 .TQ
@@ -3028,7 +3028,7 @@ request or enable terminal reports, so output of log files can be tested
 without causing terminal response.
 
 .TQ
-\fBFilenames for screen saving\fP (SaveFilename=mintty.%Y\-%m\-%d_%H\-%M\-%S)
+\fBFilenames for screen saving\fP (SaveFilename=imintty.%Y\-%m\-%d_%H\-%M\-%S)
 This setting selects the location and filename pattern (which is expanded 
 with the strftime(3) function) for .html and .png screen dumps.
 An initial home prefix or environment variable prefix is expanded (POSIX 
@@ -3040,14 +3040,14 @@ Examples:
 .ul
 .dd
 .ex
-SaveFilename=~/mintty.%Y\-%m\-%d_%H\-%M\-%S
+SaveFilename=~/imintty.%Y\-%m\-%d_%H\-%M\-%S
 .dd
 .ex
-SaveFilename=$USERPROFILE/Pictures/mintty/%Y\-%m\-%d_%H\-%M\-%S
+SaveFilename=$USERPROFILE/Pictures/imintty/%Y\-%m\-%d_%H\-%M\-%S
 ./ul
 
 Note that if the filename pattern is a relative pathname (as is the default),
-it will be taken as relative to the working directory mintty was started in,
+it will be taken as relative to the working directory imintty was started in,
 with some tweaks as described above for the Log file.
 
 .TQ
@@ -3087,10 +3087,10 @@ Setting only one of X, Y is not supported.
 See command-line option \fB\-p\fP for further positioning options.
 
 .TQ
-\fBWindow class name\fP (Class=mintty\fI_N\fP)
+\fBWindow class name\fP (Class=imintty\fI_N\fP)
 The \fBClass\fP setting determines the name of the window class of the terminal window.
-It can be used to distinguish or group different mintty windows, or tab sets, e.g. for 
-the mintty session switcher, or for Windows scripting tools such as AutoHotKey.
+It can be used to distinguish or group different imintty windows, or tab sets, e.g. for 
+the imintty session switcher, or for Windows scripting tools such as AutoHotKey.
 
 The default setting appends the tabbed window sync level (>1) to avoid 
 interaction issues between tabbed and non-tabbed windows.
@@ -3126,7 +3126,7 @@ enhanced parts of the Options dialog.
 
 .TQ
 \fBAccelerate display speed\fP (DisplaySpeedup=6)
-If mintty processes high volume of output, it will skip up to the given 
+If imintty processes high volume of output, it will skip up to the given 
 number of refresh intervals (of 16ms each) in order to save output that 
 is visually scrolled off right away, so effectively increasing output speed.
 The maximum value is 9.
@@ -3160,7 +3160,7 @@ into the scrollback buffer, so they can be restored.
 .TQ
 \fBSuspend output while selecting\fP (SuspendWhileSelecting=8080)
 During drag-selects, the user may want the screen to hold still 
-to be selected from. Mintty can suspend processing of terminal output 
+to be selected from. Imintty can suspend processing of terminal output 
 for a while; if the buffer exceeds the size configured with this parameter 
 (in bytes), output is flushed. Setting it to 0 disables the feature.
 
@@ -3190,7 +3190,7 @@ via progress bar in one of three levels 1 (green), 2 (yellow), 3 (red).
 Note that the progress bar can also be switched or even controlled by an 
 escape sequence, see 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#progress\-bar\fP.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#progress\-bar\fP.
 
 .TQ
 \fBShow automatic progress bar\fP (ProgressScan=1)
@@ -3212,7 +3212,7 @@ The detected progress will be notified via progress bar
 according to option ProgressBar or its dynamic setting.
 Progress scan mode can also be switched by an escape sequence, see 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#progress\-bar\fP.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#progress\-bar\fP.
 
 .TQ
 \fBSingle-dash long options\fP (ShortLongOpts=false)
@@ -3236,7 +3236,7 @@ screen applications (such as editors) that rely on \fBwcwidth\fP information.
 \fBCharacter narrowing factor\fP (CharNarrowing=75)
 Depending on the font and font fallback (either by Windows means or 
 via option \fBFontChoice\fP), some glyphs may be too wide for the 
-character cell grid. Mintty applies automatic narrowing heuristics 
+character cell grid. Imintty applies automatic narrowing heuristics 
 to fit such glyphs into a character cell so they do not overlap 
 subsequent characters.
 With this setting, the horizontal scaling for narrowed characters can 
@@ -3269,7 +3269,7 @@ option \fB\-\-WSL\fP:
 \fB0\fP Use Windows \fIwsl.exe\fP.
 ./ul
 
-Mintty propagates information about the terminal type and the 
+Imintty propagates information about the terminal type and the 
 character encoding (effective LC_CTYPE setting) in the environment variables 
 HOSTTERM and HOSTLANG to the WSL session. It does not propagate TERM or 
 locale variables directly as they may have values that the WSL environment 
@@ -3278,7 +3278,7 @@ does not support.
 The deficiencies of the native wsl.exe gateway should be compensated 
 by patching an updated Windows \fIconhost\fP program into Windows; see 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#wsl\-sessions\fP for details.
+\fIhttps://github.com/imintty/imintty/wiki/Tips#wsl\-sessions\fP for details.
 
 .TQ
 \fBApplication ID\fP (AppID=)
@@ -3304,32 +3304,32 @@ a flexible grouping configuration, also supporting positional parameters
 \fB%5$s\fP: WSL distribution name if selected
 ./ul
 
-The special value \fBAppID=@\fP causes mintty to derive an implicit AppID 
+The special value \fBAppID=@\fP causes imintty to derive an implicit AppID 
 from the WSL system name, in order to achieve WSL distribution-specific 
 taskbar grouping. This resolves taskbar grouping problems in some cases 
 (wsltty issue #96) but causes similar problems in other cases (issue #784).
 
-\fIWarning:\fP Using this option for a mintty window started from 
+\fIWarning:\fP Using this option for a imintty window started from 
 a Windows shortcut (desktop, taskbar, start menu) may 
 cause trouble with taskbar grouping behaviour. If you need to do that, 
 the shortcut itself should also get attached with the same AppId.
 
-\fINote:\fP Since 2.9.6, if mintty is started via a Windows shortcut 
-which has its own AppID, it is reused for the new mintty window in order 
+\fINote:\fP Since 2.9.6, if imintty is started via a Windows shortcut 
+which has its own AppID, it is reused for the new imintty window in order 
 to achieve proper taskbar icon grouping. This takes precedence over an 
 explicit setting of the AppID option.
 
 \fIExplanation:\fP Note that Windows shortcut files have their own AppID.
-Hence, if an AppID is specified in the mintty settings, but not on a 
-taskbar-pinned shortcut for invoking mintty, clicking the pinned 
-shortcut will result in a separate taskbar item for the new mintty window, 
+Hence, if an AppID is specified in the imintty settings, but not on a 
+taskbar-pinned shortcut for invoking imintty, clicking the pinned 
+shortcut will result in a separate taskbar item for the new imintty window, 
 rather than being grouped with the shortcut.
 
 \fIHint:\fP To avoid AppID inconsistence and thus ungrouped taskbar icons,
-the shortcut's AppID should to be set to the same string as the mintty AppID, 
+the shortcut's AppID should to be set to the same string as the imintty AppID, 
 which can be done using the \fBwinappid\fP utility available in 
-the mintty utils repository \fIhttps://github.com/mintty/utils\fP.
-As noted above, since mintty 2.9.6, the mintty AppID does not need to be set 
+the imintty utils repository \fIhttps://github.com/imintty/utils\fP.
+As noted above, since imintty 2.9.6, the imintty AppID does not need to be set 
 anymore in this case.
 
 .TQ
@@ -3345,31 +3345,31 @@ command-line option \-\-store\-taskbar\-properties to make it persistent.
 It should also be combined with an explicit and unique AppID.
 
 \fINote:\fP The command must be given in Windows pathname syntax (e.g. 
-AppLaunchCmd=\(aqC:\\cygwin\\bin\\mintty \-T mytitle \-\(aq).
+AppLaunchCmd=\(aqC:\\cygwin\\bin\\imintty \-T mytitle \-\(aq).
 
 \fINote:\fP An explicit icon supplied with the \-i option can also be stored 
 with the persistent properties; note, however, that for this purpose, 
 it must be given in Windows pathname syntax and it must include a 
 resource index; also, for consistent appearance, another \-i option 
 referring to the same icon should be included in the AppLaunchCmd 
-(if the mintty invocation does not include an icon parameter but was 
+(if the imintty invocation does not include an icon parameter but was 
 started from a desktop shortcut, the icon in the AppLaunchCmd should 
 be consistent with that one, respectively).
 
 Example:
 .br
 .ex
-mintty \-o AppID=Mintty.PinTest.1 \-o AppName=Mintty.PinTest \-o AppLaunchCmd="C:\\cygwin\\bin\\mintty \-i /cygdrive/c/Windows/System32/calc.exe \-" \-i C:\\Windows\\System32\\calc.exe,0 \-\-store\-taskbar\-properties \-
+imintty \-o AppID=Imintty.PinTest.1 \-o AppName=Imintty.PinTest \-o AppLaunchCmd="C:\\cygwin\\bin\\imintty \-i /cygdrive/c/Windows/System32/calc.exe \-" \-i C:\\Windows\\System32\\calc.exe,0 \-\-store\-taskbar\-properties \-
 .ee
 
 \fBWarning:\fP Once made persistent, the stored properties associated with 
 a specific AppID cannot be removed or even modified again with normal means.
 For this reason, it is advisable to use temporary AppIDs for testing 
-(like MyMintty.1).
+(like MyImintty.1).
 
 .TQ
 \fBStart shell in login mode if run from shortcut\fP (LoginFromShortcut=yes)
-By default, mintty since version 347 will start its shell in login mode 
+By default, imintty since version 347 will start its shell in login mode 
 if invoked via a Windows desktop or start menu shortcut unless this setting 
 is disabled.
 
@@ -3431,7 +3431,7 @@ of character tags:
 In bracketed paste mode (which embeds pasted contents in bracketing 
 escape sequences), it can be considered a security issue for the command line 
 if bracket embedding is applied only for the whole paste buffer. Therefore 
-mintty provides a configurable feature to embed each new line in 
+imintty provides a configurable feature to embed each new line in 
 bracket sequences individually, controlled by this setting.
 .ul
 .en
@@ -3444,7 +3444,7 @@ bracket sequences individually, controlled by this setting.
 
 \fINote:\fP This is meanwhile handled better by shell versions which 
 highlight and hold back the pasted text until confirmed, so for 
-consistent and uniform appearance, the default is 0 from mintty 3.5.2.
+consistent and uniform appearance, the default is 0 from imintty 3.5.2.
 
 .TQ
 \fBSpecial key remapping\fP [DEPRECATED, see \fBKeyFunctions\fP]
@@ -3640,7 +3640,7 @@ Supported actions are described as follows:
 .en
 \fBscrollbar\-outer\fP: toggles the scrollbar (xterm compatible)
 .en
-\fBscrollbar\-inner\fP: toggles the scrollbar (mintty legacy)
+\fBscrollbar\-inner\fP: toggles the scrollbar (imintty legacy)
 .en
 \fBcycle\-pointer\-style\fP: cycles the pointer style
 .en
@@ -3809,7 +3809,7 @@ additional functionality is provided as for context menu user commands
 the PATH environment for the external command can be set up 
 with option \fBUserCommandsPath\fP.
 
-\fINote (***):\fP An unquoted \fInumber\fP causes mintty to form a 
+\fINote (***):\fP An unquoted \fInumber\fP causes imintty to form a 
 function key sequence, applying all modifiers.
 
 \fINote:\fP To just disable the built-in shortcut (and not override it 
@@ -3819,10 +3819,10 @@ leave the action empty, but include the colon.
 \fINote:\fP To disable the built-in shortcut and not process the key either, 
 use the "\fBvoid\fP" dummy action.
 
-\fINote:\fP An invalid action (like "foo") will make mintty beep on the key.
+\fINote:\fP An invalid action (like "foo") will make imintty beep on the key.
 
 \fINote:\fP If an assignment to any of the Lock keys 
-is defined, mintty will compensate for its implicit state change effect.
+is defined, imintty will compensate for its implicit state change effect.
 
 Examples:
 .ul
@@ -3940,7 +3940,7 @@ can be considered as shooting oneself in the foot.
 
 .TQ
 \fBManage keyboard LEDs\fP (ManageLEDs=7)
-Mintty manages the keyboard indicator lights (LEDs) for the CapsLock, Numlock, 
+Imintty manages the keyboard indicator lights (LEDs) for the CapsLock, Numlock, 
 and ScrollLock state in order to achieve consistent indication.
 If any of these keys have a user-defined function attached, their usage 
 shall not affect the visual keyboard modifier indication. Also, if a 
@@ -3980,7 +3980,7 @@ for different shades of grey. If only one value is specified, it is used for
 both foreground and background.
 
 For the default values, please see the 'helmholtz' theme in directory
-/usr/share/mintty/themes.
+/usr/share/imintty/themes.
 .ul
 .en
 \fBBlack\fP=
@@ -4074,7 +4074,7 @@ is not used anymore.
 
 About this mechanism see the Tips wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#using\-colour\-schemes\-themes\fP.
+\fIhttps://github.com/imintty/imintty/wiki/Tips#using\-colour\-schemes\-themes\fP.
 
 .TQ
 .B Selection highlight colours
@@ -4166,12 +4166,12 @@ for example \-o ExitTitle="TERMINATED: ".
 .TQ
 \fBMouse pointer styles\fP (MousePointer=ibeam, AppMousePointer=arrow, PixMousePointer=cross)
 This setting defines the mouse position indicator (i.e. not the text cursor) 
-from the given resource. Note that mintty maintains three different mouse 
+from the given resource. Note that imintty maintains three different mouse 
 pointer shapes, to distinguish application mouse reporting modes.
 Valid values are Windows predefined cursor names 
 (appstarting, arrow, cross, hand, help, ibeam, icon, no, size, sizeall, sizenesw, sizens, sizenwse, sizewe, uparrow, wait).
 or cursor file names which are looked up in subdirectory \fIpointers\fP of 
-a mintty resource directory; supported file types are .cur, .ico, .ani.
+a imintty resource directory; supported file types are .cur, .ico, .ani.
 .br
 (Corresponds to the xterm resource \fBpointerShape\fP.)
 
@@ -4244,8 +4244,8 @@ This option can be set to support either DPI handling modes 1 or 2
 (if supported, respectively), or set to 0/false to suppress DPI adjustments.
 
 .TQ
-\fBCheck availability of mintty version update\fP (CheckVersionUpdate=0)
-If non-zero (e.g. 900), mintty checks whether there is a version 
+\fBCheck availability of imintty version update\fP (CheckVersionUpdate=0)
+If non-zero (e.g. 900), imintty checks whether there is a version 
 update available whenever the Options dialog is opened and this was 
 not checked within the last given number of seconds.
 
@@ -4266,7 +4266,7 @@ The value is a bitmask, adding the following values:
 .TQ
 \fBMaximum image size\fP (MaxImageSize=4444444)
 This unsigned integer byte count limits the size of graphics data 
-(image, Sixel or ReGIS graphics) accepted in the mintty command buffer.
+(image, Sixel or ReGIS graphics) accepted in the imintty command buffer.
 
 .TQ
 \fBImage cell clipboard substitution\fP (ImageClipChars=\fIspace\fP)
@@ -4304,7 +4304,7 @@ Note that the setting string must not be terminated with a Windows lineend,
 as its CR would be considered part of the last item; this can be prevented 
 with a final semicolon separator.
 
-\fINote:\fP This feature potentially makes mintty vulnerable against command injection.
+\fINote:\fP This feature potentially makes imintty vulnerable against command injection.
 Be careful what commands you configure! For shell commands, it is 
 advisable to embed the "%s" parameter placeholder in single quotation 
 marks explicitly, both to avoid trouble with special characters, and 
@@ -4354,7 +4354,7 @@ Note that the setting string must not be terminated with a Windows lineend,
 as its CR would be considered part of the last item; this can be prevented 
 with a final semicolon separator.
 
-\fINote:\fP This feature potentially makes mintty vulnerable against command injection.
+\fINote:\fP This feature potentially makes imintty vulnerable against command injection.
 Be careful what strings you configure!
 
 Example:
@@ -4385,29 +4385,29 @@ Note that the setting string must not be terminated with a Windows lineend,
 as its CR would be considered part of the last item; this can be prevented 
 with a final semicolon separator.
 
-Mintty provides useful information in environment variables:
+Imintty provides useful information in environment variables:
 .ul
 .bu
-MINTTY_SELECT for the current selection
+IMINTTY_SELECT for the current selection
 .bu
-MINTTY_BUFFER for the complete terminal contents including scrollback buffer
+IMINTTY_BUFFER for the complete terminal contents including scrollback buffer
 .bu
-MINTTY_SCREEN for the current screen; if scrolled back, starting at the current scroll position
+IMINTTY_SCREEN for the current screen; if scrolled back, starting at the current scroll position
 .bu
-MINTTY_OUTPUT for the output of the previous command, if prompt lines are marked
+IMINTTY_OUTPUT for the output of the previous command, if prompt lines are marked
 .bu
-MINTTY_TITLE for the window title text
+IMINTTY_TITLE for the window title text
 .bu
-MINTTY_PID for the program ID of the terminal foreground process
+IMINTTY_PID for the program ID of the terminal foreground process
 .bu
-MINTTY_PROG for the program name of the terminal foreground process
+IMINTTY_PROG for the program name of the terminal foreground process
 .bu
-MINTTY_CWD for the current working directory of the foreground process
+IMINTTY_CWD for the current working directory of the foreground process
 ./ul
 
 \fINote:\fP Menu item labels are subject to localization if they are 
 added to the localization file of the selected UI localization language 
-(in subdirectory \fIlang\fP of a mintty resource directory).
+(in subdirectory \fIlang\fP of a imintty resource directory).
 
 \fINote:\fP Menu item labels can contain a \fB&\fP sign to indicate a 
 key shortcut for menu item selection.
@@ -4416,7 +4416,7 @@ key shortcut for menu item selection.
 with the escape sequence ^[[?7711h.
 See the Control Sequences wiki page 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs#scroll\-markers\fP.
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs#scroll\-markers\fP.
 
 \fINote:\fP The PATH environment for the external command can be set up 
 with option \fBUserCommandsPath\fP.
@@ -4426,19 +4426,19 @@ with option \fBUserCommandsPath\fP.
 \fINote:\fP Normal terminal interaction continues after the invoked commands 
 have terminated. Be careful not to configure commands that can stall or block!
 
-\fINote:\fP This feature potentially makes mintty vulnerable against command injection.
+\fINote:\fP This feature potentially makes imintty vulnerable against command injection.
 Be careful what commands you configure! Especially do not embed 
-environment variable parameters unquoted (like \fBecho $MINTTY_SELECT\fP), 
+environment variable parameters unquoted (like \fBecho $IMINTTY_SELECT\fP), 
 in order to avoid the risk of injecting commands via tricky selected text.
 
 Examples:
 .ul
 .en
 .ex
-UserCommands=Paste capital:echo \-n "$MINTTY_SELECT" | tr \(aqa\-z\(aq \(aqA\-Z\(aq;Paste small:echo \-n "$MINTTY_SELECT" | tr \(aqA\-Z\(aq \(aqa\-z\(aq
+UserCommands=Paste capital:echo \-n "$IMINTTY_SELECT" | tr \(aqa\-z\(aq \(aqA\-Z\(aq;Paste small:echo \-n "$IMINTTY_SELECT" | tr \(aqA\-Z\(aq \(aqa\-z\(aq
 .en
 .ex
-UserCommands=google:cygstart https://www.google.de/search?q="$MINTTY_SELECT"
+UserCommands=google:cygstart https://www.google.de/search?q="$IMINTTY_SELECT"
 ./ul
 
 \fINote:\fP Control characters need to be embedded verbatim; there is no escape notation.
@@ -4525,11 +4525,11 @@ SysMenuFunctions=&Lock Title:lock\-title;Copy &Title:copy\-title;&Options...:opt
 
 .TQ
 \fBSession launcher commands\fP (SessionCommands=)
-This setting lists mintty invocation parameters for the session launcher.
+This setting lists imintty invocation parameters for the session launcher.
 The value is a series of semicolon-separated, colon-combined 
 pairs of session launch names (used as menu item labels) and 
 invocation parameter lists; when selecting one of the launch names, 
-mintty is invoked with the respective parameters.
+imintty is invoked with the respective parameters.
 (If a semicolon shall be embedded into any of the command patterns, 
 a non-whitespace control character (i.e. none of \fB^I^J^K^L^M\fP) can be 
 specified as an alternative separator by starting the whole setting with it.)
@@ -4542,7 +4542,7 @@ with a final semicolon separator.
 
 \fINote:\fP Session launch names are subject to localization if they are 
 added to the localization file of the selected UI localization language 
-(in subdirectory \fIlang\fP of a mintty resource directory).
+(in subdirectory \fIlang\fP of a imintty resource directory).
 
 Examples:
 .ul
@@ -4551,19 +4551,19 @@ Examples:
 SessionCommands=big:\-w max;Ubuntu:\-\-WSL=Ubuntu;mybox:ssh mybox
 .en
 .ex
-SessionCommands=mycolours:\-C ~/.minttyrc.mycolours
+SessionCommands=mycolours:\-C ~/.iminttyrc.mycolours
 ./ul
 
 \fINote:\fP Control characters need to be embedded verbatim; there is no escape notation.
 
 .TQ
 \fBTaskbar commands\fP (TaskCommands=)
-This setting lists mintty invocation parameters for the "Tasks" list in the 
+This setting lists imintty invocation parameters for the "Tasks" list in the 
 taskbar icon, also known as "jump list".
 The value is a series of semicolon-separated, colon-combined 
 pairs of task names and invocation parameter lists; 
 when selecting one of the tasks from the taskbar icon, 
-mintty is invoked with the respective parameters.
+imintty is invoked with the respective parameters.
 (If a semicolon shall be embedded into any of the command patterns, 
 a non-whitespace control character (i.e. none of \fB^I^J^K^L^M\fP) can be 
 specified as an alternative separator by starting the whole setting with it.)
@@ -4584,15 +4584,15 @@ First, also configure a default taskbar icon command using options
 AppName and AppLaunchCmd.
 Second, choose a unique value for AppID and also add it to 
 the (default) launch command and all (jumplist) task commands.
-Third, invoke mintty with the chosen AppID and option \-\-store\-taskbar\-properties.
+Third, invoke imintty with the chosen AppID and option \-\-store\-taskbar\-properties.
 
 \fINote:\fP Task names are subject to localization if they are 
 added to the localization file of the selected UI localization language 
-(in subdirectory \fIlang\fP of a mintty resource directory).
+(in subdirectory \fIlang\fP of a imintty resource directory).
 
-\fINote:\fP If the parameter list contains "\-\-WSL", mintty will try to 
+\fINote:\fP If the parameter list contains "\-\-WSL", imintty will try to 
 determine a suitable WSL distribution icon for the jump list, or use the 
-WSLtty default icon from the mintty resource subdirectory \fIicon\fP, 
+WSLtty default icon from the imintty resource subdirectory \fIicon\fP, 
 or from the WSLtty package if installed.
 
 Examples:
@@ -4602,7 +4602,7 @@ Examples:
 TaskCommands=big:\-w max;Ubuntu:\-\-WSL=Ubuntu;mybox:ssh mybox
 .en
 .ex
-TaskCommands=mycolours:\-C ~/.minttyrc.mycolours
+TaskCommands=mycolours:\-C ~/.iminttyrc.mycolours
 ./ul
 
 \fINote:\fP Control characters need to be embedded verbatim; there is no escape notation.
@@ -4693,7 +4693,7 @@ If empty, the default terminal font is used.
 
 .TQ
 \fBTabbar grouping\fP (NewTabs=0)
-Setting \fBNewTabs=1\fP is applicable to mintty if started from a 
+Setting \fBNewTabs=1\fP is applicable to imintty if started from a 
 desktop shortcut.
 It will start a new window, i.e. a new tab group (if tabbar is enabled) 
 in this case. (Adding command-line option \fB\-\-newtabs\fP in the 
@@ -4717,46 +4717,46 @@ can be configured.
 
 .SH ENVIRONMENT
 
-Mintty uses a couple of environment variables mainly to steer Alt+F2 window 
+Imintty uses a couple of environment variables mainly to steer Alt+F2 window 
 cloning. Some variable are also useful for explicit control or information:
 
 .TQ
-.B MINTTY_MONITOR
+.B IMINTTY_MONITOR
 Select monitor for a new terminal session started from the shell.
 Monitor numbers and their coordinates within the Windows multi-monitor 
-address space can be listed with \fBmintty -Rm\fP.
+address space can be listed with \fBimintty -Rm\fP.
 
 .TQ
-.B MINTTY_SHORTCUT
-Filename of a desktop shortcut from which mintty was started.
+.B IMINTTY_SHORTCUT
+Filename of a desktop shortcut from which imintty was started.
 
 .TQ
-.B MINTTY_DEBUG
+.B IMINTTY_DEBUG
 C will list usage of config files;
 o, x, h enable interaction debugging for the Options dialog;
-M enables Windows message tracing (in a mintty test version compiled 
+M enables Windows message tracing (in a imintty test version compiled 
 with -Ddebug_messages).
 
 .TQ
 .B Process spawning
 Variables that pass information about terminal environment and contents 
-to external programs launched from mintty, e.g. as configured with 
+to external programs launched from imintty, e.g. as configured with 
 user-defined \`\`-embedded command (via KeyFunctions), via CtxMenuFunctions 
 or from user-defined menu entries, as described above:
-MINTTY_SELECT, MINTTY_BUFFER, MINTTY_SCREEN, MINTTY_OUTPUT, 
-MINTTY_TITLE, MINTTY_PID, MINTTY_PROG, MINTTY_CWD
+IMINTTY_SELECT, IMINTTY_BUFFER, IMINTTY_SCREEN, IMINTTY_OUTPUT, 
+IMINTTY_TITLE, IMINTTY_PID, IMINTTY_PROG, IMINTTY_CWD
 
 .TQ
 .B New window placement
 Variables that pass placement information when launching new terminal 
 sessions, for example with Alt+F2:
-MINTTY_MONITOR, MINTTY_ROWS, MINTTY_COLS, MINTTY_MAXIMIZE, 
-MINTTY_X, MINTTY_Y, MINTTY_DX, MINTTY_DY, 
-MINTTY_ICON, MINTTY_TABBAR, MINTTY_CLASS, MINTTY_PWD
+IMINTTY_MONITOR, IMINTTY_ROWS, IMINTTY_COLS, IMINTTY_MAXIMIZE, 
+IMINTTY_X, IMINTTY_Y, IMINTTY_DX, IMINTTY_DY, 
+IMINTTY_ICON, IMINTTY_TABBAR, IMINTTY_CLASS, IMINTTY_PWD
 
 .TQ
 .B Terminal type information
-In WSL mode, since 3.7.8, mintty does not propagate its TERM setting 
+In WSL mode, since 3.7.8, imintty does not propagate its TERM setting 
 to WSL anymore, in order to allow WSL local preferences 
 (often xterm-256color). Instead it sets environment variable HOSTTERM.
 
@@ -4764,25 +4764,25 @@ to WSL anymore, in order to allow WSL local preferences
 
 .SS Console issue
 
-Mintty, like xterm and rxvt and other terminals, communicates with the 
+Imintty, like xterm and rxvt and other terminals, communicates with the 
 child process through a pseudo terminal device, which Cygwin emulates 
 using Windows pipes, causing issues with native Windows command line programs.
 Cygwin 3.1.0 compensates for this issue via the ConPTY API of Windows 10.
 MSYS2, however, did not enable this support by default until end of 2022.
-See \fIhttps://github.com/mintty/mintty/wiki/Tips#inputoutput\-interaction\-with\-alien\-programs\fP 
+See \fIhttps://github.com/imintty/imintty/wiki/Tips#inputoutput\-interaction\-with\-alien\-programs\fP 
 for further hints, also on the \fIwinpty\fP wrapper for older systems.
 
 .SS Termcap/terminfo
 
-Mintty has two \fItermcap\fP or \fIterminfo\fP entries, \fBmintty\fP and 
-\fBmintty\-direct\fP (the latter reflecting true-colour capability).
+Imintty has two \fItermcap\fP or \fIterminfo\fP entries, \fBimintty\fP and 
+\fBimintty\-direct\fP (the latter reflecting true-colour capability).
 However, it sets the environment variable \fBTERM\fP to \fBxterm\fP 
 by default in order to provide maximal seamless compatibility also in case 
 of remote login.
 
 .SS WSL interaction
 
-With 3.7.9, mintty supports WSL sessions out of the box, 
+With 3.7.9, imintty supports WSL sessions out of the box, 
 dropping the wslbridge gateways by default, since there were 
 notoriously frequent cases where they would have failed to work.
 Launching WSL with the Windows built-in default launcher, however, 
@@ -4791,11 +4791,11 @@ by hooking the Windows \fIconhost\fP layer into the workflow.
 This deficiency can now be compensated by patching an updated \fIconhost.exe\fP 
 into Windows (see also section WSL support above); see 
 .br
-\fIhttps://github.com/mintty/mintty/wiki/Tips#wsl\-sessions\fP for details.
+\fIhttps://github.com/imintty/imintty/wiki/Tips#wsl\-sessions\fP for details.
 
 .SS Screen control features, DEC and xterm compatibility
 
-Mintty is compatible with xterm screen control.
+Imintty is compatible with xterm screen control.
 It supports DEC terminal screen features up to the VT500 series 
 except DECRLM (right-to-left cursor motion), 
 also supporting VT52 mode, thus being fully VT100-compatible, 
@@ -4803,12 +4803,12 @@ and VT320 status lines.
 It also includes most other xterm-specific control sequences and modes.
 See \fIhttps://invisible\-island.net/xterm/ctlseqs/ctlseqs.html\fP for a list.
 
-In addition, mintty supports a maximum of ANSI and ECMA-48 character attribute controls 
+In addition, imintty supports a maximum of ANSI and ECMA-48 character attribute controls 
 (including RGB and CMYK true-colour support, italic, overline, 
 strikeout, rapid blinking, alternative fonts) and additional 
 rendering attributes (underline styles and colours, superscript and subscript, 
 shadowed and overstrike).
-Mintty provides Sixel graphics, ReGIS vector graphics, image support 
+Imintty provides Sixel graphics, ReGIS vector graphics, image support 
 according to the iTerm2 protocol (including png, jpeg, gif output), 
 Emoji support, and Bidi reordering according to the Unicode Bidi Algorithm 
 UBA, amended with flexible bidi controls according to the draft bidi 
@@ -4817,14 +4817,14 @@ mode model of the \fBBiDi in Terminal Emulators\fP recommendation
 However, rendering of emoji zwj-joined sequences within right-to-left text 
 works only in emoji width mode.
 
-For mintty-specific private escape sequences and extensions, see 
-\fIhttps://github.com/mintty/mintty/wiki/CtrlSeqs\fP.
+For imintty-specific private escape sequences and extensions, see 
+\fIhttps://github.com/imintty/imintty/wiki/CtrlSeqs\fP.
 
-Mintty also provides emulation of the Tektronix 4014 vector graphics terminal,
+Imintty also provides emulation of the Tektronix 4014 vector graphics terminal,
 including "writethru" and "defocused" beam modes (for which colour indication 
 can be configured), write beam glow and GIN mode, and APL character mode.
 
-Mintty is not as configurable as xterm; it offers essential configuration 
+Imintty is not as configurable as xterm; it offers essential configuration 
 features, many of which are "hidden settings", i.e. they do not appear in 
 the interactive "Options" configuration dialog.
 Of xterm's keyboard modes, only the default PC-style and VT220-style are available.
@@ -4833,14 +4833,14 @@ Mouse highlighting mode is not implemented.
 
 .SH SEE ALSO
 
-Additional information can be found on the wiki on the mintty project page 
-\fIhttps://github.com/mintty/mintty/wiki\fP.
+Additional information can be found on the wiki on the imintty project page 
+\fIhttps://github.com/imintty/imintty/wiki\fP.
 
 .SH LICENSE
 
 Copyright (C) 2026 Thomas Wolff, Andy Koppe
 
-Mintty is released under the terms of the the \fIGNU General Public License\fP
+Imintty is released under the terms of the the \fIGNU General Public License\fP
 version 3.
 See \fIhttp://gnu.org/licenses/gpl\fP for the license text.
 
@@ -4849,7 +4849,7 @@ There is NO WARRANTY, to the extent permitted by law.
 .SH CONTACT
 
 Please report bugs or suggest enhancements via the issue tracker at
-\fIhttps://github.com/mintty/mintty/issues\fP.
+\fIhttps://github.com/imintty/imintty/issues\fP.
 Questions can be sent to the Cygwin mailing list at \fIcygwin@cygwin.com\fP, 
-to the Mintty chat issue \fIhttps://github.com/mintty/mintty/issues/777\fP, 
-or to the Gitter chat (experimental) \fIhttps://gitter.im/mintty/mintty\fP.
+to the Imintty chat issue \fIhttps://github.com/imintty/imintty/issues/777\fP, 
+or to the Gitter chat (experimental) \fIhttps://gitter.im/imintty/imintty\fP.

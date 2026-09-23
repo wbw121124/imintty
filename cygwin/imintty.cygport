@@ -1,10 +1,10 @@
-NAME=mintty
+NAME=imintty
 #VERSION= # derived from filename of copied cygport file
 #RELEASE= # derived from filename of copied cygport file
 CATEGORY="Shells Base"
 SUMMARY="Terminal emulator with native Windows look and feel"
 DESCRIPTION="\
-Mintty is a terminal emulator for Cygwin.
+Imintty is a terminal emulator for Cygwin.
 
 Terminal display features
 * Xterm-compatible terminal emulation, coverage of all DEC terminal series screen control features.
@@ -69,7 +69,7 @@ Configuration features and system support
 * Runs in Cygwin, MSYS(2), midipix. Also hosting WSL.
 * Runs on Windows 2000, Windows XP, Windows 7, Windows 10, Windows 11."
 
-HOMEPAGE="http://mintty.github.io/"
+HOMEPAGE="http://imintty.github.io/"
 LICENSE="GPL-3.0-or-later"
 
 # URL for download, basename used by cygport for local reference:
@@ -89,28 +89,28 @@ src_compile() {
 src_install() {
   echo build-installing ${NAME} ${VERSION} ${RELEASE}
   cd ${B}
-  dobin bin/mintty.exe
-  doman docs/mintty.1
+  dobin bin/imintty.exe
+  doman docs/imintty.1
   dodoc LICENSE*
   dobin tools/mintheme
 
-  insinto /usr/share/mintty
+  insinto /usr/share/imintty
   doins config.template
-  insinto /usr/share/mintty/lang
+  insinto /usr/share/imintty/lang
   doins lang/*.pot lang/*.po
-  insinto /usr/share/mintty/themes
+  insinto /usr/share/imintty/themes
   doins themes/*
-  insinto /usr/share/mintty/sounds
+  insinto /usr/share/imintty/sounds
   doins sounds/*.wav sounds/*.WAV sounds/*.md
-  insinto /usr/share/mintty/icon
+  insinto /usr/share/imintty/icon
   doins icon/wsl.ico
-  exeinto /usr/share/mintty/emojis
+  exeinto /usr/share/imintty/emojis
   doexe tools/getemojis tools/getflags
 
   for i in 16 24 32 48 64 256
   do
     insinto /usr/share/icons/hicolor/${i}x${i}/apps
-    newins icon/hi${i}-apps-mintty.png mintty.png
+    newins icon/hi${i}-apps-imintty.png imintty.png
   done
-  make_desktop_entry mintty "Cygwin Terminal" mintty "System;TerminalEmulator" "" "OnlyShowIn=X-Cygwin;"
+  make_desktop_entry imintty "Cygwin Terminal" imintty "System;TerminalEmulator" "" "OnlyShowIn=X-Cygwin;"
 }

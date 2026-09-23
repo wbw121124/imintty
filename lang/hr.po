@@ -1,13 +1,13 @@
-# Croatian translation for mintty.
+# Croatian translation for imintty.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the mintty package.
+# This file is distributed under the same license as the imintty package.
 # Translators:
 # Milo Ivir <mail@milotype.de>, 2020.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"Project-Id-Version: imintty\n"
+"Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
 "POT-Creation-Date: 2026-06-09 00:32+0200\n"
 "PO-Revision-Date: 2020-05-07 13:12+0200\n"
 "Last-Translator: Milo Ivir <mail@milotype.de>\n"
@@ -194,7 +194,7 @@ msgstr "@ Jezik Windowsa @"
 msgid "* Locale environm. *"
 msgstr "* Jezik okruženja *"
 
-#. __ UI localization: use mintty configuration setting (Text - Locale)
+#. __ UI localization: use imintty configuration setting (Text - Locale)
 #: config.c:2466
 msgid "= cfg. Text Locale ="
 msgstr "= postavi jezik teksta ="
@@ -1067,7 +1067,7 @@ msgstr "Do&daj u prilagođene boje"
 msgid "Options"
 msgstr "Opcije"
 
-#. __ Options: dialog title: "mintty <release> available (for download)"
+#. __ Options: dialog title: "imintty <release> available (for download)"
 #: windialog.c:268
 msgid "available"
 msgstr "dostupno"
@@ -1426,8 +1426,8 @@ msgid "Syntax error in geometry argument '%s'"
 msgstr "Greška u sintaksi za argument geometrije „%s”"
 
 #: winmain.c:7506
-msgid "Mintty could not detach from caller, starting anyway"
-msgstr "Mintty se nije mogao odvojiti od pozivatelja, svejedno se pokreče"
+msgid "Imintty could not detach from caller, starting anyway"
+msgstr "Imintty se nije mogao odvojiti od pozivatelja, svejedno se pokreče"
 
 #: winmain.c:7889
 msgid "Using default title due to invalid characters in program name"
@@ -1485,11 +1485,11 @@ msgstr "Ne postoji jamstvo, u mjeri u kojoj je zakonom dopušteno."
 #: appinfo.h:69
 msgid ""
 "Please report bugs or request enhancements through the issue tracker on the "
-"mintty project page located at\n"
+"imintty project page located at\n"
 "%s.\n"
 "See also the Wiki there for further hints, thanks and credits."
 msgstr ""
 "Prijavi greške ili zatraži poboljšanja putem sustava za praćenje problema na "
-"stranici projekta Mintty:\n"
+"stranici projekta Imintty:\n"
 "%s.\n"
 "Pogledaj i Wiki-stranicu za daljnje savjete, zahvale i zasluge."

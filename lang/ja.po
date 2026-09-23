@@ -1,12 +1,12 @@
-# Japanese translations for mintty package
+# Japanese translations for imintty package
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the mintty package.
+# This file is distributed under the same license as the imintty package.
 # Ken Takata <kentkt@csc.jp>, 2017.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: mintty\n"
-"Report-Msgid-Bugs-To: https://github.com/mintty/mintty/issues/700\n"
+"Project-Id-Version: imintty\n"
+"Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
 "POT-Creation-Date: 2026-06-09 00:32+0200\n"
 "PO-Revision-Date: 2017-02-27 18:11+0900\n"
 "Last-Translator: Ken Takata <kentkt@csc.jp>\n"
@@ -189,7 +189,7 @@ msgstr "@ Windowsの言語 @"
 msgid "* Locale environm. *"
 msgstr "* ロケール環境変数 *"
 
-#. __ UI localization: use mintty configuration setting (Text - Locale)
+#. __ UI localization: use imintty configuration setting (Text - Locale)
 #: config.c:2466
 msgid "= cfg. Text Locale ="
 msgstr "= テキストロケール設定 ="
@@ -1062,7 +1062,7 @@ msgstr "色の追加"
 msgid "Options"
 msgstr "オプション"
 
-#. __ Options: dialog title: "mintty <release> available (for download)"
+#. __ Options: dialog title: "imintty <release> available (for download)"
 #: windialog.c:268
 msgid "available"
 msgstr "が利用可能"
@@ -1415,8 +1415,8 @@ msgid "Syntax error in geometry argument '%s'"
 msgstr "geometry引数に文法エラーがあります '%s'"
 
 #: winmain.c:7506
-msgid "Mintty could not detach from caller, starting anyway"
-msgstr "minttyは呼び出し元からデタッチできません、とにかく起動します"
+msgid "Imintty could not detach from caller, starting anyway"
+msgstr "iminttyは呼び出し元からデタッチできません、とにかく起動します"
 
 #: winmain.c:7889
 msgid "Using default title due to invalid characters in program name"
@@ -1473,11 +1473,11 @@ msgstr "法で許可されている範囲において、いかなる保証もあ
 #: appinfo.h:69
 msgid ""
 "Please report bugs or request enhancements through the issue tracker on the "
-"mintty project page located at\n"
+"imintty project page located at\n"
 "%s.\n"
 "See also the Wiki there for further hints, thanks and credits."
 msgstr ""
-"バグの報告や改良の要求は、以下のminttyプロジェクトページのissueトラッカーから"
+"バグの報告や改良の要求は、以下のiminttyプロジェクトページのissueトラッカーから"
 "お願いします。\n"
 "%s\n"
 "さらなるヒント、謝辞やクレジットについては、サイトのWikiも参照してください。"

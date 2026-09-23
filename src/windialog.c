@@ -1,4 +1,4 @@
-// windialog.c (part of mintty)
+// windialog.c (part of imintty)
 // Copyright 2008-11 Andy Koppe, -2026 Thomas Wolff
 // Based on code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -34,7 +34,7 @@ trace_ctrl(int line, int ev, control * ctrl)
 {
 static char * debugopt = 0;
   if (!debugopt) {
-    debugopt = getenv("MINTTY_DEBUG");
+    debugopt = getenv("IMINTTY_DEBUG");
     if (!debugopt)
       debugopt = "";
   }
@@ -225,7 +225,7 @@ static void
 debug(char *tag)
 {
   if (!debugopt) {
-    debugopt = getenv("MINTTY_DEBUG");
+    debugopt = getenv("IMINTTY_DEBUG");
     if (!debugopt)
       debugopt = "";
   }
@@ -244,11 +244,11 @@ debug(char *tag)
 #define dont_debug_version_check 1
 
 #ifdef WSLTTY_VERSION
-char * mtv = "https://raw.githubusercontent.com/mintty/wsltty/master/VERSION";
+char * mtv = "https://raw.githubusercontent.com/imintty/wsltty/master/VERSION";
 #define CHECK_APP "wsltty"
 #define CHECK_VERSION STRINGIFY(WSLTTY_VERSION)
 #else
-char * mtv = "https://raw.githubusercontent.com/mintty/mintty/master/VERSION";
+char * mtv = "https://raw.githubusercontent.com/imintty/imintty/master/VERSION";
 #define CHECK_APP APPNAME
 #define CHECK_VERSION VERSION
 #endif
@@ -264,7 +264,7 @@ display_update(char * new)
 
   //__ Options: dialog title
   char * opt = _("Options");
-  //__ Options: dialog title: "mintty <release> available (for download)"
+  //__ Options: dialog title: "imintty <release> available (for download)"
   char * avl = _("available");
   char * pat = "%s            ▶ %s %s %s ◀";
   int len = strlen(opt) + strlen(CHECK_APP) + strlen(new) + strlen(avl) + strlen(pat) - 7;
@@ -284,7 +284,7 @@ static void
 getvfn()
 {
   if (!vfn)
-    vfn = asform("%s/.mintty-version", tmpdir());
+    vfn = asform("%s/.imintty-version", tmpdir());
 }
 
 void
@@ -365,7 +365,7 @@ deliver_available_version()
   printf("deliver_available_version downloading to <%s>...\n", wfn);
 #endif
 #ifdef use_powershell
-#warning on Windows 7, this hangs the mintty parent process!!!
+#warning on Windows 7, this hangs the imintty parent process!!!
   char * cmdpat = "powershell.exe -command '(new-object System.Net.WebClient).DownloadFile(\"%s\", \"%s\")'";
   char * cmd = newn(char, strlen(cmdpat) + strlen(mtv) + strlen(wfn) - 3);
   sprintf(cmd, cmdpat, mtv, wfn);
@@ -966,7 +966,7 @@ static void CALLBACK
 hhook(LPHELPINFO lpHelpInfo)
 {
   // test
-  SetWindowTextW(lpHelpInfo->hItemHandle, W("mintty %s available"));
+  SetWindowTextW(lpHelpInfo->hItemHandle, W("imintty %s available"));
 }
 #endif
 
@@ -998,7 +998,7 @@ win_show_about(void)
     .cbSize = sizeof(MSGBOXPARAMSW),
     .hwndOwner = config_wnd,
     .hInstance = inst,
-    .lpszCaption = W(APPNAME),
+    .lpszCaption = W(APPFULL),
 #ifdef about_version_check
     .dwStyle = MB_USERICON | MB_OK | MB_HELP,
     .lpfnMsgBoxCallback = hhook,

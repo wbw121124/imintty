@@ -1,20 +1,20 @@
-# mintty 现代终端特性与体验增强计划
+# imintty 现代终端特性与体验增强计划
 
 ## 现状结论
 
 | 项 | 结论 |
 |---|---|
 | 工作目录 | `E:\吴邦玮\项目\imintty`（clone 到当前目录根） |
-| 构建链 | MSYS2 位于 `F:\msys64`（`usr\bin` 有 gcc/make），PATH 需会话级设置；mintty 官方支持 MSYS2 构建 |
-| mintty 已有 | Unicode 17、真彩、sixel/ReGIS、OSC 8、undercurl、Uniscribe 连字（`Ligatures` 选项）、tabbar、iTerm2 图片 |
+| 构建链 | MSYS2 位于 `F:\msys64`（`usr\bin` 有 gcc/make），PATH 需会话级设置；imintty 官方支持 MSYS2 构建 |
+| imintty 已有 | Unicode 17、真彩、sixel/ReGIS、OSC 8、undercurl、Uniscribe 连字（`Ligatures` 选项）、tabbar、iTerm2 图片 |
 | 主要缺口 | Kitty 键盘协议、Kitty 图形协议、OpenType 风格集开关、DirectWrite 字体回退、平滑滚动/光标/闪烁、默认体验调优 |
 
 ## 实施顺序（按性价比排序）
 
 ### Phase 0 — 环境与基线构建
-1. `git clone https://github.com/mintty/mintty.git .` 到当前目录。
+1. `git clone https://github.com/imintty/imintty.git .` 到当前目录。
 2. 会话级 PATH：`$env:PATH = "F:\msys64\usr\bin;$env:PATH"`（不持久化污染系统）。
-3. `make -C src` 产出 `bin/mintty.exe`，确认零修改基线可编译可运行。
+3. `make -C src` 产出 `bin/imintty.exe`，确认零修改基线可编译可运行。
 
 ### Phase 1 — 平滑闪烁（三路独立配置）
 - 改动：`src/term.c`（ATTR_BLINK）、光标闪烁/BEL 闪屏定时器（`src/winmain.c` / `src/wintext.c`）。
@@ -64,5 +64,5 @@
 
 ## 风险与边界
 - Phase 6/7 工作量大；Phase 1–5 完成即为可交付版本。
-- 不上游 PR（mintty 政策），改动留本地仓库。
+- 不上游 PR（imintty 政策），改动留本地仓库。
 - 不做 GPU/Direct2D 全量重写。

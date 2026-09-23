@@ -1,4 +1,4 @@
-// wintext.c (part of mintty)
+// wintext.c (part of imintty)
 // Copyright 2008-22 Andy Koppe, 2015-2026 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.
@@ -315,7 +315,7 @@ static int
 row_padding(int i, int e)
 {
   // may look nicer; used to break box characters; for background discussion,
-  // see https://github.com/mintty/mintty/issues/631#issuecomment-279690468
+  // see https://github.com/imintty/imintty/issues/631#issuecomment-279690468
   static bool allow_add_font_padding = true;
 
   if (i == 0 && e == 0)
@@ -2186,9 +2186,9 @@ load_background_image_brush(HDC dc, wstring fn)
         win_set_pixels(xh - 2 * PADDING - OFFSET - sy, xw - 2 * PADDING);
         // WARNING: rescaling asynchronously at this point makes 
         // terminal geometry (term.rows, term.cols) inconsistent with 
-        // running operations and may crash mintty; 
+        // running operations and may crash imintty; 
         // postponing the resizing with SendMessage does not help;
-        // therefore try to update mintty data now; 
+        // therefore try to update imintty data now; 
         // this seems to help a bit, but not completely;
         // that's why this embedded approach is disabled
         do_update();
@@ -4094,7 +4094,7 @@ draw:;
       top line begins with reverse or coloured background, 
       a mysterious rendering bug hides the first chunk of output 
       in frequent cases at that position.
-      (This was traced down in mintty deeply so the remaining suspicion 
+      (This was traced down in imintty deeply so the remaining suspicion 
       is it's a bug in Windows.)
       As a workaround, we invalidate the top-left cell right away 
       so it gets printed to the window repeatedly, which effectively 
@@ -4819,7 +4819,7 @@ skip_drawing:;
 #ifdef cursor_painted_with_rectangle
           // this would add an additional line, vanishing again but 
           // leaving a pixel artefact, under some utterly weird interference 
-          // with output of certain characters (mintty/wsltty#255)
+          // with output of certain characters (imintty/wsltty#255)
           HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
           Rectangle(dc, xx, y, xx + caret_width, y + cell_height);
           DeleteObject(SelectObject(dc, oldbrush));

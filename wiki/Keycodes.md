@@ -9,19 +9,19 @@ switched using the standard Windows mechanisms for that purpose.
 are all supported.
 
 Windows support for dead key combinations is limited to ANSI character ranges;
-mintty extends that to Unicode by supporting combinations like ẃ.
+imintty extends that to Unicode by supporting combinations like ẃ.
 
 Should the available keyboard layouts lack required features, Microsoft's 
 **[Keyboard Layout Creator](http://www.microsoft.com/Globaldev/tools/msklc.mspx)** 
 can be used to create custom keyboard layouts.
 
-Mintty also provides a [Compose key](http://en.wikipedia.org/wiki/Compose_key), 
+Imintty also provides a [Compose key](http://en.wikipedia.org/wiki/Compose_key), 
 configurable to Control, Shift or Alt, using X11 compose data.
 For a separate compose key solution, the most seamless and stable 
 **Compose Key for Windows** is 
 **[WinCompose](https://github.com/SamHocevar/wincompose)**.
 
-For other keys and key combinations, mintty sends 
+For other keys and key combinations, imintty sends 
 [xterm keycodes](http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#PC-Style%20Function%20Keys), 
 with a few minor changes and some additions. 
 Below, [Caret notation](http://en.wikipedia.org/wiki/Caret_notation) 
@@ -42,7 +42,7 @@ Encoding the meta modifier by setting the top bit of a character instead of pref
 Note that there is some confusion between the Alt and Meta modifier functions 
 as historically Meta was in use first and later implemented by the Alt key 
 of keyboards; however, both are also available separately in X11 and xterm.
-Mintty provides separate Alt and Meta modifier functions, as well as 
+Imintty provides separate Alt and Meta modifier functions, as well as 
 additional ones (Super and Hyper from X11).
 See [section Modifier key encodings](Keycodes#modifier-key-encodings) below.
 
@@ -95,11 +95,11 @@ Note that Ctrl+Shift+letter assignments can also be redefined with option `KeyFu
 
 ## Special keys ##
 
-The keys here send the usual control characters, but there are a few mintty-specific additions that make combinations with modifier keys available as separate keycodes.
+The keys here send the usual control characters, but there are a few imintty-specific additions that make combinations with modifier keys available as separate keycodes.
 
 The Ctrl+Tab assignments are overridden by the `SwitchShortcuts` setting (Switch window in Options menu, Keys section).
 
-The former Ctrl assignments for the Enter key are dropped with mintty 3.2.1.
+The former Ctrl assignments for the Enter key are dropped with imintty 3.2.1.
 
 The special assignments for Escape, Break and Pause are deprecated.
 
@@ -119,7 +119,7 @@ Note that key assignments can also be redefined with option `KeyFunctions`.
 
 (*) Note: With setting BackspaceSendsBS=yes, `^?` and `^H` mappings are reversed.
 
-(**) Note: To restore special key assignments of previous mintty versions, use either of these settings:
+(**) Note: To restore special key assignments of previous imintty versions, use either of these settings:
   * `OldModifyKeys=33`
   * `KeyFunctions=C+Back:^_;C+Enter:^^`
 
@@ -130,7 +130,7 @@ See the [previous section](Keycodes#ctrl) for how Unicode codepoints such as _U+
 
 ## Modifier key encodings ##
 
-Mintty supports up to 6 key modifiers.
+Imintty supports up to 6 key modifiers.
 Where the modifier keys Shift, Alt and Ctrl are not handled as 
 described in the sections above, they are encoded as a number that 
 becomes part of the keycode (escape sequence).
@@ -163,9 +163,9 @@ VT220 sequences make the keys distinguishable from the small cursor keypad keys
 ("editing keypad").
 The sequences look like the **VT220 appl keypad modified** sequences in 
 the table below but also without modifier.
-Note that mintty can send VT220-style application keypad sequences even in 
+Note that imintty can send VT220-style application keypad sequences even in 
 non-VT220 keyboard mode under certain conditions, for details see 
-[Keypad usage](https://github.com/mintty/mintty/wiki/Tips#keypad-usage).
+[Keypad usage](https://github.com/imintty/imintty/wiki/Tips#keypad-usage).
 
 
 ## Number and symbol keys ##
@@ -271,14 +271,14 @@ the modifiers like for other function keys.
 
 See the screenshots for an illustration of the meaning of _pos_ vs _size_ values.
 
-<img align=left src=https://github.com/mintty/mintty/wiki/application-scrollbar-middle.png>
+<img align=left src=https://github.com/imintty/imintty/wiki/application-scrollbar-middle.png>
 
 The position of the _viewport_ (the marked area of the scrollbar) is 
 measured at its top. So when setting up position 50 in size 100 (`^[[50;100;20#t`),
 the viewport is not centered but begins in the middle of the scrollbar.
 <br clear=all>
 
-<img align=left src=https://github.com/mintty/mintty/wiki/application-scrollbar-bottom.png>
+<img align=left src=https://github.com/imintty/imintty/wiki/application-scrollbar-bottom.png>
 
 Also, when the viewport is dragged to the bottom, it ends at the total size 
 but the reported position is its beginning (81 in the example, mouse button 
@@ -295,7 +295,7 @@ the report and sets the position. (This is to prevent looping interference
 with updated positions triggering additional system events.)
 
 For the sequences to set up application scrollbar mode and change its parameters see 
-[Control Sequences – Application scrollbar](https://github.com/mintty/mintty/wiki/CtrlSeqs#application-scrollbar).
+[Control Sequences – Application scrollbar](https://github.com/imintty/imintty/wiki/CtrlSeqs#application-scrollbar).
 
 
 ## Mousewheel ##

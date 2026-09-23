@@ -1,4 +1,4 @@
-// winclip.c (part of mintty)
+// winclip.c (part of imintty)
 // Copyright 2008-23 Andy Koppe, 2018-2026 Thomas Wolff
 // Adapted from code from PuTTY-0.60 by Simon Tatham and team.
 // Licensed under the terms of the GNU General Public License v3 or later.

@@ -520,6 +520,12 @@ struct term {
   int  curs_px1, curs_py1; /* to pixel */
   int  curs_anim_start;    /* GetTickCount at animation start */
   int  curs_last_x, curs_last_y; /* last painted cursor cell, -1 = none */
+  /* Smooth scroll (Phase 3): pixel-space animation of visible scroll */
+  bool scroll_animate;    /* scroll animation in progress */
+  int  scroll_anim_lines; /* signed lines still to animate (+ = content up) */
+  int  scroll_anim_top;   /* first affected display row */
+  int  scroll_anim_bot;   /* one past last affected display row */
+  int  scroll_anim_start; /* GetTickCount at animation start */
   bool blink_is_real;     /* Actually blink blinking text */
   bool echoing;           /* Does terminal want local echo? */
   bool insert;            /* Insert mode */
@@ -748,6 +754,10 @@ extern int  term_cursor_type(void);
 extern bool term_cursor_blinks(void);
 extern void term_cursor_track(int dx, int dy);
 extern void term_cursor_anim_cancel(void);
+extern void term_scroll_anim_begin(int topline, int botline, int lines);
+extern void term_scroll_anim_cancel(void);
+extern bool term_scroll_anim_active(void);
+extern int  term_scroll_anim_offset(void);
 extern void term_hide_cursor(void);
 
 extern void term_set_search(wchar * needle);

@@ -25,6 +25,11 @@
 #SmoothCursor=yes
 #SmoothCursorDuration=50
 
+# smooth screen scrolling (pixel interpolation; Lines = max lines to animate)
+#SmoothScroll=yes
+#SmoothScrollDuration=100
+#SmoothScrollLines=8
+
 # enable a VT320 status line
 #StatusLine=yes
 

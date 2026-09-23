@@ -106,6 +106,9 @@ const config default_cfg = {
   .smooth_blink_duration = 100,
   .smooth_cursor = true,
   .smooth_cursor_duration = 50,
+  .smooth_scroll = true,
+  .smooth_scroll_duration = 100,
+  .smooth_scroll_lines = 8,
   .locale = "",
   .charset = "",
   .charwidth = 0,
@@ -427,6 +430,9 @@ options[] = {
   {"SmoothBlinkDuration", OPT_INT, offcfg(smooth_blink_duration)},
   {"SmoothCursor", OPT_BOOL, offcfg(smooth_cursor)},
   {"SmoothCursorDuration", OPT_INT, offcfg(smooth_cursor_duration)},
+  {"SmoothScroll", OPT_BOOL, offcfg(smooth_scroll)},
+  {"SmoothScrollDuration", OPT_INT, offcfg(smooth_scroll_duration)},
+  {"SmoothScrollLines", OPT_INT, offcfg(smooth_scroll_lines)},
   {"Locale", OPT_STRING, offcfg(locale)},
   {"Charset", OPT_STRING, offcfg(charset)},
   {"Charwidth", OPT_CHARWIDTH, offcfg(charwidth)},
@@ -1875,6 +1881,9 @@ fix_config(void)
 
   // Limit size of scrollback buffer.
   cfg.scrollback_lines = min(cfg.scrollback_lines, cfg.max_scrollback_lines);
+
+  cfg.smooth_scroll_duration = max(40, min(500, cfg.smooth_scroll_duration));
+  cfg.smooth_scroll_lines = max(1, min(cfg.rows, cfg.smooth_scroll_lines));
 }
 
 /*

@@ -1201,31 +1201,177 @@ static bool ime_open_native = false;
 static int update_skipped = 0;
 int lines_scrolled = 0;
 
-/* Draw floating cursor overlay during smooth cursor motion (Phase 2). */
+/* Smooth scroll snapshot (Phase 3): pre-scroll screen band. */
+static HBITMAP scroll_snap_bm;
+static HDC scroll_snap_dc;
+static int scroll_snap_w, scroll_snap_h;
+
+bool
+win_scroll_capture(int top, int bot)
+{
+  win_scroll_release();
+  if (top < 0 || bot > term_allrows || top >= bot || cell_height <= 0)
+    return false;
+  if (term.cols <= 0)
+    return false;
+
+  int w = term.cols * cell_width;
+  int h = (bot - top) * cell_height;
+  if (w <= 0 || h <= 0)
+    return false;
+
+  int srcx = PADDING - horclip();
+  int srcy = OFFSET + PADDING + top * cell_height;
+
+  HDC wnd_dc = GetDC(wnd);
+  if (!wnd_dc)
+    return false;
+  scroll_snap_dc = CreateCompatibleDC(wnd_dc);
+  scroll_snap_bm = CreateCompatibleBitmap(wnd_dc, w, h);
+  if (!scroll_snap_dc || !scroll_snap_bm) {
+    if (scroll_snap_bm)
+      DeleteObject(scroll_snap_bm);
+    if (scroll_snap_dc)
+      DeleteDC(scroll_snap_dc);
+    scroll_snap_dc = null;
+    scroll_snap_bm = null;
+    ReleaseDC(wnd, wnd_dc);
+    return false;
+  }
+  HGDIOBJ old = SelectObject(scroll_snap_dc, scroll_snap_bm);
+  BitBlt(scroll_snap_dc, 0, 0, w, h, wnd_dc, srcx, srcy, SRCCOPY);
+
+  /* strip cursor from OLD so it does not slide with content during anim */
+  if (term.cursor_on && !term.show_other_screen) {
+    int dcy = term.curs.y - term.disptop;
+    int dcx = term.curs.x;
+    if (dcy >= top && dcy < bot && dcx >= 0 && dcx < term.cols) {
+      termline *line = fetch_line(term.curs.y);
+      if (line) {
+        if (dcx > 0 && line->chars[dcx].chr == UCSWIDE)
+          dcx--;
+        cattr ca = line->chars[dcx].attr;
+        ca.attr &= ~(TATTR_ACTCURS | TATTR_PASCURS);
+        ushort lattr = line->lattr;
+        wchar buf[2] = {line->chars[dcx].chr, 0};
+        release_line(line);
+
+        HDC saved_dc = dc;
+        dc = scroll_snap_dc;
+        if (SetGraphicsMode(dc, GM_ADVANCED)) {
+          XFORM xf = {
+            1.0f, 0.0f, 0.0f, 1.0f,
+            (float)(horclip() - PADDING),
+            (float)(-(OFFSET + PADDING + top * cell_height))
+          };
+          SetWorldTransform(dc, &xf);
+          win_text(dcx, dcy, buf, 1, ca, &ca, lattr, false, false, true, 0);
+          XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+          SetWorldTransform(dc, &id);
+        }
+        dc = saved_dc;
+      }
+    }
+  }
+
+  SelectObject(scroll_snap_dc, old);
+  ReleaseDC(wnd, wnd_dc);
+  scroll_snap_w = w;
+  scroll_snap_h = h;
+  return true;
+}
+
+void
+win_scroll_release(void)
+{
+  if (scroll_snap_dc) {
+    DeleteDC(scroll_snap_dc);
+    scroll_snap_dc = null;
+  }
+  if (scroll_snap_bm) {
+    DeleteObject(scroll_snap_bm);
+    scroll_snap_bm = null;
+  }
+  scroll_snap_w = scroll_snap_h = 0;
+}
+
+/*
+ * Overlay the pre-scroll snapshot during smooth scroll animation.
+ * dy is the signed pixel offset still to apply to the old content
+ * relative to its final displaced position (remaining - total).
+ */
+void
+win_scroll_overlay(HDC target, int dy, int top, int bot)
+{
+  if (!scroll_snap_dc || !scroll_snap_bm || !term_scroll_anim_active())
+    return;
+  if (top < 0 || bot > term_allrows || top >= bot)
+    return;
+
+  int band_y = OFFSET + PADDING + top * cell_height;
+  int phys_x = PADDING - horclip();
+  int phys_y = band_y + dy;
+
+  /* isolate transform so dest coords are device pixels */
+  XFORM saved, id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+  bool has_tf = GetWorldTransform(target, &saved) != 0;
+  if (has_tf)
+    SetWorldTransform(target, &id);
+
+  int save_dc = SaveDC(target);
+  /* clip to text-area band */
+  IntersectClipRect(target, phys_x, band_y,
+                    phys_x + scroll_snap_w, band_y + scroll_snap_h);
+  BitBlt(target, phys_x, phys_y, scroll_snap_w, scroll_snap_h,
+         scroll_snap_dc, 0, 0, SRCCOPY);
+  RestoreDC(target, save_dc);
+
+  if (has_tf)
+    SetWorldTransform(target, &saved);
+}
+
+/* Draw floating cursor overlay during smooth cursor motion (Phase 2)
+   and at the final cell during smooth scrolling (Phase 3). */
 static void
 draw_cursor_overlay(void)
 {
-  if (!term.curs_animate || !cfg.smooth_cursor || !term.cursor_on
-      || term.show_other_screen)
+  if (!term.cursor_on || term.show_other_screen)
+    return;
+  bool scroll_layer = term_scroll_anim_active();
+  if (!scroll_layer && (!term.curs_animate || !cfg.smooth_cursor))
     return;
 
-  int dur = cfg.smooth_cursor_duration;
-  if (dur < 10)
-    dur = 10;
-  if (dur > 500)
-    dur = 500;
-  int elapsed = get_tick_count() - term.curs_anim_start;
-  if (elapsed < 0)
-    elapsed = 0;
-  if (elapsed > dur)
-    elapsed = dur;
+  int x, y;
+  if (term.curs_animate && cfg.smooth_cursor) {
+    int dur = cfg.smooth_cursor_duration;
+    if (dur < 10)
+      dur = 10;
+    if (dur > 500)
+      dur = 500;
+    int elapsed = get_tick_count() - term.curs_anim_start;
+    if (elapsed < 0)
+      elapsed = 0;
+    if (elapsed > dur)
+      elapsed = dur;
 
-  /* ease-out: 1 - (1-t)^2 */
-  int u = dur - elapsed;
-  int eased = dur - u * u / max(dur, 1);
+    /* ease-out: 1 - (1-t)^2 */
+    int u = dur - elapsed;
+    int eased = dur - u * u / max(dur, 1);
 
-  int x = term.curs_px0 + (term.curs_px1 - term.curs_px0) * eased / max(dur, 1);
-  int y = term.curs_py0 + (term.curs_py1 - term.curs_py0) * eased / max(dur, 1);
+    x = term.curs_px0 + (term.curs_px1 - term.curs_px0) * eased / max(dur, 1);
+    y = term.curs_py0 + (term.curs_py1 - term.curs_py0) * eased / max(dur, 1);
+  }
+  else {
+    /* scroll overlay: pin to final cell */
+    if (term.curs_last_x >= 0 && term.curs_last_y >= 0) {
+      x = term.curs_last_x * cell_width + PADDING;
+      y = term.curs_last_y * cell_height + OFFSET + PADDING;
+    }
+    else {
+      x = term.curs_px1;
+      y = term.curs_py1;
+    }
+  }
 
   colour bg = win_get_colour(BG_COLOUR_I);
   colour cc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
@@ -1631,7 +1777,7 @@ do_update(void)
   lines_scrolled = 0;
   if ((update_skipped < cfg.display_speedup && cfg.display_speedup < 10
        && output_speed > update_skipped
-       //&& !term.smooth_scroll ?
+       && !term_scroll_anim_active()
       ) || (!term.detect_progress && win_is_iconic())
         //|| win_is_hidden() ?
         // suspend display update:
@@ -1668,6 +1814,13 @@ do_update(void)
   else {
     term_paint();
     winimgs_paint();
+    if (term_scroll_anim_active()) {
+      int total = term.scroll_anim_lines * cell_height;
+      int remaining = term_scroll_anim_offset();
+      /* old content displaced by (remaining - total) from its pre-scroll seat */
+      win_scroll_overlay(dc, remaining - total,
+                         term.scroll_anim_top, term.scroll_anim_bot);
+    }
     draw_cursor_overlay();
   }
 
@@ -3249,6 +3402,19 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
  /* Convert to window coordinates */
   int x = tx * char_width + PADDING;
   int y = ty * cell_height + OFFSET + PADDING;
+  /* Phase 3: new layer offset by remaining scroll distance within the band;
+     clip to the band so shifted rows cannot overdraw status/padding */
+  int band_clip = 0;
+  if (term_scroll_anim_active() && ty >= term.scroll_anim_top
+      && ty < term.scroll_anim_bot)
+  {
+    y += term_scroll_anim_offset();
+    int by0 = OFFSET + PADDING + term.scroll_anim_top * cell_height;
+    int by1 = OFFSET + PADDING + term.scroll_anim_bot * cell_height;
+    band_clip = SaveDC(dc);
+    IntersectClipRect(dc, PADDING, by0,
+                      PADDING + term.cols * cell_width, by1);
+  }
 
 #ifdef support_triple_width
 #define TATTR_TRIPLE 0x0080000000000000u
@@ -4760,6 +4926,9 @@ skip_drawing:;
     free(text);
   }
 
+  if (band_clip)
+    RestoreDC(dc, band_clip);
+
   show_curchar_info('w');
 
   if (has_cursor && phase < 2) {
@@ -5868,6 +6037,12 @@ win_paint(void)
     else {
       term_paint();
       winimgs_paint();
+      if (term_scroll_anim_active()) {
+        int total = term.scroll_anim_lines * cell_height;
+        int remaining = term_scroll_anim_offset();
+        win_scroll_overlay(dc, remaining - total,
+                           term.scroll_anim_top, term.scroll_anim_bot);
+      }
       draw_cursor_overlay();
     }
   }

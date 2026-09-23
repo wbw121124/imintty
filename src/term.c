@@ -415,6 +415,8 @@ term_cursor_track(int dx, int dy)
   if (term.curs_last_x < 0 || term.curs_last_y < 0) {
     term.curs_last_x = dx;
     term.curs_last_y = dy;
+    term.curs_px0 = term.curs_px1 = dx * cell_width + PADDING;
+    term.curs_py0 = term.curs_py1 = dy * cell_height + OFFSET + PADDING;
     return;
   }
 
@@ -480,6 +482,120 @@ curs_anim_cb(void)
   curs_anim_invalidate();
   win_update(false);
   win_set_timer(curs_anim_cb, 16);
+}
+
+/* Smooth screen scroll (Phase 3) */
+
+static void scroll_anim_cb(void);
+
+static int
+smooth_scroll_duration(void)
+{
+  int d = cfg.smooth_scroll_duration;
+  if (d < 40)
+    d = 40;
+  if (d > 500)
+    d = 500;
+  return d;
+}
+
+void
+term_scroll_anim_cancel(void)
+{
+  if (term.scroll_animate) {
+    term.scroll_animate = false;
+    term.scroll_anim_lines = 0;
+    win_scroll_release();
+  }
+}
+
+bool
+term_scroll_anim_active(void)
+{
+  return term.scroll_animate && cfg.smooth_scroll && !tek_mode;
+}
+
+/*
+ * Begin a smooth scroll animation for the visible portion of [topline,botline]
+ * scrolling by signed `lines` (+ = content moves up). Capture the current
+ * screen band before the logical scroll mutates lines.
+ */
+void
+term_scroll_anim_begin(int topline, int botline, int lines)
+{
+  term_scroll_anim_cancel();
+
+  if (!cfg.smooth_scroll || tek_mode || !lines || cell_height <= 0)
+    return;
+  if (abs(lines) > cfg.smooth_scroll_lines)
+    return;
+  if (win_is_iconic())
+    return;
+
+  /* map scroll region to display rows */
+  int dtop = topline - term.disptop;
+  int dbot = botline - term.disptop; /* inclusive */
+  int top = max(0, dtop);
+  int bot = min(term.rows, dbot + 1);
+  if (top >= bot)
+    return;
+  /* do not animate status area rows */
+  if (bot > term.rows)
+    bot = term.rows;
+  if (top >= bot)
+    return;
+
+  if (!win_scroll_capture(top, bot))
+    return;
+
+  term.scroll_animate = true;
+  term.scroll_anim_lines = lines;
+  term.scroll_anim_top = top;
+  term.scroll_anim_bot = bot;
+  term.scroll_anim_start = get_tick_count();
+  win_set_timer(scroll_anim_cb, 16);
+}
+
+/* current pixel offset still to travel (0 when finished) */
+int
+term_scroll_anim_offset(void)
+{
+  if (!term_scroll_anim_active())
+    return 0;
+  int elapsed = get_tick_count() - term.scroll_anim_start;
+  int dur = smooth_scroll_duration();
+  if (elapsed >= dur)
+    return 0;
+  /* ease-out: remaining fraction ((dur-elapsed)/dur)^2 of total distance */
+  long long rem = dur - elapsed;
+  long long d = dur;
+  long long total = (long long)term.scroll_anim_lines * cell_height;
+  return (int)(total * rem * rem / (d * d));
+}
+
+static void
+scroll_anim_cb(void)
+{
+  if (!term_scroll_anim_active()) {
+    term.scroll_animate = false;
+    win_scroll_release();
+    return;
+  }
+  int elapsed = get_tick_count() - term.scroll_anim_start;
+  int dur = smooth_scroll_duration();
+  if (elapsed >= dur) {
+    term.scroll_animate = false;
+    term.scroll_anim_lines = 0;
+    win_scroll_release();
+    term_invalidate(0, term.scroll_anim_top, term.cols - 1,
+                    term.scroll_anim_bot - 1);
+    win_update(false);
+    return;
+  }
+  term_invalidate(0, term.scroll_anim_top, term.cols - 1,
+                  term.scroll_anim_bot - 1);
+  win_update(false);
+  win_set_timer(scroll_anim_cb, 16);
 }
 
 /* Find the bottom line on the screen that has any content.
@@ -643,6 +759,7 @@ term_reset(bool full)
   term.cursor_blink_interval = 0;
   term.curs_animate = false;
   term.curs_last_x = term.curs_last_y = -1;
+  term_scroll_anim_cancel();
   if (full) {
     term.blink_is_real = cfg.allow_blinking;
     term.tblinker = 1;
@@ -719,6 +836,7 @@ show_screen(bool other_screen, bool flip)
 
   term.curs_animate = false;
   term.curs_last_x = term.curs_last_y = -1;
+  term_scroll_anim_cancel();
 
   // Reset cursor blinking.
   if (!other_screen) {
@@ -757,6 +875,8 @@ term_reconfig(void)
   }
   if (!new_cfg.smooth_cursor)
     curs_anim_cancel();
+  if (!new_cfg.smooth_scroll)
+    term_scroll_anim_cancel();
   cfg.cursor_blinks = new_cfg.cursor_blinks;
   term_schedule_tblink();
   term_schedule_tblink2();
@@ -1893,6 +2013,7 @@ term_resize(int newrows, int newcols, bool quick_reflow)
   trace_resize(("--- term_resize %d %d quick %d\n", newrows, newcols, quick_reflow));
 
   term.curs_animate = false;
+  term_scroll_anim_cancel();
 
   bool on_alt_screen = term.on_alt_screen;
   term_switch_screen(0, false);
@@ -2430,6 +2551,7 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
   assert(botline >= topline && lines != 0);
 
   bool down = lines < 0; // Scrolling downwards?
+  int begin_lines = lines;
   lines = abs(lines);    // Number of lines to scroll by
 
   lines_scrolled += lines;
@@ -2439,6 +2561,18 @@ term_do_scroll(int topline, int botline, int lines, bool sb)
   // Don't try to scroll more than the number of lines in the scroll region.
   int lines_in_region = botline - topline;
   lines = min(lines, lines_in_region);
+  if (down)
+    begin_lines = -lines;
+  else
+    begin_lines = lines;
+  botline--; // restore inclusive bottom for animation begin
+
+  /* capture screen band before logical content mutates (Phase 3);
+     use the clamped line count so the snapshot matches the real scroll */
+  if (term.lines && begin_lines)
+    term_scroll_anim_begin(topline, botline, begin_lines);
+
+  botline++; // back to exclusive bottom for the rest of the scroll
 
   // Number of lines that are moved up or down as they are.
   // The rest are scrolled out of the region and replaced by empty lines.
@@ -4177,7 +4311,8 @@ term_paint(void)
 
      /* Determine cursor cell attributes. */
       newchars[curs_x].attr.attr |=
-        (!term.has_focus ? TATTR_PASCURS :
+        (term_scroll_anim_active() ? 0 :
+         !term.has_focus ? TATTR_PASCURS :
          term.curs_animate ? 0 :
          term.cblink_alpha > 0 || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
         (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);

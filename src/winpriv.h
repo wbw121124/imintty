@@ -110,6 +110,9 @@ extern void win_update_now(void);
 extern bool fill_background(HDC dc, RECT * boxp);
 extern void win_flush_background(bool clearbg);
 extern void win_paint(void);
+extern bool win_scroll_capture(int top, int bot);
+extern void win_scroll_release(void);
+extern void win_scroll_overlay(HDC dc, int dy, int top, int bot);
 
 extern void win_init_fonts(int size, bool allfonts);
 extern wstring win_get_font(uint findex);

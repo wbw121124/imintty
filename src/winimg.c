@@ -575,6 +575,12 @@ draw_img(HDC dc, imglist * img)
     top += OFFSET + PADDING;
     // adjust horizontal scrolling
     left -= horclip();
+    // Phase 3: offset NEW-layer images inside the scroll band
+    if (term_scroll_anim_active()) {
+      int row = img->top - term.virtuallines - term.disptop;
+      if (row < term.scroll_anim_bot && row + img->height > term.scroll_anim_top)
+        top += term_scroll_anim_offset();
+    }
 
     int coord_transformed = 0;
     XFORM old_xform;
@@ -682,6 +688,8 @@ static bool previously_selected = false;
     force_imgs = true;
     previously_selected = term.selected;
   }
+  if (term_scroll_anim_active())
+    force_imgs = true;
 
   /* free disk space if number of tempfile exceeds TEMPFILE_MAX_NUM */
   while (tempfile_num > TEMPFILE_MAX_NUM && term.imgs.first) {
@@ -754,6 +762,24 @@ static bool previously_selected = false;
       img->y = top;
       //printf("disp @%d/%d\n", left, top);
 
+      /* Phase 3: offset NEW-layer images inside the scroll band by remaining */
+      int scroll_dy = 0;
+      int clip_band = 0;
+      if (term_scroll_anim_active()
+          && top < term.scroll_anim_bot
+          && top + img->height > term.scroll_anim_top)
+      {
+        scroll_dy = term_scroll_anim_offset();
+        clip_band = SaveDC(dc);
+        IntersectClipRect(dc,
+                          rc.left + PADDING,
+                          rc.top + OFFSET + PADDING
+                            + term.scroll_anim_top * cell_height,
+                          rc.left + PADDING + term.cols * cell_width,
+                          rc.top + OFFSET + PADDING
+                            + term.scroll_anim_bot * cell_height);
+      }
+
       if (top + img->height < 0 || top > term.rows) {
         // if the image is scrolled out, serialize it into a temp file
 #ifdef debug_img_list
@@ -807,9 +833,9 @@ static bool previously_selected = false;
             if (clip_flag)
               ExcludeClipRect(dc,
                               x * wide_factor * cell_width + PADDING,
-                              y * cell_height + OFFSET + PADDING,
+                              y * cell_height + OFFSET + PADDING + scroll_dy,
                               (x + 1) * wide_factor * cell_width + PADDING,
-                              (y + 1) * cell_height + OFFSET + PADDING);
+                              (y + 1) * cell_height + OFFSET + PADDING + scroll_dy);
           }
         }
 #ifdef debug_img_over
@@ -831,8 +857,9 @@ static bool previously_selected = false;
 
         // fill image area background (in case it's smaller or transparent)
         // calculate area for padding
-        int ytop = max(0, top) * cell_height + OFFSET + PADDING;
-        int ybot = min(top + img->height, term.rows) * cell_height + OFFSET + PADDING;
+        int ytop = max(0, top) * cell_height + OFFSET + PADDING + scroll_dy;
+        int ybot = min(top + img->height, term.rows) * cell_height
+                   + OFFSET + PADDING + scroll_dy;
         int xlft = left * cell_width + PADDING;
         int xrgt = min(left + img->width, term.cols) * cell_width + PADDING;
 
@@ -909,7 +936,7 @@ static bool previously_selected = false;
             int padwidth = cell_width * img->width;
             int padheight = cell_height * img->height;
             // anchor position of graphics
-            int grtop = top * cell_height + OFFSET + PADDING;
+            int grtop = top * cell_height + OFFSET + PADDING + scroll_dy;
 
             // determine zoom factor
 #define scale_regis true
@@ -1048,19 +1075,22 @@ static bool previously_selected = false;
             // adjust horizontal scrolling
             left -= horclip() / cell_width;
 
-            StretchBlt(dc,
-                       left * cell_width + PADDING, top * cell_height + OFFSET + PADDING,
+            int sy = top * cell_height + OFFSET + PADDING + scroll_dy;
+            int ey = sy + img->height * cell_height;
+            int sx = left * cell_width + PADDING;
+            StretchBlt(dc, sx, sy,
                        img->width * cell_width, img->height * cell_height,
                        img->hdc,
                        0, 0, img->pixelwidth, img->pixelheight, SRCCOPY);
-            ExcludeClipRect(dc,
-                       left * cell_width + PADDING, top * cell_height + OFFSET + PADDING,
-                       left * cell_width + PADDING + img->width * cell_width,
-                       top * cell_height + OFFSET + PADDING + img->height * cell_height
-                       );
+            ExcludeClipRect(dc, sx, sy,
+                       sx + img->width * cell_width, ey);
           }
           if (!backward_img_traversal) {
             // restore clipping region
+            if (clip_band) {
+              RestoreDC(dc, clip_band);
+              clip_band = 0;
+            }
             ReleaseDC(wnd, dc);
             dc = GetDC(wnd);
           }
@@ -1080,6 +1110,8 @@ static bool previously_selected = false;
 #endif
         }
       }
+      if (clip_band)
+        RestoreDC(dc, clip_band);
     }
 
     // proceed to next image in list; destroy current if requested

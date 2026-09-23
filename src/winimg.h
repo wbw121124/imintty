@@ -11,7 +11,7 @@ extern bool winimg_new(imglist * * ppimg, char * id,
                        int attr);
 extern void winimg_destroy(imglist * img);
 extern void winimg_lazyinit(imglist * img);
-extern void winimgs_paint(void);
+extern void winimgs_paint(HDC dc);
 extern void winimgs_clear(void);
 
 // override suppression of repetitive image painting

@@ -1338,7 +1338,15 @@ draw_cursor_overlay(void)
   if (!term.cursor_on || term.show_other_screen)
     return;
   bool scroll_layer = term_scroll_anim_active();
-  if (!scroll_layer && (!term.curs_animate || !cfg.smooth_cursor))
+  if (scroll_layer) {
+    /* Overlay only pins the cursor inside the scroll band; elsewhere
+       term_paint already applied TATTR_ACTCURS/PASCURS. */
+    int cy = term.cursor_on && !term.show_other_screen
+             ? term.curs.y - term.disptop : -1;
+    if (cy < term.scroll_anim_top || cy >= term.scroll_anim_bot)
+      return;
+  }
+  else if (!term.curs_animate || !cfg.smooth_cursor)
     return;
 
   int x, y;
@@ -1796,7 +1804,36 @@ do_update(void)
 
   show_curchar_info('u');
 
-  dc = GetDC(wnd);
+  bool anim = term_scroll_anim_active();
+  RECT crc = {0};
+  if (anim)
+    GetClientRect(wnd, &crc);
+
+  HDC screen_dc = GetDC(wnd);
+  HDC mem_dc = 0;
+  HBITMAP mem_bm = 0, mem_oldbm = 0;
+
+  if (anim && screen_dc) {
+    int mw = max(1, crc.right), mh = max(1, crc.bottom);
+    mem_dc = CreateCompatibleDC(screen_dc);
+    mem_bm = CreateCompatibleBitmap(screen_dc, mw, mh);
+    if (mem_dc && mem_bm) {
+      mem_oldbm = SelectObject(mem_dc, mem_bm);
+      BitBlt(mem_dc, 0, 0, mw, mh, screen_dc, 0, 0, SRCCOPY);
+      dc = mem_dc;
+    }
+    else {
+      if (mem_bm)
+        DeleteObject(mem_bm);
+      if (mem_dc)
+        DeleteDC(mem_dc);
+      mem_dc = 0;
+      mem_bm = 0;
+      dc = screen_dc;
+    }
+  }
+  else
+    dc = screen_dc;
 
   // horizontal scrolling of terminal view
   int dx = - horclip();
@@ -1813,7 +1850,16 @@ do_update(void)
     tek_paint();
   else {
     term_paint();
-    winimgs_paint();
+    /* images adjust horclip themselves and expect an identity transform */
+    XFORM xf_save;
+    bool has_xf = GetWorldTransform(dc, &xf_save) != 0;
+    if (has_xf) {
+      XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+      SetWorldTransform(dc, &id);
+    }
+    winimgs_paint(dc);
+    if (has_xf)
+      SetWorldTransform(dc, &xf_save);
     if (term_scroll_anim_active()) {
       int total = term.scroll_anim_lines * cell_height;
       int remaining = term_scroll_anim_offset();
@@ -1824,7 +1870,18 @@ do_update(void)
     draw_cursor_overlay();
   }
 
-  ReleaseDC(wnd, dc);
+  if (mem_dc && mem_bm) {
+    XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+    SetWorldTransform(mem_dc, &id);
+    BitBlt(screen_dc, 0, 0, crc.right, crc.bottom, mem_dc, 0, 0, SRCCOPY);
+    SelectObject(mem_dc, mem_oldbm);
+    DeleteObject(mem_bm);
+    DeleteDC(mem_dc);
+    dc = 0;
+  }
+  if (screen_dc)
+    ReleaseDC(wnd, screen_dc);
+  dc = 0;
 
   // Update scrollbar
   if (cfg.scrollbar && term.show_scrollbar && !term.app_scrollbar) {
@@ -6020,7 +6077,34 @@ void
 win_paint(void)
 {
   PAINTSTRUCT p;
-  dc = BeginPaint(wnd, &p);
+  bool anim = term_scroll_anim_active() && !tek_mode;
+  HDC screen_dc = BeginPaint(wnd, &p);
+  HDC mem_dc = 0;
+  HBITMAP mem_bm = 0, mem_oldbm = 0;
+  RECT crc = {0};
+
+  if (anim && screen_dc) {
+    GetClientRect(wnd, &crc);
+    int mw = max(1, crc.right), mh = max(1, crc.bottom);
+    mem_dc = CreateCompatibleDC(screen_dc);
+    mem_bm = CreateCompatibleBitmap(screen_dc, mw, mh);
+    if (mem_dc && mem_bm) {
+      mem_oldbm = SelectObject(mem_dc, mem_bm);
+      BitBlt(mem_dc, 0, 0, mw, mh, screen_dc, 0, 0, SRCCOPY);
+      dc = mem_dc;
+    }
+    else {
+      if (mem_bm)
+        DeleteObject(mem_bm);
+      if (mem_dc)
+        DeleteDC(mem_dc);
+      mem_dc = 0;
+      mem_bm = 0;
+      dc = screen_dc;
+    }
+  }
+  else
+    dc = screen_dc;
 
   // better invalidate more than less; limited to text area in term_invalidate
   term_invalidate(
@@ -6031,12 +6115,23 @@ win_paint(void)
   );
 
   //if (kb_trace) printf("[%ld] win_paint state %d (idl/blk/pnd)\n", mtime(), update_state);
-  if (update_state != UPDATE_PENDING) {
+  // During smooth scroll, always compose a frame even if a timer update is pending
+  if (update_state != UPDATE_PENDING || anim) {
     if (tek_mode)
       tek_paint();
     else {
       term_paint();
-      winimgs_paint();
+      {
+        XFORM xf_save;
+        bool has_xf = GetWorldTransform(dc, &xf_save) != 0;
+        if (has_xf) {
+          XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+          SetWorldTransform(dc, &id);
+        }
+        winimgs_paint(dc);
+        if (has_xf)
+          SetWorldTransform(dc, &xf_save);
+      }
       if (term_scroll_anim_active()) {
         int total = term.scroll_anim_lines * cell_height;
         int remaining = term_scroll_anim_offset();
@@ -6101,6 +6196,16 @@ win_paint(void)
     usleep(900000);
 #endif
   }
+
+  if (mem_dc && mem_bm) {
+    XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+    SetWorldTransform(mem_dc, &id);
+    BitBlt(screen_dc, 0, 0, crc.right, crc.bottom, mem_dc, 0, 0, SRCCOPY);
+    SelectObject(mem_dc, mem_oldbm);
+    DeleteObject(mem_bm);
+    DeleteDC(mem_dc);
+  }
+  dc = 0;
 
   EndPaint(wnd, &p);
 }

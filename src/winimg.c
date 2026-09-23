@@ -674,7 +674,7 @@ static void flush(void)
 }
 
 void
-winimgs_paint(void)
+winimgs_paint(HDC target)
 {
   imglist * img;
 
@@ -699,7 +699,8 @@ static bool previously_selected = false;
     winimg_destroy(img);
   }
 
-  HDC dc = GetDC(wnd);
+  HDC dc = target;
+  int base_clip = SaveDC(dc);
 
   // clip off padding area, avoiding image artefacts when scrolling
   RECT rc;
@@ -1091,8 +1092,10 @@ static bool previously_selected = false;
               RestoreDC(dc, clip_band);
               clip_band = 0;
             }
-            ReleaseDC(wnd, dc);
-            dc = GetDC(wnd);
+            RestoreDC(dc, base_clip);
+            IntersectClipRect(dc, rc.left + PADDING, rc.top + OFFSET + PADDING,
+                              rc.left + PADDING + term.cols * cell_width,
+                              rc.top + OFFSET + PADDING + term.rows * cell_height);
           }
         }
         else if (top < 0 || top + img->height > term.rows) {
@@ -1129,7 +1132,7 @@ static bool previously_selected = false;
     }
   }
 
-  ReleaseDC(wnd, dc);
+  RestoreDC(dc, base_clip);
 
   // suppress repetitive image painting
   force_imgs = false;

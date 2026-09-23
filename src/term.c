@@ -499,14 +499,28 @@ smooth_scroll_duration(void)
   return d;
 }
 
+/* Stop an in-flight animation, release the snapshot, and mark the band dirty.
+   Does not schedule a paint; callers decide (restart suppresses flicker). */
+static void
+scroll_anim_stop(void)
+{
+  if (!term.scroll_animate)
+    return;
+  int top = term.scroll_anim_top, bot = term.scroll_anim_bot;
+  term.scroll_animate = false;
+  term.scroll_anim_lines = 0;
+  win_scroll_release();
+  if (bot > top)
+    term_invalidate(0, top, term.cols - 1, bot - 1);
+}
+
 void
 term_scroll_anim_cancel(void)
 {
-  if (term.scroll_animate) {
-    term.scroll_animate = false;
-    term.scroll_anim_lines = 0;
-    win_scroll_release();
-  }
+  if (!term.scroll_animate)
+    return;
+  scroll_anim_stop();
+  win_update(false);
 }
 
 bool
@@ -523,30 +537,31 @@ term_scroll_anim_active(void)
 void
 term_scroll_anim_begin(int topline, int botline, int lines)
 {
-  term_scroll_anim_cancel();
+  bool had = term.scroll_animate;
+  scroll_anim_stop();
 
-  if (!cfg.smooth_scroll || tek_mode || !lines || cell_height <= 0)
+  bool ok = cfg.smooth_scroll && !tek_mode && lines && cell_height > 0
+            && abs(lines) <= cfg.smooth_scroll_lines
+            && !win_is_iconic();
+  int top = 0, bot = 0;
+  if (ok) {
+    /* map scroll region to display rows */
+    int dtop = topline - term.disptop;
+    int dbot = botline - term.disptop; /* inclusive */
+    top = max(0, dtop);
+    bot = min(term.rows, dbot + 1);
+    /* do not animate status area rows */
+    if (bot > term.rows)
+      bot = term.rows;
+    ok = top < bot;
+  }
+  if (ok)
+    ok = win_scroll_capture(top, bot);
+  if (!ok) {
+    if (had)
+      win_update(false);
     return;
-  if (abs(lines) > cfg.smooth_scroll_lines)
-    return;
-  if (win_is_iconic())
-    return;
-
-  /* map scroll region to display rows */
-  int dtop = topline - term.disptop;
-  int dbot = botline - term.disptop; /* inclusive */
-  int top = max(0, dtop);
-  int bot = min(term.rows, dbot + 1);
-  if (top >= bot)
-    return;
-  /* do not animate status area rows */
-  if (bot > term.rows)
-    bot = term.rows;
-  if (top >= bot)
-    return;
-
-  if (!win_scroll_capture(top, bot))
-    return;
+  }
 
   term.scroll_animate = true;
   term.scroll_anim_lines = lines;
@@ -577,8 +592,10 @@ static void
 scroll_anim_cb(void)
 {
   if (!term_scroll_anim_active()) {
-    term.scroll_animate = false;
-    win_scroll_release();
+    if (term.scroll_animate) {
+      scroll_anim_stop();
+      win_update(false);
+    }
     return;
   }
   int elapsed = get_tick_count() - term.scroll_anim_start;
@@ -4309,9 +4326,14 @@ term_paint(void)
 
       term_cursor_track(curs_x, curs_y);
 
+     /* Suppress text-layer cursor only inside the smooth-scroll band
+        (overlay draws it at the final cell there). Outside keep normal attrs. */
+      bool scroll_band_cursor =
+        term_scroll_anim_active()
+        && curs_y >= term.scroll_anim_top && curs_y < term.scroll_anim_bot;
      /* Determine cursor cell attributes. */
       newchars[curs_x].attr.attr |=
-        (term_scroll_anim_active() ? 0 :
+        (scroll_band_cursor ? 0 :
          !term.has_focus ? TATTR_PASCURS :
          term.curs_animate ? 0 :
          term.cblink_alpha > 0 || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |

@@ -1194,22 +1194,30 @@ set_option(string name, string val_str, bool from_file)
 static int
 parse_option(string option, bool from_file)
 {
-  const char *eq = strchr(option, '=');
+  // strip CR (CRLF files) and other trailing whitespace
+  char *opt = (char *)option;
+  opt[strcspn(opt, "\r\n")] = 0;
+  uint end = strlen(opt);
+  while (end && isspace((uchar)opt[end - 1]))
+    opt[--end] = 0;
+  if (!*opt)
+    return -1;  // blank line
+
+  const char *eq = strchr(opt, '=');
   if (!eq) {
-    ((char *)option)[strcspn(option, "\r")] = 0;
     //__ %s: option name
     opterror(_("Ignoring option '%s' with missing value"), 
-             from_file, option, 0);
+             from_file, opt, 0);
     return -1;
   }
 
   const char *name_end = eq;
-  while (isspace((uchar)name_end[-1]))
+  while (name_end > opt && isspace((uchar)name_end[-1]))
     name_end--;
 
-  uint name_len = name_end - option;
+  uint name_len = name_end - opt;
   char name[name_len + 1];
-  memcpy(name, option, name_len);
+  memcpy(name, opt, name_len);
   name[name_len] = 0;
 
   const char *val = eq + 1;
@@ -1831,14 +1839,19 @@ load_config(string filename, int to_save)
           break;
       }
 
-      if (lbuf[len - 1] == '\n')
-        lbuf[len - 1] = 0;
+      if (len && lbuf[len - 1] == '\n')
+        lbuf[--len] = 0;
+      if (len && lbuf[len - 1] == '\r')
+        lbuf[--len] = 0;
       //printf("option <%s>\n", lbuf);
 
-      if (lbuf[0] == '#' || lbuf[0] == '\0') {
+      char *nb = lbuf;
+      while (*nb == ' ' || *nb == '\t')
+        nb++;
+      if (*nb == '#' || *nb == '\0') {
         // preserve comment lines and empty lines
         if (to_save)
-          remember_file_comment(lbuf);
+          remember_file_comment(nb);
       }
       else {
         // apply config options

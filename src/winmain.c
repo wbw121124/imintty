@@ -867,6 +867,7 @@ win_set_timer(void (*cb)(void), uint ticks)
 { SetTimer(wnd, (UINT_PTR)cb, ticks, null); }
 
 static bool dynblur_on;
+static void win_update_blur(bool opaque);
 
 static void
 dynblur_off(void)
@@ -874,16 +875,18 @@ dynblur_off(void)
   if (!dynblur_on)
     return;
   dynblur_on = false;
-  win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
+  win_update_blur(cfg.opaque_when_focused);
 }
 
 void
 win_dynamic_blur_pulse(void)
 {
-  if (cfg.dynamic_blur <= 0 || !pDwmEnableBlurBehindWindow)
+  // only pulse when the window is already (semi)transparent;
+  // enabling blur behind an opaque window makes it translucent (Win10/11)
+  if (cfg.dynamic_blur <= 0 || cfg.transparency == 0 || !pDwmEnableBlurBehindWindow)
     return;
   dynblur_on = true;
-  win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
+  win_update_blur(cfg.opaque_when_focused);
   win_set_timer(dynblur_off, (uint)cfg.dynamic_blur);
 }
 
@@ -2560,11 +2563,12 @@ win_is_glass_available(void)
 static void
 win_update_blur(bool opaque)
 {
-// This feature is disabled in config.c as it does not seem to work,
-// see https://github.com/imintty/imintty/issues/501
+// Blur-behind is only meaningful with configured transparency;
+// forcing it on an opaque window yields phantom translucency (issue #501).
   if (pDwmEnableBlurBehindWindow) {
     bool blur =
-      ((cfg.transparency && cfg.blurred) || dynblur_on) && !win_is_fullscreen &&
+      ((cfg.transparency && cfg.blurred) || (dynblur_on && cfg.transparency)) &&
+      !win_is_fullscreen &&
       !(opaque && term.has_focus && !dynblur_on);
 #define dont_use_dwmapi_h
 #ifdef use_dwmapi_h

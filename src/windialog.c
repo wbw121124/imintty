@@ -186,7 +186,9 @@ create_controls(HWND wnd, char *path)
   return path[0] ? cp.ypos : 0;
 }
 
-/* Panel viewport in client pixels (excludes tree column and button row). */
+/* Panel viewport in client pixels (excludes tree column and button row).
+ * bottom is exclusive and must stop at the button row top (DLU 183),
+ * so ScrollWindow never shifts the About/Save/Cancel/Apply buttons. */
 static RECT
 panel_clip(HWND wnd)
 {
@@ -194,7 +196,7 @@ panel_clip(HWND wnd)
   r.left = 68;
   r.top = 3;
   r.right = DIALOG_WIDTH - 3;
-  r.bottom = DIALOG_HEIGHT - 17;
+  r.bottom = DIALOG_HEIGHT - 17 - 1;
   MapDialogRect(wnd, &r);
   r.top = scale_dialog(r.top);
   r.bottom = scale_dialog(r.bottom);
@@ -203,6 +205,27 @@ panel_clip(HWND wnd)
   MapDialogRect(wnd, &x);
   r.left = scale_dialog(x.right);
   return r;
+}
+
+/* Hide panel controls that fall outside the viewport so tall panels
+ * do not paint over the bottom button row. */
+static void
+update_panel_visibility(HWND wnd)
+{
+  RECT clip = panel_clip(wnd);
+  for (winctrl *c = ctrls_panel.first; c; c = c->next) {
+    for (int k = 0; k < c->num_ids; k++) {
+      HWND item = GetDlgItem(wnd, c->base_id + k);
+      if (!item)
+        continue;
+      RECT r;
+      GetWindowRect(item, &r);
+      MapWindowPoints(null, wnd, (POINT *)&r, 2);
+      bool vis = r.top >= clip.top && r.bottom <= clip.bottom &&
+                 r.right > clip.left && r.left < clip.right;
+      ShowWindow(item, vis ? SW_SHOW : SW_HIDE);
+    }
+  }
 }
 
 static void
@@ -231,13 +254,15 @@ scroll_panel(HWND wnd, int new_pos)
   int dy = delta > 0 ? -dpx : dpx;
   RECT clip = panel_clip(wnd);
   ScrollWindow(wnd, 0, dy, null, &clip);
+  update_panel_visibility(wnd);
   UpdateWindow(wnd);
 }
 
 static void
 update_panel_scrollbar(HWND wnd)
 {
-  int view_h = (DIALOG_HEIGHT - 17) - 3;
+  // viewport height in DLU: from panel top (3) up to button row top (DIALOG_HEIGHT-17-1)
+  int view_h = (DIALOG_HEIGHT - 17 - 1) - 3;
   int content_h = panel_content_bottom - 3;
   int max_scroll = content_h - view_h;
   bool overflow = max_scroll > 0;
@@ -793,6 +818,7 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         // here we need the correct DIALOG_HEIGHT already
         panel_content_bottom = create_controls(wnd, (char *) item.lParam);
         update_panel_scrollbar(wnd);
+        update_panel_visibility(wnd);
         debug("WM_NOTIFY: create");
         dlg_refresh(null); /* set up control values */
         debug("WM_NOTIFY: refresh");

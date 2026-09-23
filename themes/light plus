@@ -1,0 +1,22 @@
+# source: VS Code Light+ (default light) terminal colours
+# https://github.com/microsoft/vscode
+
+BackgroundColour=255,255,255
+ForegroundColour=59,59,59
+CursorColour=4,81,165
+Black=0,0,0
+BoldBlack=102,102,102
+Red=205,49,49
+BoldRed=205,49,49
+Green=16,124,16
+BoldGreen=20,206,20
+Yellow=148,152,0
+BoldYellow=181,186,0
+Blue=4,81,165
+BoldBlue=4,81,165
+Magenta=188,5,188
+BoldMagenta=188,5,188
+Cyan=5,152,188
+BoldCyan=5,152,188
+White=85,85,85
+BoldWhite=165,165,165

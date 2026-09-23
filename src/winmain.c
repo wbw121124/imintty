@@ -54,6 +54,7 @@ typedef UINT_PTR uintptr_t;
 #include <fcntl.h>  // open flags
 #include <sys/utsname.h>
 #include <dirent.h>
+#include <strings.h>  // strcasecmp
 
 
 #ifndef INT16
@@ -7555,6 +7556,59 @@ static int dynfonts = 0;
   }
   handle_file_resources(W("fonts/*"), add_font);
   //printf("Added %d fonts\n", dynfonts);
+
+  // MSYS and user font directories; FR_PRIVATE keeps them above system fonts
+  bool
+  is_font_ext(const char * name)
+  {
+    const char * dot = strrchr(name, '.');
+    if (!dot || !dot[1])
+      return false;
+    const char * x = dot + 1;
+    return !strcasecmp(x, "ttf") || !strcasecmp(x, "otf")
+        || !strcasecmp(x, "ttc") || !strcasecmp(x, "otc")
+        || !strcasecmp(x, "fon") || !strcasecmp(x, "fnt");
+  }
+  void
+  add_font_dir_fonts(const char * dir, int depth)
+  {
+    if (depth > 3)
+      return;
+    DIR * d = opendir(dir);
+    if (!d)
+      return;
+    struct dirent * de;
+    while ((de = readdir(d))) {
+      if (de->d_name[0] == '.')
+        continue;
+      char * fn = asform("%s/%s", dir, de->d_name);
+      struct stat st;
+      if (stat(fn, &st) == 0) {
+        if (S_ISDIR(st.st_mode))
+          add_font_dir_fonts(fn, depth + 1);
+        else if (is_font_ext(de->d_name)) {
+          wchar * wfn = path_posix_to_win_w(fn);
+          add_font(wfn);
+          free(wfn);
+        }
+      }
+      free(fn);
+    }
+    closedir(d);
+  }
+  if (!support_wsl && home) {
+    // highest priority first
+    char * d0 = asform("%s/.mintty/fonts", home);
+    char * d1 = asform("%s/.config/mintty/fonts", home);
+    char * d2 = asform("%s/.fonts", home);
+    add_font_dir_fonts(d0, 0);
+    add_font_dir_fonts(d1, 0);
+    add_font_dir_fonts(d2, 0);
+    add_font_dir_fonts("/usr/share/fonts", 0);
+    free(d0);
+    free(d1);
+    free(d2);
+  }
 
   if (report_fonts) {
     if (dynfonts)

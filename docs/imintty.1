@@ -471,6 +471,9 @@ of characters; the TextOut API is automatically used instead if suitable.
 Fonts in the resource subdirectory \fIfonts\fP of the config directory 
 are installed dynamically and can be used for configured or interactively 
 changed font selection. This is especially useful for a portable installation.
+MSYS and user font directories \fI~/.mintty/fonts\fP, \fI~/.config/mintty/fonts\fP, 
+\fI~/.fonts\fP, and \fI/usr/share/fonts\fP are also scanned (depth 3) and loaded 
+as private fonts with priority over system fonts.
 
 .SS Font selection
 

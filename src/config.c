@@ -191,7 +191,7 @@ const config default_cfg = {
   .scroll_mod = MDK_SHIFT,
   .border_style = BORDER_NORMAL,
   .pgupdn_scroll = false,
-  .lang = W("@"),
+  .lang = W("zh_CN"),
   .search_bar = W(""),
   .search_context = 0,
   // Terminal
@@ -1272,12 +1272,16 @@ init_config_dirs(void)
   if (config_dirs)
     return;
 
-  int ncd = 4;
   char * appdata = getenv("APPDATA");
+  bool use_home = !support_wsl && home && access(home, X_OK) == 0;
+  int ncd = 2;  // /usr/share, /usr/share/imintty
   if (appdata)
     ncd++;
+  if (use_home)
+    ncd += 2;
   if (config_dir)
     ncd++;
+  ncd += 2;  // executable directory and parent (portable/development lang etc.)
   config_dirs = newn(string, ncd);
   // init indication whether config dirs have emojis to unknown
   config_emojis = newn(char, ncd);
@@ -1285,6 +1289,7 @@ init_config_dirs(void)
     config_emojis[i] = -1;
 
   // /usr/share/imintty , $APPDATA/imintty , ~/.config/imintty , ~/.imintty
+  // , next to the executable (portable layout: bin/.. contains lang/)
   config_dirs[++last_config_dir] = "/usr/share";  // for "/emojis" only
   config_dirs[++last_config_dir] = "/usr/share/imintty";
   if (appdata) {
@@ -1292,13 +1297,27 @@ init_config_dirs(void)
     sprintf(appdata, "%s/imintty", getenv("APPDATA"));
     config_dirs[++last_config_dir] = appdata;
   }
-  if (!support_wsl && access(home, X_OK) == 0) {
+  if (use_home) {
     char * xdgconf = newn(char, strlen(home) + 16);
     sprintf(xdgconf, "%s/.config/imintty", home);
     config_dirs[++last_config_dir] = xdgconf;
     char * homeconf = newn(char, strlen(home) + 9);
     sprintf(homeconf, "%s/.imintty", home);
     config_dirs[++last_config_dir] = homeconf;
+  }
+  wchar wexe[MAX_PATH];
+  uint xn = GetModuleFileNameW(null, wexe, lengthof(wexe));
+  if (xn && xn < lengthof(wexe)) {
+    wchar * slash = wcsrchr(wexe, L'\\');
+    if (slash) {
+      *slash = L'\0';
+      config_dirs[++last_config_dir] = path_win_w_to_posix(wexe);
+      slash = wcsrchr(wexe, L'\\');
+      if (slash) {
+        *slash = L'\0';
+        config_dirs[++last_config_dir] = path_win_w_to_posix(wexe);
+      }
+    }
   }
   if (config_dir) {
     config_dirs[++last_config_dir] = config_dir;

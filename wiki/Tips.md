@@ -1095,6 +1095,15 @@ To avoid having to set up an explicit `--configdir` invocation parameter,
 fonts can be placed in the /usr/share/imintty/fonts folder of the portable 
 installation.
 
+In addition, the following MSYS and user font directories are scanned 
+recursively (depth 3) for `ttf`/`otf`/`ttc`/`otc`/`fon`/`fnt` files and 
+loaded as private fonts, taking priority over system fonts:
+
+* `~/.mintty/fonts`
+* `~/.config/mintty/fonts`
+* `~/.fonts`
+* `/usr/share/fonts`
+
 
 ## Character width ##
 

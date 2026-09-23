@@ -130,17 +130,77 @@ vt220(string term)
 static void term_schedule_tblink(void);
 static void term_schedule_tblink2(void);
 
+/* Smooth blink fade state (Phase 1): ramp alpha between visible/hidden. */
+struct blink_fade {
+  int from, to;
+  int elapsed, duration, tick;
+  bool active;
+};
+static struct blink_fade fade_tblink, fade_tblink2, fade_cblink;
+
+static int
+blink_duration(void)
+{
+  int d = cfg.smooth_blink_duration;
+  if (d < 40)
+    d = 40;
+  if (d > 1000)
+    d = 1000;
+  return d;
+}
+
+static void
+fade_start(struct blink_fade *f, int from, int to, void (*cb)(void))
+{
+  f->from = from;
+  f->to = to;
+  f->elapsed = 0;
+  f->duration = blink_duration();
+  f->tick = max(20, f->duration / 5);
+  f->active = true;
+  win_set_timer(cb, f->tick);
+}
+
+/* Advance one frame; returns true if more frames are pending. */
+static bool
+fade_advance(struct blink_fade *f, int *alpha, void (*cb)(void))
+{
+  f->elapsed += f->tick;
+  if (f->elapsed >= f->duration) {
+    *alpha = f->to;
+    f->active = false;
+    return false;
+  }
+  *alpha = f->from + (f->to - f->from) * f->elapsed / f->duration;
+  win_set_timer(cb, f->tick);
+  return true;
+}
+
+static void
+tblink_fade_cb(void)
+{
+  fade_advance(&fade_tblink, &term.tblink_alpha, tblink_fade_cb);
+  term.tblinker = term.tblink_alpha <= 127;
+  force_imgs = true;
+  win_update(false);
+}
+
 static void
 tblink_cb(void)
 {
-  term.tblinker = !term.tblinker;
+  if (cfg.smooth_blink_attr && term.blink_is_real) {
+    int from = term.tblink_alpha;
+    int to = from > 127 ? 0 : 255;
+    term.tblinker = to <= 127;
+    fade_start(&fade_tblink, from, to, tblink_fade_cb);
+  }
+  else {
+    term.tblinker = !term.tblinker;
+    term.tblink_alpha = term.tblinker ? 0 : 255;
+    force_imgs = true;
+    win_update(false);
+  }
   term_schedule_tblink();
-
-  // ensure blinking graphics are redisplayed;
-  // this could be controlled more fine-grained but seems to be sufficient
-  force_imgs = true;
-
-  win_update(false);
 }
 
 static void
@@ -148,21 +208,37 @@ term_schedule_tblink(void)
 {
   if (term.blink_is_real)
     win_set_timer(tblink_cb, 500);
-  else
+  else {
     term.tblinker = 1;  /* reset when not in use */
+    term.tblink_alpha = 0;
+  }
+}
+
+static void
+tblink2_fade_cb(void)
+{
+  fade_advance(&fade_tblink2, &term.tblink2_alpha, tblink2_fade_cb);
+  term.tblinker2 = term.tblink2_alpha <= 127;
+  force_imgs = true;
+  win_update(false);
 }
 
 static void
 tblink2_cb(void)
 {
-  term.tblinker2 = !term.tblinker2;
+  if (cfg.smooth_blink_attr && term.blink_is_real) {
+    int from = term.tblink2_alpha;
+    int to = from > 127 ? 0 : 255;
+    term.tblinker2 = to <= 127;
+    fade_start(&fade_tblink2, from, to, tblink2_fade_cb);
+  }
+  else {
+    term.tblinker2 = !term.tblinker2;
+    term.tblink2_alpha = term.tblinker2 ? 0 : 255;
+    force_imgs = true;
+    win_update(false);
+  }
   term_schedule_tblink2();
-
-  // ensure blinking graphics are redisplayed;
-  // this could be controlled more fine-grained but seems to be sufficient
-  force_imgs = true;
-
-  win_update(false);
 }
 
 static void
@@ -170,8 +246,10 @@ term_schedule_tblink2(void)
 {
   if (term.blink_is_real)
     win_set_timer(tblink2_cb, 300);
-  else
+  else {
     term.tblinker2 = 1;  /* reset when not in use */
+    term.tblink2_alpha = 0;
+  }
 }
 
 /*
@@ -183,7 +261,7 @@ term_cursor_type(void)
   return term.cursor_type == -1 ? cfg.cursor_type : term.cursor_type;
 }
 
-static bool
+bool
 term_cursor_blinks(void)
 {
   return term.cursor_blinkmode
@@ -200,11 +278,29 @@ term_hide_cursor(void)
 }
 
 static void
+cblink_fade_cb(void)
+{
+  fade_advance(&fade_cblink, &term.cblink_alpha, cblink_fade_cb);
+  term.cblinker = term.cblink_alpha > 127;
+  term.cursor_invalid = true;
+  win_update(false);
+}
+
+static void
 cblink_cb(void)
 {
-  term.cblinker = !term.cblinker;
+  if (cfg.smooth_blink_cursor && term_cursor_blinks() && term.has_focus) {
+    int from = term.cblink_alpha;
+    int to = from > 127 ? 0 : 255;
+    term.cblinker = to > 127;
+    fade_start(&fade_cblink, from, to, cblink_fade_cb);
+  }
+  else {
+    term.cblinker = !term.cblinker;
+    term.cblink_alpha = term.cblinker ? 255 : 0;
+    win_update(false);
+  }
   term_schedule_cblink();
-  win_update(false);
 }
 
 void
@@ -212,24 +308,63 @@ term_schedule_cblink(void)
 {
   if (term_cursor_blinks() && term.has_focus)
     win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
-  else
+  else {
     term.cblinker = 1;  /* reset when not in use */
+    term.cblink_alpha = 255;
+  }
+}
+
+static int vbell_start;
+
+static void
+vbell_fade_cb(void)
+{
+  int elapsed = get_tick_count() - vbell_start;
+  int total = max(141, 2 * cfg.smooth_blink_duration);
+  if (elapsed >= total) {
+    term.in_vbell = false;
+    term.vbell_alpha = 0;
+    win_update(false);
+    return;
+  }
+  int half = total / 2;
+  term.vbell_alpha = elapsed < half
+                   ? (elapsed * 255 / max(1, half))
+                   : ((total - elapsed) * 255 / max(1, total - half));
+  win_update(false);
+  win_set_timer(vbell_fade_cb, 25);
 }
 
 static void
 vbell_cb(void)
 {
   term.in_vbell = false;
+  term.vbell_alpha = 0;
   win_update(false);
 }
 
 void
 term_schedule_vbell(int already_started, int startpoint)
 {
-  int ticks_gone = already_started ? get_tick_count() - startpoint : 0;
-  int ticks = 141 - ticks_gone;
-  if ((term.in_vbell = ticks > 0))
-    win_set_timer(vbell_cb, ticks);
+  if (cfg.smooth_blink_bell) {
+    int total = max(141, 2 * cfg.smooth_blink_duration);
+    int ticks_gone = already_started ? get_tick_count() - startpoint : 0;
+    int ticks = total - ticks_gone;
+    if ((term.in_vbell = ticks > 0)) {
+      vbell_start = get_tick_count() - ticks_gone;
+      if (!already_started)
+        term.vbell_alpha = 0;
+      win_set_timer(vbell_fade_cb, 25);
+    }
+  }
+  else {
+    int ticks_gone = already_started ? get_tick_count() - startpoint : 0;
+    int ticks = 141 - ticks_gone;
+    if ((term.in_vbell = ticks > 0)) {
+      term.vbell_alpha = 255;
+      win_set_timer(vbell_cb, ticks);
+    }
+  }
 }
 
 /* Find the bottom line on the screen that has any content.
@@ -393,6 +528,13 @@ term_reset(bool full)
   term.cursor_blink_interval = 0;
   if (full) {
     term.blink_is_real = cfg.allow_blinking;
+    term.tblinker = 1;
+    term.tblinker2 = 1;
+    term.tblink_alpha = 0;
+    term.tblink2_alpha = 0;
+    term.cblinker = 1;
+    term.cblink_alpha = 255;
+    term.vbell_alpha = 0;
     term.hide_mouse = cfg.hide_mouse;
   }
 
@@ -461,6 +603,7 @@ show_screen(bool other_screen, bool flip)
   // Reset cursor blinking.
   if (!other_screen) {
     term.cblinker = 1;
+    term.cblink_alpha = 255;
     term_schedule_cblink();
   }
 
@@ -487,8 +630,11 @@ term_reconfig(void)
 {
   if (!*new_cfg.printer)
     term_print_finish();
-  if (new_cfg.allow_blinking != cfg.allow_blinking)
+  if (new_cfg.allow_blinking != cfg.allow_blinking) {
     term.blink_is_real = new_cfg.allow_blinking;
+    term.tblink_alpha = term.tblinker ? 0 : 255;
+    term.tblink2_alpha = term.tblinker2 ? 0 : 255;
+  }
   cfg.cursor_blinks = new_cfg.cursor_blinks;
   term_schedule_tblink();
   term_schedule_tblink2();
@@ -3072,11 +3218,11 @@ emoji_show(int x, int y, struct emoji e, int elen, cattr eattr, ushort lattr)
   if (eattr.attr & (ATTR_BLINK | ATTR_BLINK2))
     if (term.blink_is_real && term.has_focus) {
       if (eattr.attr & ATTR_BLINK2) {
-        if (term.tblinker2)
+        if (term.tblink2_alpha <= 127)
           return;
       }
       else if (eattr.attr & ATTR_BLINK) {
-        if (term.tblinker)
+        if (term.tblink_alpha <= 127)
           return;
       }
     }
@@ -3461,7 +3607,26 @@ term_paint(void)
                        );
 
       if (flashchar) {
-        if (cfg.bell_flash_style & FLASH_REVERSE)
+        if (cfg.smooth_blink_bell && term.vbell_alpha < 255) {
+          cattr ac = apply_attr_colour(tattr, ACM_TERM);
+          if (cfg.bell_flash_style & FLASH_REVERSE) {
+            int a = term.vbell_alpha;
+            tattr.truefg = blend_colour(ac.truefg, ac.truebg, a);
+            tattr.truebg = blend_colour(ac.truebg, ac.truefg, a);
+            tattr.attr = (tattr.attr & ~(ATTR_FGMASK | ATTR_BGMASK))
+                         | (TRUE_COLOUR << ATTR_FGSHIFT)
+                         | (TRUE_COLOUR << ATTR_BGSHIFT);
+          }
+          else {
+            tattr.truebg = blend_colour(
+                             ac.truebg,
+                             brighten(ac.truebg, ac.truefg, false),
+                             term.vbell_alpha);
+            tattr.attr = (tattr.attr & ~ATTR_BGMASK)
+                         | (TRUE_COLOUR << ATTR_BGSHIFT);
+          }
+        }
+        else if (cfg.bell_flash_style & FLASH_REVERSE)
           tattr.attr ^= ATTR_REVERSE;
         else {
           tattr.truebg = apply_attr_colour(tattr, ACM_VBELL_BG).truebg;
@@ -3500,14 +3665,14 @@ term_paint(void)
      /* Real blinking ? */
       else if (term.blink_is_real) {
         if (tattr.attr & ATTR_BLINK2) {
-          if (term.has_focus && term.tblinker2) {
+          if (term.has_focus && term.tblink2_alpha <= 0) {
             tattr.attr |= ATTR_INVISIBLE;
             tattr.attr &= ~UNBLINK;
           }
         }
         // ATTR_BLINK2 should override ATTR_BLINK to avoid chaotic dual blink
         else if (tattr.attr & ATTR_BLINK) {
-          if (term.has_focus && term.tblinker) {
+          if (term.has_focus && term.tblink_alpha <= 0) {
             tattr.attr |= ATTR_INVISIBLE;
             tattr.attr &= ~UNBLINK;
           }
@@ -3885,7 +4050,7 @@ term_paint(void)
      /* Determine cursor cell attributes. */
       newchars[curs_x].attr.attr |=
         (!term.has_focus ? TATTR_PASCURS :
-         term.cblinker || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
+         term.cblink_alpha > 0 || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
         (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);
 
       if (term.cursor_invalid)
@@ -4569,7 +4734,7 @@ term_paint(void)
           }
           else if (term.blink_is_real) {
             if (tattr.attr & ATTR_BLINK2) {
-              if (term.has_focus && term.tblinker2) {
+              if (term.has_focus && term.tblink2_alpha <= 0) {
                 tattr.attr |= ATTR_INVISIBLE;
                 tattr.attr &= ~UNBLINK;
               }
@@ -4577,7 +4742,7 @@ term_paint(void)
             }
             // ATTR_BLINK2 should override ATTR_BLINK to avoid chaotic dual blink
             else if (tattr.attr & ATTR_BLINK) {
-              if (term.has_focus && term.tblinker) {
+              if (term.has_focus && term.tblink_alpha <= 0) {
                 tattr.attr |= ATTR_INVISIBLE;
                 tattr.attr &= ~UNBLINK;
               }

@@ -249,6 +249,21 @@ brighten(colour c, colour against, bool monotone)
   return bright;
 }
 
+colour
+blend_colour(colour from, colour to, int alpha)
+{
+  if (alpha <= 0)
+    return from;
+  if (alpha >= 255)
+    return to;
+  int inv = 255 - alpha;
+  return make_colour(
+           (red(from) * inv + red(to) * alpha) / 255,
+           (green(from) * inv + green(to) * alpha) / 255,
+           (blue(from) * inv + blue(to) * alpha) / 255
+         );
+}
+
 static uint
 get_font_quality(void)
 {
@@ -3199,6 +3214,18 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   colour bg = attr.truebg;
   // ATTR_BOLD is now set if and only if we need further thickening.
 
+  // Smooth blink: fade blinking text toward the cell background
+  if (cfg.smooth_blink_attr && term.blink_is_real && term.has_focus
+      && (attr.attr & (ATTR_BLINK | ATTR_BLINK2))
+      && !(attr.attr & ATTR_INVISIBLE)
+      && !(term.enable_blink_colour && colours[BLINK_COLOUR_I] != (colour)-1)
+     )
+  {
+    int ba = (attr.attr & ATTR_BLINK2) ? term.tblink2_alpha : term.tblink_alpha;
+    if (ba < 255)
+      fg = blend_colour(bg, fg, ba);
+  }
+
   bool has_cursor = attr.attr & (TATTR_ACTCURS | TATTR_PASCURS);
   colour cursor_colour = 0;
 
@@ -3252,10 +3279,17 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
     }
 
     if ((attr.attr & TATTR_ACTCURS) && term_cursor_type() == CUR_BLOCK) {
+      colour cell_fg = fg, cell_bg = bg;
       fg = colours[CURSOR_TEXT_COLOUR_I];
       if (too_close && colour_dist(cursor_colour, fg) < mindist)
-        fg = bg;
+        fg = cell_bg;
       bg = cursor_colour;
+      if (cfg.smooth_blink_cursor && term_cursor_blinks()
+          && term.cblink_alpha < 255)
+      {
+        fg = blend_colour(cell_fg, fg, term.cblink_alpha);
+        bg = blend_colour(cell_bg, bg, term.cblink_alpha);
+      }
 #ifdef debug_cursor
       printf("set cursor (colour %06X) @(row %d col %d) cursor_on %d\n", bg, (y - PADDING - OFFSET) / cell_height, (x - PADDING) / char_width, term.cursor_on);
 #endif
@@ -4679,6 +4713,10 @@ skip_drawing:;
     colour _cc = cursor_colour;
     if (layer)
       _cc = ((_cc & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
+    // Smooth cursor blink: fade line/box cursor toward the cell background
+    if (cfg.smooth_blink_cursor && term_cursor_blinks()
+        && (attr.attr & TATTR_ACTCURS) && term.cblink_alpha < 255)
+      _cc = blend_colour(bg, _cc, term.cblink_alpha);
 #if defined(debug_cursor) && debug_cursor > 1
     printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
 #endif

@@ -510,6 +510,10 @@ struct term {
   bool cblinker;          /* When blinking is the cursor on ? */
   bool tblinker;          /* When the blinking text is on */
   bool tblinker2;         /* When fast blinking is on */
+  int tblink_alpha;       /* Smooth blink: 0 hidden .. 255 visible */
+  int tblink2_alpha;
+  int cblink_alpha;
+  int vbell_alpha;
   bool blink_is_real;     /* Actually blink blinking text */
   bool echoing;           /* Does terminal want local echo? */
   bool insert;            /* Insert mode */
@@ -735,6 +739,7 @@ extern void term_write(const char *, uint len);
 extern void term_flush(void);
 extern void term_set_focus(bool has_focus, bool may_report);
 extern int  term_cursor_type(void);
+extern bool term_cursor_blinks(void);
 extern void term_hide_cursor(void);
 
 extern void term_set_search(wchar * needle);

@@ -5380,6 +5380,7 @@ term_do_write(const char *buf, uint len, bool fix_status)
 
   // Reset cursor blinking.
   term.cblinker = 1;
+  term.cblink_alpha = 255;
   term_schedule_cblink();
 
   short oldy = term.curs.y;

@@ -15,6 +15,12 @@
 # enhance cursor visibility
 #CursorType=block
 
+# smooth animations (fade transitions for blink effects)
+#SmoothBlinkCursor=yes
+#SmoothBlinkBell=yes
+#SmoothBlinkAttr=no
+#SmoothBlinkDuration=100
+
 # enable a VT320 status line
 #StatusLine=yes
 

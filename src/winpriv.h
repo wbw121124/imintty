@@ -63,6 +63,7 @@ extern int ntabinfo;
 
 extern COLORREF colours[COLOUR_NUM];
 extern colour brighten(colour c, colour against, bool monotone);
+extern colour blend_colour(colour from, colour to, int alpha);
 
 extern LOGFONT lfont;
 

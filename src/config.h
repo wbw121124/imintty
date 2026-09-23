@@ -89,6 +89,10 @@ typedef struct {
   bool bold_as_font;
   bool bold_as_colour;
   bool allow_blinking;
+  bool smooth_blink_attr;
+  bool smooth_blink_cursor;
+  bool smooth_blink_bell;
+  int smooth_blink_duration;
   string locale;
   string charset;
   char charwidth;

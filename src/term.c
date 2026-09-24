@@ -467,7 +467,7 @@ static void
 cblink_expand_cb(void)
 {
   if ((cfg.smooth_blink_cursor != ANIM_EXPAND
-       && !cfg.cursor_neovide_expand)
+       && !cfg.control_cursor_tail)
       || !term_cursor_blinks() || !term.has_focus
       || !term.cursor_on || term.show_other_screen) {
     term.cblinker = 1;
@@ -530,7 +530,7 @@ cblink_cb(void)
     cblink_phase_cb();
     return;
   }
-  if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.cursor_neovide_expand)
+  if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
       && term_cursor_blinks() && term.has_focus) {
     /* free-run the expand chain; do not reset phase here (avoids snap) */
     cblink_expand_cb();
@@ -563,7 +563,7 @@ term_schedule_cblink(void)
   else if (cfg.smooth_blink_cursor == ANIM_PHASE
            && term_cursor_blinks() && term.has_focus)
     win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
-  else if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.cursor_neovide_expand)
+  else if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
            && term_cursor_blinks() && term.has_focus)
     win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
   else if (term_cursor_blinks() && term.has_focus)

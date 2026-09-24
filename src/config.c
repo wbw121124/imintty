@@ -108,7 +108,7 @@ const config default_cfg = {
    .smooth_cursor_duration = 50,
    .cursor_trail_size = 0,
    .cursor_short_threshold = 1,
-   .cursor_neovide_expand = false,
+   .control_cursor_tail = false,
    .cursor_separate_canvas = false,
    .smooth_scroll = ANIM_SMOOTH,
   .smooth_scroll_duration = 100,
@@ -439,7 +439,7 @@ options[] = {
    {"SmoothCursorDuration", OPT_INT, offcfg(smooth_cursor_duration)},
    {"CursorTrailSize", OPT_INT, offcfg(cursor_trail_size)},
    {"CursorShortThreshold", OPT_INT, offcfg(cursor_short_threshold)},
-   {"CursorNeovideExpand", OPT_BOOL, offcfg(cursor_neovide_expand)},
+   {"ControlCursorTail", OPT_BOOL, offcfg(control_cursor_tail)},
    {"CursorSeparateCanvas", OPT_BOOL, offcfg(cursor_separate_canvas)},
   {"SmoothScroll", OPT_ANIM, offcfg(smooth_scroll)},
   {"SmoothScrollDuration", OPT_INT, offcfg(smooth_scroll_duration)},
@@ -4610,10 +4610,10 @@ setup_config_box(controlbox * b)
     s, _("Scroll lines"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_lines
   )->column = 3;
   ctrl_columns(s, 1, 100);
-  //__ Options - Animation: Neovide-style expand blink
+  //__ Options - Animation: cursor trail toggle
   ctrl_checkbox(
-    s, _("Neovide &expand blink"),
-    dlg_stdcheckbox_handler, &new_cfg.cursor_neovide_expand
+    s, _("光标拖尾"),
+    dlg_stdcheckbox_handler, &new_cfg.control_cursor_tail
   );
   //__ Options - Animation: Neovide cursor trail
   ctrl_editbox(

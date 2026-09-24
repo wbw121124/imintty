@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: imintty\n"
 "Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
-"POT-Creation-Date: 2026-09-24 07:53+0800\n"
+"POT-Creation-Date: 2026-09-24 09:08+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -283,7 +283,7 @@ msgid "Save"
 msgstr ""
 
 #. __ Dialog button - cancel
-#: config.c:4375 winctrls.c:1277 windialog.c:948
+#: config.c:4375 winctrls.c:1277 windialog.c:957
 msgid "Cancel"
 msgstr ""
 
@@ -293,12 +293,12 @@ msgid "Apply"
 msgstr ""
 
 #. __ Dialog button - take notice
-#: config.c:4383 windialog.c:945
+#: config.c:4383 windialog.c:954
 msgid "I see"
 msgstr ""
 
 #. __ Dialog button - confirm action
-#: config.c:4385 winctrls.c:1276 windialog.c:947
+#: config.c:4385 winctrls.c:1276 windialog.c:956
 msgid "OK"
 msgstr ""
 
@@ -534,7 +534,7 @@ msgid "Scroll lines"
 msgstr ""
 
 #: config.c:4615
-msgid "Neovide &expand blink"
+msgid "光标拖尾"
 msgstr ""
 
 #: config.c:4620
@@ -1172,7 +1172,7 @@ msgid "A&dd to Custom Colours"
 msgstr ""
 
 #. __ Options: dialog title
-#: windialog.c:311 windialog.c:892
+#: windialog.c:311 windialog.c:901
 msgid "Options"
 msgstr ""
 
@@ -1182,11 +1182,11 @@ msgid "available"
 msgstr ""
 
 #. __ Options: dialog width scale factor (80...200)
-#: windialog.c:836
+#: windialog.c:845
 msgid "100"
 msgstr ""
 
-#: windialog.c:977 windialog.c:1004
+#: windialog.c:986 windialog.c:1013
 msgid "Error"
 msgstr ""
 

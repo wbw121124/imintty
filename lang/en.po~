@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: imintty\n"
 "Report-Msgid-Bugs-To: https://github.com/imintty/imintty/issues/700\n"
-"POT-Creation-Date: 2026-09-24 09:08+0800\n"
+"POT-Creation-Date: 2026-09-24 09:02+0800\n"
 "PO-Revision-Date: 2024-06-28 23:51+0200\n"
 "Last-Translator: GeekDuanLian <dl@pbstu.com>\n"
 "Language-Team: \n"
@@ -288,7 +288,7 @@ msgid "Save"
 msgstr "保存"
 
 #. __ Dialog button - cancel
-#: config.c:4375 winctrls.c:1277 windialog.c:957
+#: config.c:4375 winctrls.c:1277 windialog.c:953
 msgid "Cancel"
 msgstr "取消"
 
@@ -298,12 +298,12 @@ msgid "Apply"
 msgstr "应用"
 
 #. __ Dialog button - take notice
-#: config.c:4383 windialog.c:954
+#: config.c:4383 windialog.c:950
 msgid "I see"
 msgstr "我了解了"
 
 #. __ Dialog button - confirm action
-#: config.c:4385 winctrls.c:1276 windialog.c:956
+#: config.c:4385 winctrls.c:1276 windialog.c:952
 msgid "OK"
 msgstr "确定"
 
@@ -1177,7 +1177,7 @@ msgid "A&dd to Custom Colours"
 msgstr "添加到自定义颜色(&D)"
 
 #. __ Options: dialog title
-#: windialog.c:311 windialog.c:901
+#: windialog.c:311 windialog.c:897
 msgid "Options"
 msgstr "选项"
 
@@ -1187,11 +1187,11 @@ msgid "available"
 msgstr "可用"
 
 #. __ Options: dialog width scale factor (80...200)
-#: windialog.c:845
+#: windialog.c:841
 msgid "100"
 msgstr "105"
 
-#: windialog.c:986 windialog.c:1013
+#: windialog.c:982 windialog.c:1009
 msgid "Error"
 msgstr "错误"
 

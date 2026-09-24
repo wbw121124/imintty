@@ -777,6 +777,10 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
 
     when WM_COMMAND or WM_DRAWITEM: {
+      if (dlg.ended) {
+        debug("WM_COMMAND: skipped (ended)");
+        return 0;
+      }
       debug("WM_COMMAND");
       int ret = winctrl_handle_command(msg, wParam, lParam);
       debug("WM_COMMAND: handle");

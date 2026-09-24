@@ -1411,7 +1411,7 @@ draw_cursor_overlay(void)
 
   /* Expand mode: vertical-only cosine ease-in-out, clamped to cell bounds */
   int expand = 0;
-  if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.cursor_neovide_expand)
+  if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
       && term_cursor_blinks()
       && term.has_focus)
     expand = term.cblink_expand;
@@ -5265,7 +5265,7 @@ skip_drawing:;
     printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
 #endif
     int expand = 0;
-    if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.cursor_neovide_expand)
+    if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
         && term_cursor_blinks()
         && term.has_focus)
       expand = term.cblink_expand;

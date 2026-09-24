@@ -17,6 +17,8 @@ enum { ANIM_NONE = 0, ANIM_DEFAULT = 1, ANIM_SMOOTH = 2,
        ANIM_PHASE = 3, ANIM_EXPAND = 4 };
 enum { FR_TEXTOUT, FR_UNISCRIBE, FR_DWRITE };
 enum { RB_GDI, RB_D2D };
+// Neovide-style cursor trail particle modes (cursor_vfx.rs TrailMode).
+enum { TRAIL_NONE = 0, TRAIL_RAILGUN = 1, TRAIL_TORPEDO = 2, TRAIL_PIXIEDUST = 3 };
 enum { MC_VOID, MC_PASTE, MC_EXTEND, MC_ENTER };
 enum { RC_MENU, RC_PASTE, RC_EXTEND, RC_ENTER };
 enum { BORDER_NORMAL, BORDER_FRAME, BORDER_VOID };
@@ -106,6 +108,8 @@ typedef struct {
    int cursor_trail_size;     // Neovide-style trail segments, 0 = none
    int cursor_short_threshold; // cell-distance below which animation snaps
    bool control_cursor_tail; // enable cursor trail (Neovide-style expand)
+   char trail_mode;           // TRAIL_*: railgun / torpedo / pixiedust particle style
+   bool cursor_smear;         // smear-cursor.nvim/Neovide: 4-corner lag body
    bool cursor_separate_canvas; // separate cursor canvas, clear & redraw each frame
    char smooth_scroll;        // ANIM_*: scroll motion
    int smooth_scroll_duration;

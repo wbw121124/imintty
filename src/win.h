@@ -96,6 +96,7 @@ extern void win_paste_path(void);
 extern char * get_clipboard(void);
 
 extern void win_set_timer(void_fn cb, uint ticks);
+extern void win_kill_timer(void_fn cb);
 
 extern bool print_opterror(FILE * stream, string msg, bool utf8params, string p1, string p2);
 extern void win_show_about(void);

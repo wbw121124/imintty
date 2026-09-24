@@ -10,6 +10,7 @@
 #include "config.h"
 #include "charset.h"  // cs__wcstoutf
 #include "windwrite.h"
+#include "wind2d.h"
 
 // IID without linking dwrite.lib GUID (same workaround as prior cygwin code).
 static const IID MY_IID_IDWriteFactory =
@@ -580,8 +581,42 @@ dw_text_out(HDC hdc, int x, int y, UINT eto, RECT *box,
       wmemcmp(text, dw_run_text, len) != 0)
     return false;
 
-  // ETO_GLYPH_INDEX: WCHAR array holds glyph ids; INT advances in logical px.
+  // Glyph array is always glyph ids here; keep ETO_GLYPH_INDEX for the GDI fallback.
   UINT flags = eto & (ETO_OPAQUE | ETO_CLIPPED);
+  flags |= ETO_GLYPH_INDEX;
+
+  // Prefer D2D DrawGlyphRun whenever the factory is available (B2/B4).
+  {
+    LOGFONTW lf;
+    HFONT hf = (HFONT)GetCurrentObject(hdc, OBJ_FONT);
+    float em = 0;
+    TEXTMETRICW tm;
+    bool have_tm = GetTextMetricsW(hdc, &tm) != 0;
+    // GDI cell height is winA+winD scaled; design em = cell * upem / (winA+winD).
+    if (dw_run_face) {
+      DWRITE_FONT_METRICS fm;
+      IDWriteFontFace_GetMetrics(dw_run_face, &fm);
+      UINT16 winA = fm.ascent, winD = fm.descent;
+      UINT16 winH = winA + winD;
+      if (winH && have_tm && tm.tmHeight > 0 && fm.designUnitsPerEm)
+        em = (float)tm.tmHeight * (float)fm.designUnitsPerEm / (float)winH;
+    }
+    if (em <= 0 && hf && GetObjectW(hf, sizeof lf, &lf))
+      em = (float)(lf.lfHeight < 0 ? -lf.lfHeight : lf.lfHeight);
+    if (em <= 0 && have_tm)
+      em = (float)tm.tmHeight;
+    // GDI TA_TOP: y is cell top; baseline is top + ascent.
+    float baseline = (float)y;
+    if (have_tm)
+      baseline += (float)tm.tmAscent;
+    if (em > 0 && d2d_draw_glyph_run(hdc, dw_run_face, dw_run_glyphs,
+                                     dw_run_adv, (unsigned)dw_run_count,
+                                     (float)x, baseline, em,
+                                     GetTextColor(hdc), flags, box))
+      return true;
+    // fall through to GDI if D2D bind/draw failed
+  }
+
   BOOL ok = ExtTextOutW(hdc, x, y, flags, box,
                         (LPCWSTR)dw_run_glyphs, (UINT)dw_run_count,
                         dw_run_adv);

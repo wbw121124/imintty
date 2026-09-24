@@ -528,6 +528,24 @@ struct term {
    int  curs_trail[32][2]; /* Neovide trail: px,py at each segment */
    int  curs_trail_len;    /* number of trail segments in flight */
    int  curs_trail_count;  /* current write index into ring */
+   /* Neovide-style particle trail (TrailMode: railgun/torpedo/pixiedust). */
+   struct {
+     float x, y;           /* position, px */
+     float vx, vy;         /* velocity, px per second */
+     float life;           /* remaining lifetime, 0..1 */
+     float rot;            /* rotation speed, rad/s (unused draw) */
+    } curs_particles[128];
+    int  curs_particle_n;    /* live particle count */
+    /* smear-cursor.nvim-style: 4 corner springs + head/tail stiffness (device px). */
+    struct {
+      float x[4], y[4];      /* current corner positions */
+      float dx[4], dy[4];    /* destination corners */
+      float ox[4], oy[4];    /* remaining offset from destination */
+      float vx[4], vy[4];    /* spring velocity */
+      float stiff[4];        /* per-corner stiffness 0..1 (smear-cursor.nvim) */
+      unsigned last_ms;      /* last update tick for real dt */
+      bool inited;
+    } curs_smear;
   /* Smooth scroll (Phase 3): pixel-space animation of visible scroll */
   bool scroll_animate;    /* scroll animation in progress */
   int  scroll_anim_lines; /* signed lines still to animate (+ = content up) */
@@ -771,6 +789,7 @@ extern int  term_cursor_type(void);
 extern bool term_cursor_blinks(void);
 extern void term_cursor_track(int dx, int dy);
 extern void term_cursor_anim_cancel(void);
+extern bool term_curs_smear_pts(float pts[8]);
 extern void term_scroll_anim_begin(int topline, int botline, int lines);
 extern void term_scroll_anim_cancel(void);
 extern bool term_scroll_anim_active(void);

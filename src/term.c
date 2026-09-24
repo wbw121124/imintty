@@ -429,6 +429,15 @@ term_hide_cursor(void)
 static void
 cblink_fade_cb(void)
 {
+  if (cfg.smooth_blink_cursor != ANIM_SMOOTH
+      || !term_cursor_blinks() || !term.has_focus) {
+    fade_cblink.active = false;
+    term.cblink_alpha = 255;
+    term.cblinker = 1;
+    term.cursor_invalid = true;
+    win_update(false);
+    return;
+  }
   fade_advance(&fade_cblink, &term.cblink_alpha, cblink_fade_cb);
   term.cblinker = term.cblink_alpha > 127;
   term.cursor_invalid = true;
@@ -466,8 +475,7 @@ cblink_phase_cb(void)
 static void
 cblink_expand_cb(void)
 {
-  if ((cfg.smooth_blink_cursor != ANIM_EXPAND
-       && !cfg.control_cursor_tail)
+  if (cfg.smooth_blink_cursor != ANIM_EXPAND
       || !term_cursor_blinks() || !term.has_focus
       || !term.cursor_on || term.show_other_screen) {
     term.cblinker = 1;
@@ -520,6 +528,10 @@ cblink_cb(void)
     term.cblinker = 1;
     term.cblink_alpha = 255;
     term.cblink_expand = 0;
+    win_kill_timer(cblink_fade_cb);
+    win_kill_timer(cblink_phase_cb);
+    win_kill_timer(cblink_expand_cb);
+    fade_cblink.active = false;
     term.cursor_invalid = true;
     win_update(false);
     return;
@@ -530,7 +542,7 @@ cblink_cb(void)
     cblink_phase_cb();
     return;
   }
-  if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
+  if (cfg.smooth_blink_cursor == ANIM_EXPAND
       && term_cursor_blinks() && term.has_focus) {
     /* free-run the expand chain; do not reset phase here (avoids snap) */
     cblink_expand_cb();
@@ -559,19 +571,27 @@ term_schedule_cblink(void)
     term.cblinker = 1;
     term.cblink_alpha = 255;
     term.cblink_expand = 0;
+    win_kill_timer(cblink_cb);
+    win_kill_timer(cblink_fade_cb);
+    win_kill_timer(cblink_phase_cb);
+    win_kill_timer(cblink_expand_cb);
+    fade_cblink.active = false;
   }
-  else if (cfg.smooth_blink_cursor == ANIM_PHASE
+  else if ((cfg.smooth_blink_cursor == ANIM_PHASE
+            || cfg.smooth_blink_cursor == ANIM_EXPAND
+            || cfg.smooth_blink_cursor == ANIM_SMOOTH
+            || cfg.smooth_blink_cursor == ANIM_DEFAULT)
            && term_cursor_blinks() && term.has_focus)
-    win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
-  else if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
-           && term_cursor_blinks() && term.has_focus)
-    win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
-  else if (term_cursor_blinks() && term.has_focus)
     win_set_timer(cblink_cb, term.cursor_blink_interval ?: cursor_blink_ticks());
   else {
     term.cblinker = 1;  /* reset when not in use */
     term.cblink_alpha = 255;
     term.cblink_expand = 0;
+    win_kill_timer(cblink_cb);
+    win_kill_timer(cblink_fade_cb);
+    win_kill_timer(cblink_phase_cb);
+    win_kill_timer(cblink_expand_cb);
+    fade_cblink.active = false;
   }
 }
 
@@ -646,6 +666,339 @@ curs_anim_cancel(void)
 {
   term.curs_animate = false;
   term.curs_trail_len = 0;
+  term.curs_particle_n = 0;
+  term.curs_smear.inited = false;
+}
+
+/* Spawn Neovide-style trail particles along the move from (x0,y0) to (x1,y1). */
+static void
+curs_spawn_particles(float x0, float y0, float x1, float y1)
+{
+  if (cfg.trail_mode == TRAIL_NONE || !cfg.control_cursor_tail
+      || cfg.cursor_trail_size <= 0)
+    return;
+  float dx = x1 - x0, dy = y1 - y0;
+  float dist = sqrtf(dx * dx + dy * dy);
+  if (dist < 1.0f)
+    return;
+  float cellh = cell_height > 0 ? (float)cell_height : 16.0f;
+  int n = (int)(dist / cellh * (float)cfg.cursor_trail_size);
+  if (n < 1)
+    n = 1;
+  if (n > 16)
+    n = 16;
+  float speed = 80.0f;  // px/s base
+  unsigned seed = (unsigned)get_tick_count() ^ (unsigned)(dist * 17.0f);
+  for (int i = 0; i < n && term.curs_particle_n < 128; i++) {
+    float t = (float)(i + 1) / (float)n;
+    float px = x0 + dx * t;
+    float py = y0 + dy * t;
+    float vx = 0, vy = 0;
+    switch (cfg.trail_mode) {
+      when TRAIL_RAILGUN: {
+        // phase-locked sine/cosine along travel (neovide Railgun)
+        float phase = t * 3.14159265f * 2.0f;
+        vx = sinf(phase) * speed;
+        vy = cosf(phase) * speed;
+      }
+      when TRAIL_TORPEDO: {
+        // roughly opposite travel direction with jitter
+        float len = dist > 0 ? dist : 1.0f;
+        float ux = -dx / len, uy = -dy / len;
+        seed = seed * 1664525u + 1013904223u;
+        float j = ((seed >> 8) & 0xFFFF) / 65535.0f * 2.0f - 1.0f;
+        vx = (ux + j * 0.5f) * speed;
+        vy = (uy + j * 0.5f) * speed;
+      }
+      when TRAIL_PIXIEDUST: {
+        // upward-biased scatter
+        seed = seed * 1664525u + 1013904223u;
+        float rx = ((seed >> 8) & 0xFFFF) / 65535.0f * 2.0f - 1.0f;
+        seed = seed * 1664525u + 1013904223u;
+        float ry = ((seed >> 8) & 0xFFFF) / 65535.0f;
+        vx = rx * 0.5f * speed;
+        vy = -(0.4f + ry * 0.6f) * speed;  // screen y grows downward
+      }
+      otherwise: return;
+    }
+    term.curs_particles[term.curs_particle_n].x = px;
+    term.curs_particles[term.curs_particle_n].y = py;
+    term.curs_particles[term.curs_particle_n].vx = vx;
+    term.curs_particles[term.curs_particle_n].vy = vy;
+    term.curs_particles[term.curs_particle_n].life = 1.0f;
+    term.curs_particles[term.curs_particle_n].rot = 0;
+    term.curs_particle_n++;
+  }
+}
+
+static void
+curs_update_particles(float dt)
+{
+  if (term.curs_particle_n <= 0)
+    return;
+  int w = 0;
+  for (int i = 0; i < term.curs_particle_n; i++) {
+    term.curs_particles[i].x += term.curs_particles[i].vx * dt;
+    term.curs_particles[i].y += term.curs_particles[i].vy * dt;
+    term.curs_particles[i].life -= dt * 1.5f;
+    if (term.curs_particles[i].life > 0)
+      term.curs_particles[w++] = term.curs_particles[i];
+  }
+  term.curs_particle_n = w;
+}
+
+/* smear-cursor.nvim spring: discrete stiffness integration per corner.
+   Head (closest to target) stiffer than tail → longitudinal smear.
+   Returns true while any corner still moving. */
+static bool
+smear_update(float dt)
+{
+  if (!cfg.cursor_smear || !term.curs_smear.inited)
+    return false;
+
+  unsigned now = (unsigned)get_tick_count();
+  unsigned last = term.curs_smear.last_ms;
+  term.curs_smear.last_ms = now;
+  if (last == 0 || now <= last)
+    dt = 0.016f; /* first tick or clock rewind: assume one frame */
+  else {
+    float real = (float)(now - last) / 1000.0f;
+    if (real > 0.1f)
+      real = 0.1f; /* clamp stalls */
+    dt = real;
+  }
+
+  /* smear-cursor.nvim: velocity_conservation = exp(ln(1-damping)*speed_corr) */
+  float base_frame = 1.0f / 60.0f; /* ~17ms BASE_TIME_INTERVAL */
+  float speed_corr = dt / base_frame;
+  if (speed_corr < 0.1f)
+    speed_corr = 0.1f;
+  if (speed_corr > 4.0f)
+    speed_corr = 4.0f;
+
+  float damping = 0.85f; /* config.damping default */
+  float vcf = expf(logf(1.0f - damping) * speed_corr);
+  /* Empirical correction to keep duration stable across damping */
+  float dcf = 1.0f / (1.0f + 2.5f * vcf);
+
+  bool anim = false;
+  float max_d2 = 0;
+  float max_v = 0;
+  for (int i = 0; i < 4; i++) {
+    float stiff = term.curs_smear.stiff[i];
+    if (stiff < 0.01f)
+      stiff = 0.01f;
+    if (stiff > 1.0f)
+      stiff = 1.0f;
+    /* stiffness = 1 - exp(ln(1 - s*dcf) * speed_corr) */
+    float inner = 1.0f - stiff * dcf;
+    if (inner < 1e-6f)
+      inner = 1e-6f;
+    float k = 1.0f - expf(logf(inner) * speed_corr);
+
+    float ddx = term.curs_smear.dx[i] - term.curs_smear.x[i];
+    float ddy = term.curs_smear.dy[i] - term.curs_smear.y[i];
+    term.curs_smear.vx[i] += ddx * k;
+    term.curs_smear.vy[i] += ddy * k;
+    term.curs_smear.x[i] += term.curs_smear.vx[i];
+    term.curs_smear.y[i] += term.curs_smear.vy[i];
+    term.curs_smear.vx[i] *= vcf;
+    term.curs_smear.vy[i] *= vcf;
+
+    float d2 = ddx * ddx + ddy * ddy;
+    if (d2 > max_d2)
+      max_d2 = d2;
+    float sp = sqrtf(term.curs_smear.vx[i] * term.curs_smear.vx[i]
+                     + term.curs_smear.vy[i] * term.curs_smear.vy[i]);
+    if (sp > max_v)
+      max_v = sp;
+
+    if (d2 > 0.01f || sp > 0.01f)
+      anim = true;
+  }
+
+  /* distance_stop_animating ≈ 0.1 cells (smear-cursor.nvim) */
+  float stop = cell_width * 0.1f;
+  if (stop < 1.0f)
+    stop = 1.0f;
+  if (max_d2 <= stop * stop && max_v <= stop) {
+    for (int i = 0; i < 4; i++) {
+      term.curs_smear.x[i] = term.curs_smear.dx[i];
+      term.curs_smear.y[i] = term.curs_smear.dy[i];
+      term.curs_smear.vx[i] = term.curs_smear.vy[i] = 0;
+      term.curs_smear.ox[i] = term.curs_smear.oy[i] = 0;
+    }
+    anim = false;
+  }
+  return anim;
+}
+
+/* Map cursor cell (+ type) to visual rect corners in device px.
+   order: TL, TR, BR, BL (Neovide STANDARD_CORNERS / smear-cursor set_corners). */
+static void
+smear_dest_corners(int cx, int cy, float dst[8])
+{
+  float x = cx * cell_width + PADDING;
+  float y = cy * cell_height + OFFSET + PADDING;
+  float w = cell_width, h = cell_height;
+  char ctype = term_cursor_type();
+  if (ctype == CUR_LINE)
+    w = max(2, cell_width / 8);
+  else if (ctype == CUR_UNDERSCORE) {
+    float th = max(2, cell_height / 8);
+    y += cell_height - th;
+    h = th;
+  }
+  dst[0] = x;         dst[1] = y;
+  dst[2] = x + w;     dst[3] = y;
+  dst[4] = x + w;     dst[5] = y + h;
+  dst[6] = x;         dst[7] = y + h;
+}
+
+/* smear-cursor.nvim set_stiffnesses: head stiff, tail soft by distance
+   to target center; trailing_exponent shapes the falloff. */
+static void
+smear_set_stiffnesses(const float dst[8])
+{
+  float tcx = 0, tcy = 0;
+  for (int i = 0; i < 4; i++) {
+    tcx += dst[i * 2];
+    tcy += dst[i * 2 + 1];
+  }
+  tcx /= 4.0f;
+  tcy /= 4.0f;
+
+  float dist[4], min_d = 1e30f, max_d = 0;
+  for (int i = 0; i < 4; i++) {
+    float ddx = term.curs_smear.x[i] - tcx;
+    float ddy = term.curs_smear.y[i] - tcy;
+    dist[i] = sqrtf(ddx * ddx + ddy * ddy);
+    if (dist[i] < min_d)
+      min_d = dist[i];
+    if (dist[i] > max_d)
+      max_d = dist[i];
+  }
+
+  float head = 0.6f;    /* config.stiffness */
+  float tail = 0.45f;   /* config.trailing_stiffness */
+  float expn = 3.0f;    /* config.trailing_exponent */
+  if (max_d - min_d < 1e-6f) {
+    for (int i = 0; i < 4; i++)
+      term.curs_smear.stiff[i] = head;
+    return;
+  }
+  for (int i = 0; i < 4; i++) {
+    float t = (dist[i] - min_d) / (max_d - min_d);
+    float s = head + (tail - head) * powf(t, expn);
+    if (s < 0.01f)
+      s = 0.01f;
+    if (s > 1.0f)
+      s = 1.0f;
+    term.curs_smear.stiff[i] = s;
+  }
+}
+
+/* On cursor cell jump: retarget 4 corners (smear-cursor.nvim change_target). */
+static void
+smear_on_jump(int from_cx, int from_cy, int to_cx, int to_cy)
+{
+  if (!cfg.cursor_smear || cell_width <= 0 || cell_height <= 0)
+    return;
+
+  float dst[8];
+  smear_dest_corners(to_cx, to_cy, dst);
+
+  float from_c[8];
+  smear_dest_corners(from_cx, from_cy, from_c);
+
+  bool was_inited = term.curs_smear.inited;
+  if (!was_inited) {
+    for (int i = 0; i < 4; i++) {
+      term.curs_smear.x[i] = from_c[i * 2];
+      term.curs_smear.y[i] = from_c[i * 2 + 1];
+      term.curs_smear.vx[i] = term.curs_smear.vy[i] = 0;
+      term.curs_smear.ox[i] = term.curs_smear.oy[i] = 0;
+      term.curs_smear.dx[i] = from_c[i * 2];
+      term.curs_smear.dy[i] = from_c[i * 2 + 1];
+      term.curs_smear.stiff[i] = 0.6f;
+    }
+    term.curs_smear.inited = true;
+    term.curs_smear.last_ms = 0;
+    if (from_cx == to_cx && from_cy == to_cy) {
+      for (int i = 0; i < 4; i++) {
+        term.curs_smear.x[i] = dst[i * 2];
+        term.curs_smear.y[i] = dst[i * 2 + 1];
+        term.curs_smear.dx[i] = dst[i * 2];
+        term.curs_smear.dy[i] = dst[i * 2 + 1];
+      }
+      return;
+    }
+  }
+
+  /* Retarget: keep current visual pos, aim at new dest. */
+  for (int i = 0; i < 4; i++) {
+    term.curs_smear.dx[i] = dst[i * 2];
+    term.curs_smear.dy[i] = dst[i * 2 + 1];
+    term.curs_smear.ox[i] = dst[i * 2] - term.curs_smear.x[i];
+    term.curs_smear.oy[i] = dst[i * 2 + 1] - term.curs_smear.y[i];
+  }
+
+  smear_set_stiffnesses(dst);
+
+  /* anticipation: initial velocity away from target (config.anticipation=0.2) */
+  if (was_inited) {
+    float ant = 0.2f;
+    for (int i = 0; i < 4; i++) {
+      term.curs_smear.vx[i] += (term.curs_smear.x[i] - term.curs_smear.dx[i]) * ant;
+      term.curs_smear.vy[i] += (term.curs_smear.y[i] - term.curs_smear.dy[i]) * ant;
+    }
+  }
+
+  /* max_length clamp (config.max_length=25 cells): shrink trailing corners
+     toward head so smear never spans more than N cells. */
+  float max_len = 25.0f * cell_width;
+  if (max_len < cell_width)
+    max_len = cell_width;
+  /* find head = corner closest to dest center */
+  int head = 0;
+  float best = 1e30f;
+  for (int i = 0; i < 4; i++) {
+    float ddx = term.curs_smear.x[i] - term.curs_smear.dx[i];
+    float ddy = term.curs_smear.y[i] - term.curs_smear.dy[i];
+    float d2 = ddx * ddx + ddy * ddy;
+    if (d2 < best) {
+      best = d2;
+      head = i;
+    }
+  }
+  for (int i = 0; i < 4; i++) {
+    if (i == head)
+      continue;
+    float ddx = term.curs_smear.x[i] - term.curs_smear.x[head];
+    float ddy = term.curs_smear.y[i] - term.curs_smear.y[head];
+    float len = sqrtf(ddx * ddx + ddy * ddy);
+    if (len > max_len && len > 0.001f) {
+      float f = max_len / len;
+      term.curs_smear.x[i] = term.curs_smear.x[head] + ddx * f;
+      term.curs_smear.y[i] = term.curs_smear.y[head] + ddy * f;
+      term.curs_smear.ox[i] = term.curs_smear.dx[i] - term.curs_smear.x[i];
+      term.curs_smear.oy[i] = term.curs_smear.dy[i] - term.curs_smear.y[i];
+    }
+  }
+
+  term.curs_smear.last_ms = (unsigned)get_tick_count();
+}
+
+bool
+term_curs_smear_pts(float pts[8])
+{
+  if (!cfg.cursor_smear || !term.curs_smear.inited)
+    return false;
+  for (int i = 0; i < 4; i++) {
+    pts[i * 2] = term.curs_smear.x[i];
+    pts[i * 2 + 1] = term.curs_smear.y[i];
+  }
+  return true;
 }
 
 void
@@ -662,7 +1015,8 @@ void
 term_cursor_track(int dx, int dy)
 {
   if (dx < 0 || dy < 0 || !term.cursor_on || term.show_other_screen
-      || !term.has_focus || cfg.smooth_cursor != ANIM_SMOOTH || tek_mode)
+      || !term.has_focus || tek_mode
+      || (cfg.smooth_cursor != ANIM_SMOOTH && !cfg.cursor_smear))
   {
     curs_anim_cancel();
     term.curs_last_x = dx;
@@ -675,6 +1029,8 @@ term_cursor_track(int dx, int dy)
     term.curs_last_y = dy;
     term.curs_px0 = term.curs_px1 = dx * cell_width + PADDING;
     term.curs_py0 = term.curs_py1 = dy * cell_height + OFFSET + PADDING;
+    if (cfg.cursor_smear)
+      smear_on_jump(dx, dy, dx, dy);
     return;
   }
 
@@ -700,11 +1056,15 @@ term_cursor_track(int dx, int dy)
      from_y = term.curs_last_y * cell_height + OFFSET + PADDING;
    }
 
+   /* Smear always jumps (Neovide uses short anim length, not a hard snap). */
+   if (cfg.cursor_smear)
+     smear_on_jump(term.curs_last_x, term.curs_last_y, dx, dy);
+
    /* Short-distance threshold: snap directly if move is tiny. */
    if (cfg.cursor_short_threshold > 0
        && abs(dx - term.curs_last_x) + abs(dy - term.curs_last_y)
           <= cfg.cursor_short_threshold
-       && !term.curs_animate) {
+       && !term.curs_animate && !cfg.cursor_smear) {
      curs_anim_cancel();
      term.curs_last_x = dx;
      term.curs_last_y = dy;
@@ -719,6 +1079,9 @@ term_cursor_track(int dx, int dy)
    term.curs_animate = true;
    term.curs_last_x = dx;
    term.curs_last_y = dy;
+   /* Spawn particle trail along the move (TrailMode). */
+   curs_spawn_particles((float)from_x, (float)from_y,
+                        (float)term.curs_px1, (float)term.curs_py1);
    /* Push current final position into the Neovide trail ring. */
    if (cfg.cursor_trail_size > 0) {
      int n = cfg.cursor_trail_size;
@@ -755,13 +1118,54 @@ curs_anim_invalidate(void)
       term_invalidate(tx, ty, tx, ty);
     }
   }
+  /* invalidate particle bounds too */
+  if (term.curs_particle_n > 0 && cell_width > 0 && cell_height > 0) {
+    for (int i = 0; i < term.curs_particle_n; i++) {
+      int tx = (term.curs_particles[i].x - PADDING) / cell_width;
+      int ty = (term.curs_particles[i].y - PADDING - OFFSET) / cell_height;
+      term_invalidate(tx - 1, ty - 1, tx + 1, ty + 1);
+    }
+  }
+  /* invalidate smear corner bounds (may lag outside start/end cells) */
+  if (cfg.cursor_smear && term.curs_smear.inited
+      && cell_width > 0 && cell_height > 0) {
+    int sx0 = INT_MAX, sy0 = INT_MAX, sx1 = INT_MIN, sy1 = INT_MIN;
+    for (int i = 0; i < 4; i++) {
+      int tx = (term.curs_smear.x[i] - PADDING) / cell_width;
+      int ty = (term.curs_smear.y[i] - PADDING - OFFSET) / cell_height;
+      if (tx < sx0) sx0 = tx;
+      if (ty < sy0) sy0 = ty;
+      if (tx > sx1) sx1 = tx;
+      if (ty > sy1) sy1 = ty;
+      tx = (term.curs_smear.dx[i] - PADDING) / cell_width;
+      ty = (term.curs_smear.dy[i] - PADDING - OFFSET) / cell_height;
+      if (tx < sx0) sx0 = tx;
+      if (ty < sy0) sy0 = ty;
+      if (tx > sx1) sx1 = tx;
+      if (ty > sy1) sy1 = ty;
+    }
+    term_invalidate(sx0 - 1, sy0 - 1, sx1 + 1, sy1 + 1);
+  }
 }
 
 static void
 curs_anim_cb(void)
 {
+  if (term.curs_particle_n > 0)
+    curs_update_particles(0.016f);
+
+  bool smear_anim = smear_update(0.016f);
+
+  /* Keep timer alive while smear/particles still settling (even if smooth done). */
   if (!term.curs_animate || cfg.smooth_cursor != ANIM_SMOOTH) {
-    term.curs_animate = false;
+    if (!smear_anim && term.curs_particle_n == 0)
+      term.curs_animate = false;
+    if (term.curs_particle_n > 0 || smear_anim) {
+      term.cursor_invalid = true;
+      curs_anim_invalidate();
+      win_update(false);
+      win_set_timer(curs_anim_cb, 16);
+    }
     return;
   }
   int elapsed = get_tick_count() - term.curs_anim_start;
@@ -771,6 +1175,8 @@ curs_anim_cb(void)
     term.cursor_invalid = true;
     curs_anim_invalidate();
     win_update(false);
+    if (term.curs_particle_n > 0 || smear_anim)
+      win_set_timer(curs_anim_cb, 16);
     return;
   }
   /* update trail head to current interpolated position */
@@ -1092,6 +1498,7 @@ term_reset(bool full)
   term.cursor_blink_interval = 0;
   term.curs_animate = false;
   term.curs_last_x = term.curs_last_y = -1;
+  term.curs_smear.inited = false;
   term_scroll_anim_cancel();
   if (full) {
     term.blink_is_real = cfg.allow_blinking;
@@ -1169,6 +1576,7 @@ show_screen(bool other_screen, bool flip)
 
   term.curs_animate = false;
   term.curs_last_x = term.curs_last_y = -1;
+  term.curs_smear.inited = false;
   term_scroll_anim_cancel();
 
   // Reset cursor blinking.
@@ -1207,8 +1615,12 @@ term_reconfig(void)
     term.tblink_alpha = term.tblinker ? 0 : 255;
     term.tblink2_alpha = term.tblinker2 ? 0 : 255;
   }
-  if (new_cfg.smooth_cursor != ANIM_SMOOTH)
+  if (new_cfg.smooth_cursor != ANIM_SMOOTH && !new_cfg.cursor_smear)
     curs_anim_cancel();
+  else if (!new_cfg.cursor_smear)
+    term.curs_smear.inited = false;
+  else if (new_cfg.smooth_cursor != ANIM_SMOOTH)
+    term.curs_animate = false;
   if (new_cfg.smooth_scroll != ANIM_SMOOTH)
     term_scroll_anim_cancel();
   if (new_cfg.smooth_blink_cursor == ANIM_NONE
@@ -1226,6 +1638,11 @@ term_reconfig(void)
     term.cblinker = 1;
     term.cblink_alpha = 255;
     term.cblink_expand = 0;
+    win_kill_timer(cblink_cb);
+    win_kill_timer(cblink_fade_cb);
+    win_kill_timer(cblink_phase_cb);
+    win_kill_timer(cblink_expand_cb);
+    fade_cblink.active = false;
     term.cursor_invalid = true;
   }
   if (new_cfg.smooth_blink_attr != cfg.smooth_blink_attr) {
@@ -4675,7 +5092,8 @@ term_paint(void)
       newchars[curs_x].attr.attr |=
         (scroll_band_cursor ? 0 :
          !term.has_focus ? TATTR_PASCURS :
-         term.curs_animate ? 0 :
+         term.curs_animate || cfg.cursor_separate_canvas
+         || (cfg.cursor_smear && term.curs_smear.inited) ? 0 :
          term.cblink_alpha > 0 || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
         (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);
 

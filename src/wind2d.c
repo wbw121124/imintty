@@ -6,6 +6,7 @@
 #define COBJMACROS
 #include <initguid.h>
 #include <d2d1.h>
+#include <dwrite.h>
 
 #include "winpriv.h"
 #include "config.h"
@@ -69,13 +70,19 @@ d2d_ensure(void)
 bool
 d2d_available(void)
 {
-  return cfg.render_backend == RB_D2D && d2d_ensure();
+  /* Always prefer D2D when the OS can create the factory; GDI is only
+     for systems where Direct2D init fails (or explicit RenderBackend=gdi). */
+  if (cfg.render_backend == RB_GDI)
+    return false;
+  return d2d_ensure();
 }
 
 bool
 d2d_begin(HDC hdc)
 {
-  if (cfg.render_backend != RB_D2D || !hdc || d2d_drawing)
+  if (!hdc || d2d_drawing)
+    return false;
+  if (cfg.render_backend == RB_GDI)
     return false;
   if (!d2d_ensure())
     return false;
@@ -148,6 +155,141 @@ d2d_stroke_rect(float x, float y, float w, float h, colour c,
   ID2D1DCRenderTarget_DrawRectangle(d2d_rt, &rect, (ID2D1Brush *)brush,
                                     stroke, 0);
   ID2D1SolidColorBrush_Release(brush);
+}
+
+static bool
+d2d_open_path(const float *xy, int n, bool filled,
+              ID2D1PathGeometry **out_path, ID2D1GeometrySink **out_sink)
+{
+  *out_path = 0;
+  *out_sink = 0;
+  if (!d2d_drawing || n < 3)
+    return false;
+  ID2D1PathGeometry * path = 0;
+  HRESULT hr = ID2D1Factory_CreatePathGeometry(d2d_factory, &path);
+  if (FAILED(hr) || !path)
+    return false;
+  ID2D1GeometrySink * sink = 0;
+  hr = ID2D1PathGeometry_Open(path, &sink);
+  if (FAILED(hr) || !sink) {
+    ID2D1PathGeometry_Release(path);
+    return false;
+  }
+  D2D1_POINT_2F p0 = {.x = xy[0], .y = xy[1]};
+  ID2D1GeometrySink_BeginFigure(
+    sink, p0,
+    filled ? D2D1_FIGURE_BEGIN_FILLED : D2D1_FIGURE_BEGIN_HOLLOW);
+  for (int i = 1; i < n; i++) {
+    D2D1_POINT_2F p = {.x = xy[i * 2], .y = xy[i * 2 + 1]};
+    ID2D1GeometrySink_AddLine(sink, p);
+  }
+  ID2D1GeometrySink_EndFigure(sink, D2D1_FIGURE_END_CLOSED);
+  *out_path = path;
+  *out_sink = sink;
+  return true;
+}
+
+void
+d2d_fill_polygon(const float *xy, int n, colour c, int alpha)
+{
+  ID2D1PathGeometry * path = 0;
+  ID2D1GeometrySink * sink = 0;
+  if (!d2d_open_path(xy, n, true, &path, &sink))
+    return;
+  ID2D1GeometrySink_Close(sink);
+  ID2D1GeometrySink_Release(sink);
+  ID2D1SolidColorBrush * brush = d2d_brush(c, alpha);
+  if (brush) {
+    ID2D1DCRenderTarget_FillGeometry(d2d_rt, (ID2D1Geometry *)path,
+                                     (ID2D1Brush *)brush, 0);
+    ID2D1SolidColorBrush_Release(brush);
+  }
+  ID2D1PathGeometry_Release(path);
+}
+
+void
+d2d_stroke_polygon(const float *xy, int n, colour c, int alpha, float stroke)
+{
+  if (stroke < 1.0f)
+    stroke = 1.0f;
+  ID2D1PathGeometry * path = 0;
+  ID2D1GeometrySink * sink = 0;
+  if (!d2d_open_path(xy, n, false, &path, &sink))
+    return;
+  ID2D1GeometrySink_Close(sink);
+  ID2D1GeometrySink_Release(sink);
+  ID2D1SolidColorBrush * brush = d2d_brush(c, alpha);
+  if (brush) {
+    ID2D1DCRenderTarget_DrawGeometry(d2d_rt, (ID2D1Geometry *)path,
+                                     (ID2D1Brush *)brush, stroke, 0);
+    ID2D1SolidColorBrush_Release(brush);
+  }
+  ID2D1PathGeometry_Release(path);
+}
+
+bool
+d2d_draw_glyph_run(HDC hdc, void *font_face,
+                   const unsigned short *glyphs,
+                   const int *advances, unsigned count,
+                   float x, float baseline, float em_size,
+                   colour fg, unsigned eto, const RECT *clip)
+{
+  if (!font_face || !glyphs || !advances || count == 0 || em_size <= 0)
+    return false;
+  if (!d2d_begin(hdc))
+    return false;
+
+  if ((eto & ETO_OPAQUE) && clip) {
+    colour bg = GetBkColor(hdc);
+    d2d_fill_rect((float)clip->left, (float)clip->top,
+                  (float)(clip->right - clip->left),
+                  (float)(clip->bottom - clip->top), bg, 255);
+  }
+
+  if ((eto & ETO_CLIPPED) && clip) {
+    D2D1_RECT_F cr = {
+      .left = (float)clip->left, .top = (float)clip->top,
+      .right = (float)clip->right, .bottom = (float)clip->bottom
+    };
+    ID2D1DCRenderTarget_PushAxisAlignedClip(
+      d2d_rt, &cr, D2D1_ANTIALIAS_MODE_ALIASED);
+  }
+
+  ID2D1SolidColorBrush * brush = d2d_brush(fg, 255);
+  bool ok = false;
+  if (brush) {
+    FLOAT * adv = 0;
+    if (count) {
+      adv = malloc(count * sizeof *adv);
+      if (adv)
+        for (unsigned i = 0; i < count; i++)
+          adv[i] = (FLOAT)advances[i];
+    }
+    if (adv) {
+      DWRITE_GLYPH_RUN run = {
+        .fontFace = (IDWriteFontFace *)font_face,
+        .fontEmSize = em_size,
+        .glyphCount = count,
+        .glyphIndices = glyphs,
+        .glyphAdvances = adv,
+        .glyphOffsets = 0,
+        .isSideways = FALSE,
+        .bidiLevel = 0
+      };
+      D2D1_POINT_2F origin = {.x = x, .y = baseline};
+      ID2D1DCRenderTarget_DrawGlyphRun(
+        d2d_rt, origin, &run, (ID2D1Brush *)brush,
+        DWRITE_MEASURING_MODE_NATURAL);
+      ok = true;
+      free(adv);
+    }
+    ID2D1SolidColorBrush_Release(brush);
+  }
+
+  if ((eto & ETO_CLIPPED) && clip)
+    ID2D1DCRenderTarget_PopAxisAlignedClip(d2d_rt);
+  d2d_end();
+  return ok;
 }
 
 void

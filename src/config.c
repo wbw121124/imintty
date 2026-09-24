@@ -98,7 +98,7 @@ const config default_cfg = {
   .font_smoothing = FS_DEFAULT,
   .font_render = FR_UNISCRIBE,
   .font_features = W(""),
-  .render_backend = RB_GDI,
+  .render_backend = RB_D2D,
   .dim_as_font = true,
   .bold_as_font = true,
   .bold_as_colour = true,
@@ -111,8 +111,10 @@ const config default_cfg = {
    .smooth_cursor_duration = 50,
    .cursor_trail_size = 0,
    .cursor_short_threshold = 1,
-   .control_cursor_tail = false,
-   .cursor_separate_canvas = false,
+    .control_cursor_tail = false,
+    .trail_mode = TRAIL_NONE,
+    .cursor_smear = false,
+    .cursor_separate_canvas = false,
    .smooth_scroll = ANIM_SMOOTH,
   .smooth_scroll_duration = 100,
   .smooth_scroll_lines = 8,
@@ -361,7 +363,7 @@ typedef enum {
   OPT_HOLD, OPT_ANIM,
   OPT_INT, OPT_COLOUR, OPT_COLOUR_PAIR, OPT_STRING, OPT_WSTRING,
   OPT_CHARWIDTH, OPT_EMOJIS, OPT_EMOJI_PLACEMENT,
-  OPT_COMPOSE_KEY, OPT_RENDERBACKEND,
+   OPT_COMPOSE_KEY, OPT_RENDERBACKEND, OPT_TRAILMODE,
   OPT_TYPE_MASK = 0x1F,
   OPT_LEGACY = 0x20,
   OPT_KEEPCR = 0x40
@@ -443,8 +445,10 @@ options[] = {
    {"SmoothCursorDuration", OPT_INT, offcfg(smooth_cursor_duration)},
    {"CursorTrailSize", OPT_INT, offcfg(cursor_trail_size)},
    {"CursorShortThreshold", OPT_INT, offcfg(cursor_short_threshold)},
-   {"ControlCursorTail", OPT_BOOL, offcfg(control_cursor_tail)},
-   {"CursorSeparateCanvas", OPT_BOOL, offcfg(cursor_separate_canvas)},
+     {"ControlCursorTail", OPT_BOOL, offcfg(control_cursor_tail)},
+     {"TrailMode", OPT_TRAILMODE, offcfg(trail_mode)},
+     {"CursorSmear", OPT_BOOL, offcfg(cursor_smear)},
+     {"CursorSeparateCanvas", OPT_BOOL, offcfg(cursor_separate_canvas)},
   {"SmoothScroll", OPT_ANIM, offcfg(smooth_scroll)},
   {"SmoothScrollDuration", OPT_INT, offcfg(smooth_scroll_duration)},
   {"SmoothScrollLines", OPT_INT, offcfg(smooth_scroll_lines)},
@@ -842,6 +846,13 @@ static opt_val * const opt_vals[] = {
   [OPT_RENDERBACKEND] = (opt_val[]) {
     {"gdi", RB_GDI},
     {"d2d", RB_D2D},
+    {0, 0}
+  },
+  [OPT_TRAILMODE] = (opt_val[]) {
+    {"none", TRAIL_NONE},
+    {"railgun", TRAIL_RAILGUN},
+    {"torpedo", TRAIL_TORPEDO},
+    {"pixiedust", TRAIL_PIXIEDUST},
     {0, 0}
   },
   [OPT_MIDDLECLICK] = (opt_val[]) {
@@ -4677,18 +4688,45 @@ setup_config_box(controlbox * b)
     s, _("Scroll lines"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_lines
   )->column = 3;
   ctrl_columns(s, 1, 100);
-  //__ Options - Animation: cursor trail toggle
+  //__ Options - Animation: smear cursor body (smear-cursor.nvim)
   ctrl_checkbox(
-    s, _("光标拖尾"),
+    s, _("涂抹动画"), dlg_stdcheckbox_handler, &new_cfg.cursor_smear
+  );
+  ctrl_columns(s, 1, 100);
+
+ /*
+  * The Cursor Trail panel.
+  */
+  //__ Options - CursorTrail: treeview label
+  s = ctrl_new_set(b, _("光标拖尾"),
+  //__ Options - CursorTrail: panel title
+                      _("光标拖尾"), null);
+  //__ Options - CursorTrail: enable cursor trail
+  ctrl_checkbox(
+    s, _("启用光标拖尾"),
     dlg_stdcheckbox_handler, &new_cfg.control_cursor_tail
   );
-  //__ Options - Animation: Neovide cursor trail
+  //__ Options - CursorTrail: Neovide-style trail segment count
   ctrl_editbox(
-    s, _("Cursor trail"), 40, dlg_stdintbox_handler, &new_cfg.cursor_trail_size
+    s, _("拖尾段数"), 40, dlg_stdintbox_handler, &new_cfg.cursor_trail_size
   );
-  //__ Options - Animation: skip animation for short moves
+  //__ Options - CursorTrail: skip animation for short moves
   ctrl_editbox(
-    s, _("Short skip"), 40, dlg_stdintbox_handler, &new_cfg.cursor_short_threshold
+    s, _("短距跳过"), 40, dlg_stdintbox_handler, &new_cfg.cursor_short_threshold
+  );
+  //__ Options - CursorTrail: particle trail mode (neovide)
+  ctrl_radiobuttons(
+    s, _("拖尾模式"), 4,
+    dlg_stdradiobutton_handler, &new_cfg.trail_mode,
+    //__ Options - CursorTrail: trail mode
+    _("无"), TRAIL_NONE,
+    //__ Options - CursorTrail: trail mode railgun
+    _("Railgun"), TRAIL_RAILGUN,
+    //__ Options - CursorTrail: trail mode torpedo
+    _("Torpedo"), TRAIL_TORPEDO,
+    //__ Options - CursorTrail: trail mode pixiedust
+    _("PixieDust"), TRAIL_PIXIEDUST,
+    null
   );
   ctrl_columns(s, 1, 100);
 

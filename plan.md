@@ -63,13 +63,20 @@
 
 #### B2 Direct2D 渲染目标
 - [x] `ID2D1DCRenderTarget`（先绑 paint HDC；后续可评估 `ID2D1HwndRenderTarget` / DXGI swapchain）接管光标层。
-- [ ] 文字：`DrawGlyphRun`（消费 B1 排版结果）。
+- [x] 文字：`DrawGlyphRun`（消费 B1 排版结果；`RenderBackend=d2d` 且 `FontRender=dwrite` 时走 D2D，失败回退 GDI `ETO_GLYPH_INDEX`）。
 - [x] 光标 overlay：D2D 形状 + 真 alpha（`d2d_fill_rect`/`d2d_stroke_rect`，取代光标路径 `blend_colour` 假 alpha；trail 同路径）。
 - [ ] sixel / emoji / iTerm2 / Kitty 图像：`ID2D1Bitmap`（WIC 解码）+ alpha 合成；GDI+ 路径保留为 fallback。
 - [ ] RTL：`minibidi` 双向重排保留；shaping 换 HarfBuzz；`SetWorldTransform` 镜像改 D2D transform。
-- [x] 配置：`RenderBackend=d2d|gdi`（默认 gdi，可回退；GUI Text 面板 radiobutton）。
-- [x] `src/wind2d.c` + `wind2d.h`：factory/DC RT 单例、`d2d_begin/end`、`d2d_shutdown` 挂 `exit_imintty`。
+- [x] 配置：`RenderBackend=d2d|gdi`（**默认 d2d**，GDI 仍可选；GUI Text 面板 radiobutton）。
+- [x] `src/wind2d.c` + `wind2d.h`：factory/DC RT 单例、`d2d_begin/end`、`d2d_shutdown` 挂 `exit_imintty`；`d2d_fill_polygon`/`d2d_stroke_polygon`（smear 四边形）。
 - [x] Makefile：`-ld2d1`；`make -j4` 零警告；`RenderBackend=d2d|gdi` 冒烟 exit 0。
+
+#### B2b Smear cursor（smear-cursor.nvim / Neovide Animated Cursor）
+- [x] 配置：`CursorSmear=yes|no`（默认 no；Animation 面板「涂抹动画」；`config.template`）。
+- [x] 四角弹簧（smear-cursor.nvim）：head/tail stiffness（0.6/0.45，trailing_exponent=3）、anticipation=0.2、damping=0.85、`max_length=25` cells 钳制、`distance_stop_animating≈0.1` cell、真实 dt；状态 `term.curs_smear`。
+- [x] 与其它光标动画正交：smooth/blink/trail/particles 可同时开；**仅抑制 expand 几何**（`CursorSmear` 时不画 `cblink_expand`）。
+- [x] 渲染：D2D `FillGeometry`/`DrawGeometry` 四边形；GDI `Polygon`；`term_curs_smear_pts()` 供 overlay。
+- [x] 冒烟：`CursorSmear=yes` + d2d + trail/railgun exit 0。
 
 #### B3 HarfBuzz + OpenType shaping
 - 字体 blob：`IDWriteFontFace` → `hb_blob_create`（或 FreeType 后端，按包可用性定）。
@@ -80,10 +87,10 @@
 #### B4 分阶段落地（每步可编译可跑、独立 commit）
 1. [x] B1 纯文字 DWrite（仍与 GDI 合成）
 2. [x] B2 光标 + overlay 进 D2D（DCRenderTarget + 真 alpha）
-3. [ ] B2 文字进 D2D
+3. [x] B2 文字进 D2D
 4. [ ] B3 HarfBuzz 接入
 5. [ ] 图像层（WIC + D2D bitmap）迁移
-6. [ ] 默认 `RenderBackend=d2d`，GDI 仍可选
+6. [x] 默认 `RenderBackend=d2d`，GDI 仍可选
 
 #### B 验证
 - 每步 `make -C src` 零警告；中英/RTL/连字/emoji/sixel 冒烟；`FontRender` 与 `RenderBackend` 回退路径回归。

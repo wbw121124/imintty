@@ -868,6 +868,10 @@ void
 win_set_timer(void (*cb)(void), uint ticks)
 { SetTimer(wnd, (UINT_PTR)cb, ticks, null); }
 
+void
+win_kill_timer(void (*cb)(void))
+{ KillTimer(wnd, (UINT_PTR)cb); }
+
 static bool dynblur_on;
 static void win_update_blur(bool opaque);
 

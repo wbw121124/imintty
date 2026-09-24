@@ -15,6 +15,7 @@
 
 #include <winnls.h>
 #include <usp10.h>  // Uniscribe
+#include <math.h>
 
 
 #define dont_debug_bold 1
@@ -1214,6 +1215,7 @@ static HDC cursor_canvas_dc = 0;
 static HBITMAP cursor_canvas_bm = 0;
 static HBITMAP cursor_canvas_oldbm = 0;
 static int cursor_canvas_w = 0, cursor_canvas_h = 0;
+static BOOL (WINAPI *pAlphaBlend)(HDC, int, int, int, int, HDC, int, int, int, int, BLENDFUNCTION);
 
 bool
 win_scroll_capture(int top, int bot)
@@ -1340,13 +1342,22 @@ win_scroll_overlay(HDC target, int dy, int top, int bot)
 }
 
 /* Draw floating cursor overlay during smooth cursor motion (Phase 2)
-   and at the final cell during smooth scrolling (Phase 3). */
-static void
-draw_cursor_overlay(void)
+   and at the final cell during smooth scrolling (Phase 3).
+   Returns false if nothing was drawn (early exit). */
+static bool
+draw_cursor_overlay_to_dc(void)
 {
   if (!term.cursor_on || term.show_other_screen)
-    return;
+    return false;
   bool scroll_layer = term_scroll_anim_active();
+  /* Cell path owns the static body unless animate/separate/smear/scroll pin
+     it here; otherwise term_paint + overlay double-draw and blink flickers. */
+  bool own_body = scroll_layer || term.curs_animate || cfg.cursor_separate_canvas
+                  || (cfg.cursor_smear && term.curs_smear.inited);
+  bool have_fx = term.curs_particle_n > 0
+                 || (term.curs_trail_len > 0 && term.curs_animate);
+  if (!own_body && !have_fx)
+    return false;
   int cx = -1, cy = -1;
   if (scroll_layer) {
     /* Overlay only pins the cursor inside the scroll band; elsewhere
@@ -1354,14 +1365,20 @@ draw_cursor_overlay(void)
     cy = term.cursor_on && !term.show_other_screen
          ? term.curs.y - term.disptop : -1;
     if (cy < term.scroll_anim_top || cy >= term.scroll_anim_bot)
-      return;
+      return false;
   }
   else if (!term.curs_animate || cfg.smooth_cursor != ANIM_SMOOTH) {
-    /* Static cursor: draw at current cell position. */
+    /* Static body drawn by cell path when overlay does not own it. */
+    if (!own_body && !have_fx)
+      return false;
     cy = term.curs.y - term.disptop;
     cx = term.curs.x;
-    if (cy < 0 || cy >= term.rows || cx < 0 || cx >= term.cols)
-      return;
+    if (cy < 0 || cy >= term.rows || cx < 0 || cx >= term.cols) {
+      if (!have_fx)
+        return false;
+      /* particles use their own coords; skip body/trail only */
+      cx = cy = -1;
+    }
     /* fall through to draw static cursor below */
   }
 
@@ -1411,11 +1428,13 @@ draw_cursor_overlay(void)
   int w = cell_width;
   int h = cell_height;
   if (w <= 0 || h <= 0)
-    return;
+    return false;
 
-  /* Expand mode: vertical-only cosine ease-in-out, clamped to cell bounds */
+  /* Expand mode: vertical-only cosine ease-in-out, clamped to cell bounds.
+     Suppressed while CursorSmear owns the body geometry (except expand). */
   int expand = 0;
-  if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
+  if (!cfg.cursor_smear
+      && cfg.smooth_blink_cursor == ANIM_EXPAND
       && term_cursor_blinks()
       && term.has_focus)
     expand = term.cblink_expand;
@@ -1424,10 +1443,23 @@ draw_cursor_overlay(void)
   int uy = max(y, y - dy);        /* top clamped to cell top at worst */
   int by = min(y + h, y + h + dy); /* bottom clamped to cell bottom at worst */
 
+  /* Neovide smear: draw deformed quad from 4 corner springs instead of axis rect. */
+  float smear[8];
+  bool use_smear = !scroll_layer && term_curs_smear_pts(smear);
+
   /* RenderBackend=d2d: D2D shapes with true alpha (no blend_colour). */
   if (d2d_begin(dc)) {
     char ctype = term_cursor_type();
-    if (ctype == CUR_BLOCK)
+    if (!own_body) {
+      /* effects only; cell path already painted the body */
+    }
+    else if (use_smear) {
+      if (ctype == CUR_BOX)
+        d2d_stroke_polygon(smear, 4, cc, blink_a, 1.0f);
+      else
+        d2d_fill_polygon(smear, 4, cc, blink_a);
+    }
+    else if (ctype == CUR_BLOCK)
       d2d_fill_rect(x, uy, w, by - uy, cc, blink_a);
     else if (ctype == CUR_BOX)
       d2d_stroke_rect(x, uy, w, by - uy, cc, blink_a, 1.0f);
@@ -1464,13 +1496,60 @@ draw_cursor_overlay(void)
         }
       }
     }
+    /* particle trail inside the same D2D begin/end slice */
+    if (term.curs_particle_n > 0 && !scroll_layer) {
+      for (int i = 0; i < term.curs_particle_n; i++) {
+        float life = term.curs_particles[i].life;
+        if (life <= 0)
+          continue;
+        int pa = (int)(life * 255.0f);
+        if (pa < 8)
+          continue;
+        float px = term.curs_particles[i].x;
+        float py = term.curs_particles[i].y;
+        if (cfg.trail_mode == TRAIL_PIXIEDUST) {
+          float s = max(2.0f, w * 0.2f * life);
+          d2d_fill_rect(px, py, s, s, cc, pa);
+        }
+        else {
+          float r = max(2.0f, w * 0.5f * life);
+          d2d_fill_rect(px - r * 0.5f, py - r * 0.5f, r, r, cc, pa);
+        }
+      }
+    }
     d2d_end();
     (void)bg;
-    return;
+    return true;
   }
 
   cc = blend_colour(bg, cc, blink_a);
 
+  if (!own_body) {
+    /* effects only; body already painted by term_paint */
+  }
+  else if (use_smear) {
+    POINT pts[4];
+    for (int i = 0; i < 4; i++) {
+      pts[i].x = (LONG)lroundf(smear[i * 2]);
+      pts[i].y = (LONG)lroundf(smear[i * 2 + 1]);
+    }
+    if (term_cursor_type() == CUR_BOX) {
+      HPEN sp = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
+      HBRUSH sb = SelectObject(dc, GetStockObject(NULL_BRUSH));
+      Polygon(dc, pts, 4);
+      DeleteObject(SelectObject(dc, sb));
+      DeleteObject(SelectObject(dc, sp));
+    }
+    else {
+      HPEN sp = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
+      HBRUSH sb = SelectObject(dc, CreateSolidBrush(cc));
+      Polygon(dc, pts, 4);
+      DeleteObject(SelectObject(dc, sb));
+      DeleteObject(SelectObject(dc, sp));
+    }
+    /* particles still drawn below */
+  }
+  else {
   HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
   switch (term_cursor_type()) {
     when CUR_BLOCK: {
@@ -1499,6 +1578,7 @@ draw_cursor_overlay(void)
     }
   }
   DeleteObject(SelectObject(dc, oldpen));
+  }
 
   /* Neovide-style cursor trail: render ghost copies at decreasing alpha. */
   if (term.curs_trail_len > 0 && term.curs_animate && cfg.smooth_cursor == ANIM_SMOOTH
@@ -1540,10 +1620,66 @@ draw_cursor_overlay(void)
       DeleteObject(SelectObject(dc, tp));
     }
   }
+
+  /* Neovide-style particle trail (TrailMode railgun/torpedo/pixiedust). */
+  if (term.curs_particle_n > 0 && !scroll_layer) {
+    colour pcc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
+    int d2d = d2d_begin(dc);
+    for (int i = 0; i < term.curs_particle_n; i++) {
+      float life = term.curs_particles[i].life;
+      if (life <= 0)
+        continue;
+      int pa = (int)(life * 255.0f);
+      if (pa < 8)
+        continue;
+      float px = term.curs_particles[i].x;
+      float py = term.curs_particles[i].y;
+      if (cfg.trail_mode == TRAIL_PIXIEDUST) {
+        float s = max(2.0f, w * 0.2f * life);
+        if (d2d)
+          d2d_fill_rect(px, py, s, s, pcc, pa);
+        else {
+          colour g = blend_colour(bg, pcc, pa);
+          HBRUSH pb = SelectObject(dc, CreateSolidBrush(g));
+          Rectangle(dc, (int)px, (int)py, (int)(px + s), (int)(py + s));
+          DeleteObject(SelectObject(dc, pb));
+        }
+      }
+      else {
+        // railgun / torpedo: shrinking oval-ish blob
+        float r = max(2.0f, w * 0.5f * life);
+        if (d2d) {
+          d2d_fill_rect(px - r * 0.5f, py - r * 0.5f, r, r, pcc, pa);
+        }
+        else {
+          colour g = blend_colour(bg, pcc, pa);
+          HBRUSH pb = SelectObject(dc, CreateSolidBrush(g));
+          int ir = (int)r;
+          Ellipse(dc, (int)px - ir / 2, (int)py - ir / 2,
+                  (int)px + ir / 2, (int)py + ir / 2);
+          DeleteObject(SelectObject(dc, pb));
+        }
+      }
+    }
+    if (d2d)
+      d2d_end();
+  }
+  return true;
+}
+
+/* Compatibility wrapper for the non-canvas call site. */
+static void
+draw_cursor_overlay(void)
+{
+  draw_cursor_overlay_to_dc();
 }
 
 /* Separate cursor canvas (Neovide-style): clear & redraw cursor layer each frame,
- * then composite onto screen. Prevents cursor smear without redrawing content. */
+ * then composite onto screen. Prevents cursor smear without redrawing content.
+ * Canvas is a 32bpp premultiplied-free DIB with alpha=0; composite via AlphaBlend
+ * so the terminal content underneath is not covered by an opaque fill (Phase A1). */
+static bool draw_cursor_overlay_to_dc(void);
+
 static void
 draw_cursor_to_canvas(HDC screen_dc)
 {
@@ -1553,27 +1689,59 @@ draw_cursor_to_canvas(HDC screen_dc)
   if (w <= 0 || h <= 0)
     return;
 
-  /* Create or resize cursor canvas */
+  /* Create or resize cursor canvas as a 32bpp top-down DIBSection */
   if (!cursor_canvas_dc
       || cursor_canvas_w != w || cursor_canvas_h != h) {
     if (cursor_canvas_dc) {
       SelectObject(cursor_canvas_dc, cursor_canvas_oldbm);
       DeleteObject(cursor_canvas_bm);
       DeleteDC(cursor_canvas_dc);
+      cursor_canvas_dc = 0;
+      cursor_canvas_bm = 0;
+    }
+    BITMAPINFO bmi;
+    memset(&bmi, 0, sizeof bmi);
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = w;
+    bmi.bmiHeader.biHeight = -h;  // top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    void * bits = 0;
+    cursor_canvas_bm = CreateDIBSection(screen_dc, &bmi, DIB_RGB_COLORS,
+                                        &bits, 0, 0);
+    if (!cursor_canvas_bm || !bits) {
+      if (cursor_canvas_bm)
+        DeleteObject(cursor_canvas_bm);
+      cursor_canvas_bm = 0;
+      return;
     }
     cursor_canvas_dc = CreateCompatibleDC(screen_dc);
-    cursor_canvas_bm = CreateCompatibleBitmap(screen_dc, w, h);
+    if (!cursor_canvas_dc) {
+      DeleteObject(cursor_canvas_bm);
+      cursor_canvas_bm = 0;
+      return;
+    }
     cursor_canvas_oldbm = SelectObject(cursor_canvas_dc, cursor_canvas_bm);
     cursor_canvas_w = w;
     cursor_canvas_h = h;
   }
-  /* Clear cursor canvas to terminal background (not black) */
-  colour bg = win_get_colour(BG_COLOUR_I);
-  HBRUSH clr = CreateSolidBrush(RGB(GetRValue(bg), GetGValue(bg), GetBValue(bg)));
-  HBRUSH old_brush = SelectObject(cursor_canvas_dc, clr);
-  Rectangle(cursor_canvas_dc, 0, 0, w, h);
-  SelectObject(cursor_canvas_dc, old_brush);
-  DeleteObject(clr);
+
+  /* Clear to fully transparent (alpha=0) — no opaque Rectangle(bg). */
+  {
+    BITMAP bm;
+    if (GetObject(cursor_canvas_bm, sizeof bm, &bm) && bm.bmBits) {
+      memset(bm.bmBits, 0, (size_t)bm.bmWidthBytes * (size_t)h);
+    }
+    else {
+      // Fallback: GDI fill black (alpha still 0 from DIB create on first use).
+      HBRUSH clr = CreateSolidBrush(RGB(0, 0, 0));
+      HBRUSH old_brush = SelectObject(cursor_canvas_dc, clr);
+      PatBlt(cursor_canvas_dc, 0, 0, w, h, BLACKNESS);
+      SelectObject(cursor_canvas_dc, old_brush);
+      DeleteObject(clr);
+    }
+  }
 
   /* Save world transform and set identity for cursor drawing */
   XFORM saved_xf;
@@ -1585,15 +1753,50 @@ draw_cursor_to_canvas(HDC screen_dc)
   /* Temporarily redirect dc to cursor canvas for overlay drawing */
   HDC old_dc = dc;
   dc = cursor_canvas_dc;
-  draw_cursor_overlay();
+  bool drew = draw_cursor_overlay_to_dc();
   dc = old_dc;
 
   /* Restore transform */
   if (has_xf)
     SetWorldTransform(cursor_canvas_dc, &saved_xf);
 
-  /* Composite cursor layer onto screen */
-  BitBlt(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, SRCCOPY);
+  /* Overlay returned early with nothing drawn: skip composite (avoid covering text). */
+  if (!drew)
+    return;
+
+  /* Composite cursor layer onto screen with per-pixel alpha (AC_SRC_ALPHA).
+     GDI-only draws leave alpha=0; force opaque alpha for non-zero pixels first. */
+  {
+    BITMAP bm;
+    if (GetObject(cursor_canvas_bm, sizeof bm, &bm) && bm.bmBits) {
+      unsigned char * p = bm.bmBits;
+      int stride = bm.bmWidthBytes;
+      for (int yy = 0; yy < h; yy++) {
+        unsigned char * row = p + (size_t)yy * stride;
+        for (int xx = 0; xx < w; xx++) {
+          unsigned char * px = row + xx * 4;
+          if (px[0] | px[1] | px[2])
+            px[3] = 255;
+        }
+      }
+    }
+  }
+
+  if (!pAlphaBlend) {
+    pAlphaBlend = load_library_func("msimg32.dll", "AlphaBlend");
+  }
+  if (pAlphaBlend) {
+    BLENDFUNCTION bf = {
+      .BlendOp = AC_SRC_OVER,
+      .BlendFlags = 0,
+      .SourceConstantAlpha = 255,
+      .AlphaFormat = AC_SRC_ALPHA
+    };
+    pAlphaBlend(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, w, h, bf);
+  }
+  else {
+    BitBlt(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, SRCCOPY);
+  }
 }
 
 #define dont_debug_cursor 1
@@ -1951,10 +2154,8 @@ do_update(void)
   printf("do_update cursor_on %d @%d,%d\n", term.cursor_on, term.curs.y, term.curs.x);
 #endif
   //printf("do_update state %d susp %d\n", update_state, term.suspend_update);
-  if (update_state == UPDATE_BLOCKED) {
-    update_state = UPDATE_IDLE;
-    return;
-  }
+  if (update_state == UPDATE_BLOCKED)
+    return;  // re-entrant call while painting; outer pass owns state
 
   update_skipped++;
   int output_speed = lines_scrolled / (term.rows ?: cfg.rows);
@@ -2091,7 +2292,9 @@ do_update(void)
     }
   }
 
-  // Schedule next update.
+  // Schedule next update; clear BLOCKED so the timer chain survives (A2).
+  if (update_state == UPDATE_BLOCKED)
+    update_state = UPDATE_IDLE;
   win_set_timer(do_update, update_timer);
 }
 
@@ -2307,7 +2510,7 @@ static int alpha = -1;
 static LONG w = 0, h = 0;
 static HBRUSH bgbrush_bmp = 0;
 
-static BOOL (WINAPI *pAlphaBlend)(HDC, int, int, int, int, HDC, int, int, int, int, BLENDFUNCTION) = 0;
+// pAlphaBlend is declared near the cursor canvas (A1) above.
 
 static HBITMAP
 alpha_blend_bg(int alpha, HDC dc, HBITMAP hbm, int bw, int bh, colour bg)
@@ -5212,7 +5415,8 @@ skip_drawing:;
     printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
 #endif
     int expand = 0;
-    if ((cfg.smooth_blink_cursor == ANIM_EXPAND || cfg.control_cursor_tail)
+    if (!cfg.cursor_smear
+        && cfg.smooth_blink_cursor == ANIM_EXPAND
         && term_cursor_blinks()
         && term.has_focus)
       expand = term.cblink_expand;

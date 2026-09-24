@@ -540,7 +540,7 @@ msgstr "滚动行数"
 
 #: config.c:4615
 msgid "光标拖尾"
-msgstr ""
+msgstr "光标拖尾"
 
 #: config.c:4620
 msgid "Cursor trail"
@@ -549,6 +549,36 @@ msgstr "光标拖尾"
 #: config.c:4624
 msgid "Short skip"
 msgstr "短距跳过"
+
+#. __ Options - CursorTrail: enable cursor trail
+#: config.c:4690
+msgid "启用光标拖尾"
+msgstr "启用光标拖尾"
+
+#. __ Options - CursorTrail: Neovide-style trail segment count
+#: config.c:4695
+msgid "拖尾段数"
+msgstr "拖尾段数"
+
+#. __ Options - CursorTrail: skip animation for short moves
+#: config.c:4700
+msgid "短距跳过"
+msgstr "短距跳过"
+
+#. __ Options - CursorTrail: particle trail mode
+#: config.c:4705
+msgid "拖尾模式"
+msgstr "拖尾模式"
+
+#. __ Options - CursorTrail: trail mode none
+#: config.c:4708
+msgid "无"
+msgstr "无"
+
+#. __ Options - Animation: Neovide smear (corner-lag) cursor body
+#: config.c:4691
+msgid "涂抹动画"
+msgstr "涂抹动画"
 
 #. __ Options - Text: treeview label
 #: config.c:4632 config.c:4657 config.c:4672 config.c:4721 config.c:4771

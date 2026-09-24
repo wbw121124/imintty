@@ -3682,8 +3682,12 @@ do_csi(uchar c)
         term.cursor_type = arg0 ? (arg0 - 1) / 2 : -1;
         term.cursor_blinks = arg0 ? arg0 % 2 : -1;
       }
-      if (term.cursor_blinks)
+      if (term.cursor_blinks) {
+        /* Clamp absurd DECSCUSR intervals; 0 keeps the configured default. */
+        if (arg1 > 0 && arg1 < 100)
+          arg1 = 100;
         term.cursor_blink_interval = arg1;
+      }
       term.cursor_invalid = true;
       term_schedule_cblink();
     when CPAIR('?', 'c'):  /* Cursor size (Linux console) */

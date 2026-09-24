@@ -1348,8 +1348,8 @@ draw_cursor_overlay(void)
   if (scroll_layer) {
     /* Overlay only pins the cursor inside the scroll band; elsewhere
        term_paint already applied TATTR_ACTCURS/PASCURS. */
-    int cy = term.cursor_on && !term.show_other_screen
-             ? term.curs.y - term.disptop : -1;
+    cy = term.cursor_on && !term.show_other_screen
+         ? term.curs.y - term.disptop : -1;
     if (cy < term.scroll_anim_top || cy >= term.scroll_anim_bot)
       return;
   }

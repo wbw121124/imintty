@@ -16,7 +16,7 @@ extern void setup_config_box(controlbox *);
 
 #include <commctrl.h>
 
-//# define debug_dialog_crash
+# define debug_dialog_crash
 
 #ifdef debug_dialog_crash
 #include <signal.h>
@@ -734,18 +734,21 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
     when WM_NOTIFY: {
       if (LOWORD(wParam) == IDCX_TREEVIEW &&
           ((LPNMHDR) lParam)->code == TVN_SELCHANGED) {
-        debug("WM_NOTIFY");
+        debug("WN01");
         HTREEITEM i = TreeView_GetSelection(((LPNMHDR) lParam)->hwndFrom);
-        if (!i)
+        if (!i) { debug("WN02");
           return 0;
-        debug("WM_NOTIFY: GetSelection");
+        }
+        debug("WN03");
 
         TVITEM item;
         item.hItem = i;
         item.mask = TVIF_PARAM;
         (void)TreeView_GetItem(((LPNMHDR) lParam)->hwndFrom, &item);
-        if (!item.lParam)
+        debug("WN04");
+        if (!item.lParam) { debug("WN05");
           return 0;
+        }
 
         /* Destroy all controls in the currently visible panel. */
         for (winctrl *c = ctrls_panel.first; c; c = c->next) {
@@ -755,19 +758,21 @@ config_dialog_proc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
               DestroyWindow(item);
           }
         }
-        debug("WM_NOTIFY: Destroy");
+        debug("WN06");
         winctrl_cleanup(&ctrls_panel);
-        debug("WM_NOTIFY: cleanup");
+        debug("WN07");
 
         // lay out the new panel at the top (no vertical scrollbar)
+        debug("WN08");
         (void)create_controls(wnd, (char *) item.lParam);
+        debug("WN09");
         update_panel_visibility(wnd);
         // invalidate so next paint cycle clears any residual pixels
         RECT clipr = panel_clip(wnd);
         InvalidateRect(wnd, &clipr, false);
-        debug("WM_NOTIFY: create");
+        debug("WN10");
         dlg_refresh(null); /* set up control values */
-        debug("WM_NOTIFY: refresh");
+        debug("WN11");
       }
     }
 

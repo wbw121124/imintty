@@ -135,7 +135,8 @@ ifneq ($(platform), msys)
   emojilib = -lGdiPlus
   scriptlib += -lDWrite
 endif
-extralibs=$(scriptlib) $(downldlib) $(emojilib) -lshlwapi
+lualib=-llua
+extralibs=$(scriptlib) $(downldlib) $(emojilib) $(lualib) -lshlwapi
 LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
 LDLIBS := -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid -lmpr
 

@@ -89,4 +89,9 @@
 	AW+KP_Left:tab-left;AW+KP_Right:tab-right;\
 	A+F12:'🤓';AC+F12:`echo -n $( date )`;
 
+# load a Lua script after this config file (POSIX, Windows, or long paths).
+# The script may use imintty.set / get / rc / on / command / key / expand_path.
+#LuaConfig=~/.config/imintty/init.lua
+#LuaConfig=C:\Users\me\.config\imintty\init.lua
+
 #############################################################################

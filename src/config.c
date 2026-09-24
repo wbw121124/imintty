@@ -69,6 +69,7 @@ const config default_cfg = {
   .theme_file = W(""),
   .dark_theme = W(""),
   .background = W(""),
+  .lua_config = W(""),
   .colour_scheme = "",
   .transparency = 0,
   .blurred = false,
@@ -405,6 +406,7 @@ options[] = {
   {"ThemeFile", OPT_WSTRING, offcfg(theme_file)},
   {"ThemeDark", OPT_WSTRING, offcfg(dark_theme)},
   {"Background", OPT_WSTRING, offcfg(background)},
+  {"LuaConfig", OPT_WSTRING, offcfg(lua_config)},
   {"ColourScheme", OPT_STRING, offcfg(colour_scheme)},
   {"Transparency", OPT_TRANS, offcfg(transparency)},
 #ifdef support_blurred
@@ -1255,6 +1257,62 @@ void
 set_arg_option(string name, string val)
 {
   check_arg_option(set_option(name, val, false));
+}
+
+bool
+config_set_option(string name, string val)
+{
+  if (!name || !val)
+    return false;
+  char *v = strdup(val);
+  int i = set_option(name, v, true);  // UTF-8 parameters
+  free(v);
+  return i >= 0;
+}
+
+char *
+config_get_option(string name)
+{
+  if (!name)
+    return 0;
+  for (uint i = 0; i < lengthof(options); i++) {
+    if (strcasecmp(name, options[i].name))
+      continue;
+    void *val_p = (void *)&cfg + options[i].offset;
+    uint type = options[i].type & OPT_TYPE_MASK;
+    switch (type) {
+      when OPT_STRING:
+        return strdup(*(string *)val_p ?: "");
+      when OPT_WSTRING: {
+        wstring ws = *(wstring *)val_p;
+        return ws ? cs__wcstoutf(ws) : strdup("");
+      }
+      when OPT_INT:
+        return asform("%d", *(int *)val_p);
+      when OPT_BOOL:
+        return strdup(*(bool *)val_p ? "yes" : "no");
+      when OPT_COLOUR: {
+        colour c = *(colour *)val_p;
+        return asform("#%02x%02x%02x", red(c), green(c), blue(c));
+      }
+      when OPT_COLOUR_PAIR: {
+        colour_pair *pair = val_p;
+        return asform("#%02x%02x%02x;#%02x%02x%02x",
+                      red(pair->fg), green(pair->fg), blue(pair->fg),
+                      red(pair->bg), green(pair->bg), blue(pair->bg));
+      }
+      otherwise: {
+        if (type < lengthof(opt_vals) && opt_vals[type]) {
+          char v = *(char *)val_p;
+          for (opt_val *o = opt_vals[type]; o->name; o++)
+            if (o->val == v)
+              return strdup(o->name);
+        }
+        return asform("%d", *(char *)val_p);
+      }
+    }
+  }
+  return 0;
 }
 
 void

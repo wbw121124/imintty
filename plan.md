@@ -23,20 +23,26 @@
   - 超长路径：`\\?\` 前缀规范化（读写前统一加/剥策略）
 - 加载时机：`load_config` 读完 rc 后求值；主题切换 / Options Apply 可重入；错误 pcall + 初始化期报告。
 
-#### C2 嵌入与 API（Lua 5.4 静态链接）
-- `LICENSE.bundling` 增加 Lua 许可条目；Makefile 链接 `-llua` 或内置子树（按 MSYS2 包可用性定）。
+#### C2 嵌入与 API（MSYS2 Lua 5.5，`-llua` 动态链接）
+- `LICENSE.bundling` 已增加 Lua 许可条目；Makefile `lualib=-llua`（系统包 `lua 5.5.x`，`msys-lua-5.5.dll` 运行时）。
 - 首期完整 API：
   - `imintty.set(key, value)` / `get(key)` — 走 `set_option` 同一类型系统（只进内存 `cfg`，不回写 rc）
   - `imintty.rc(path)` — 读取子 rc/theme（复用 `load_config`）
   - `imintty.on(event, fn)` — 钩子：`config_loaded`、`bell`、`command`（逐步扩展）
   - `imintty.command(name, fn)` — 注册命令（对接 UserCommands 分发）
   - `imintty.key(keyspec, action)` — 键绑定（对接 KeyFunctions）
-  - 受控 `io`/`os`（路径经 helper；`os.execute` 默认禁用）
-- GUI：选项对话框展示 `LuaConfig` 路径 + “重新加载 Lua”（可选）。
+  - `imintty.expand_path(path)` / `imintty.home` — 路径与家目录
+  - 标准库全开（`luaL_openlibs`：io/os/string/table/…）；完整脚本 API，不额外禁用 `os.execute`
+- 加载：`finish_config()` 后 `winlua_init` → `winlua_load_config` → `fire("config_loaded")`；`win_reconfig` 检测 `LuaConfig` 变更则 `winlua_reload`；`exit_imintty` → `winlua_shutdown`。
+- 事件：`config_loaded`、`bell`；命令：`KeyFunctions`/`UserCommands` 未命中内置名时查 `imintty.command`。
+- GUI：选项对话框展示 `LuaConfig` 路径 + “重新加载 Lua”（可选，未做）。
 - 改动不回写 `.iminttyrc`（函数/表无法序列化为 `name=value`）。
 
 #### C3 验证
-- `make -C src` 零警告；冒烟：`LuaConfig` 指向示例 `init.lua`，`set` 生效、错误脚本不崩溃。
+- [x] `make -C src` 零警告（`-Werror`）
+- [x] 冒烟：`LuaConfig=~/.config/imintty/init.lua`，`config_loaded` 中 `set("Rows","24")` → stderr `lua ok rows=24`，exit 0
+- [x] 坏脚本 `error(` → 报告 `unexpected symbol`，exit 0 不崩溃
+- [ ] GUI 选项框 LuaConfig 路径 + 重新加载按钮（可选）
 
 ---
 

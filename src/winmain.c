@@ -24,6 +24,7 @@ char * imintty_debug;
 #include "charset.h"
 #include "tek.h"
 #include "print.h"  // list_printers
+#include "winlua.h"
 
 #include <locale.h>
 #include <getopt.h>
@@ -3355,6 +3356,7 @@ do_win_bell(config * conf, bool margin_bell)
 void
 win_bell(config * conf)
 {
+  winlua_fire("bell");
   do_win_bell(conf, false);
 }
 
@@ -3993,6 +3995,7 @@ win_reconfig(void)
     new_cfg.font_smoothing != cfg.font_smoothing;
 
   bool emojistyle_changed = new_cfg.emojis != cfg.emojis;
+  bool lua_changed = wcscmp(new_cfg.lua_config, cfg.lua_config) != 0;
 
   if (new_cfg.fg_colour != cfg.fg_colour)
     win_set_colour(FG_COLOUR_I, new_cfg.fg_colour);
@@ -4012,6 +4015,9 @@ win_reconfig(void)
   }
 
   font_cs_reconfig(font_changed);
+
+  if (lua_changed && winlua_active())
+    winlua_reload();
 }
 
 static bool
@@ -6138,6 +6144,7 @@ report_pos(void)
 void
 exit_imintty(void)
 {
+  winlua_shutdown();
   child_close_log();
 
   report_pos();
@@ -7686,6 +7693,10 @@ static int dynfonts = 0;
   }
 
   finish_config();
+
+  winlua_init();
+  winlua_load_config();
+  winlua_fire("config_loaded");
 
   int term_rows = cfg.rows;
   int term_cols = cfg.cols;

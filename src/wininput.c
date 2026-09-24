@@ -9,6 +9,7 @@
 #include "charset.h"
 #include "child.h"
 #include "tek.h"
+#include "winlua.h"
 
 #include <math.h>
 #include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
@@ -2333,8 +2334,11 @@ pick_key_function(wstring key_commands, char * tag, int n, uint key, mod_keys mo
           // should we trigger ret = false if (fudef->fct_key == kb_select)
           // so the case can be handled further in win_key_down ?
         }
+        else if (winlua_call_command(paramp)) {
+          ret = true;
+        }
         else {
-          // invalid definition (e.g. "A+Enter:foo;"), shall 
+          // invalid definition (e.g. "A+Enter:foo;"), shall
           // not cause any action (return true) but provide a feedback
           win_bell(&cfg);
           ret = true;

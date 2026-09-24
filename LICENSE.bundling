@@ -18,7 +18,14 @@ in a window environment.
 slightly differently.)
 
 License declaration:
-Inclusion of imintty in a bundle does not cause the GPL license to 
-apply to the other parts of the bundle, with the exception of section 11, 
+Inclusion of imintty in a bundle does not cause the GPL license to
+apply to the other parts of the bundle, with the exception of section 11,
 the patents clause.
+
+
+Third-party components
+
+Lua (https://www.lua.org/) may be linked for optional LuaConfig scripting.
+Lua is distributed under the terms of the MIT license
+(https://www.lua.org/license.html).
 

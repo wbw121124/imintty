@@ -72,6 +72,7 @@ typedef struct {
   wstring theme_file;
   wstring dark_theme;
   wstring background;
+  wstring lua_config;
   string colour_scheme;
   char transparency;
   bool blurred;
@@ -323,6 +324,8 @@ extern void handle_file_resources(wstring pattern, str_fn fnh);
 extern void load_scheme(string colour_scheme);
 extern void set_arg_option(string name, string val);
 extern void parse_arg_option(string);
+extern bool config_set_option(string name, string val);
+extern char * config_get_option(string name);
 extern void remember_arg(string);
 extern void finish_config(void);
 extern void copy_config(char * tag, config * dst, const config * src);

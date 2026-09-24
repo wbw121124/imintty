@@ -470,8 +470,10 @@ cblink_phase_cb(void)
   win_set_timer(cblink_phase_cb, 20);
 }
 
-/* Expand mode: cosine ease-in-out ping-pong 0..255 drives cursor geometry.
- * Vertical-only expansion, clamped to cell boundaries (no overflow). */
+/* Expand mode: VSCode CSS keyframes with animation-direction:alternate.
+ * @keyframes expand { 0%,20% { transform:scaleY(0); } 80%,100% { transform:scaleY(1); } }
+ * animation: expand 0.5s ease-in-out infinite alternate;
+ * Full alternate period is 1s; scaleY origin is the cell vertical midpoint. */
 static void
 cblink_expand_cb(void)
 {
@@ -480,7 +482,7 @@ cblink_expand_cb(void)
       || !term.cursor_on || term.show_other_screen) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
-    term.cblink_expand = 0;
+    term.cblink_expand = 255;   /* rest state = full cell (scaleY 1) */
     term.cursor_invalid = true;
     int dys = term.curs.y - term.disptop;
     term_invalidate(term.curs.x - 1, dys - 1,
@@ -488,27 +490,28 @@ cblink_expand_cb(void)
     win_update_cursor();
     return;
   }
-  /* VSCode-style expand: hold scaleY(1) for 20%, ease-out to scaleY(0) for
-   * the next 60%, hold at 0 for the final 20%. Uses piecewise cosine so
-   * the transition is properly asymmetric (vs a full symmetric cos cycle). */
-  term.cblink_phase += 18.0;  /* 360° / 25 ticks = 500ms full cycle at 20ms tick */
+  /* 20ms tick, 50 ticks = 1000ms alternate cycle → 7.2° per tick. */
+  term.cblink_phase += 7.2;
   if (term.cblink_phase >= 360.0)
     term.cblink_phase -= 360.0;
   double p = term.cblink_phase;
-  if (p < 72.0) {
-    /* 0..20%: hold at 1.0 */
-    term.cblink_expand = 255;
-  } else if (p < 288.0) {
-    /* 20..80%: ease-in-out from 1.0 down to 0.0 */
-    double t = (p - 72.0) / 216.0;  /* 0..1 over the transition window */
+  /* First half: forward 0→1; second half: alternate reverse 1→0. */
+  bool reverse = p >= 180.0;
+  double local = reverse ? (p - 180.0) / 180.0 : p / 180.0;
+  double scale;
+  if (local < 0.20)
+    scale = reverse ? 1.0 : 0.0;
+  else if (local < 0.80) {
+    double t = (local - 0.20) / 0.60;
+    /* CSS ease-in-out ≈ cubic-bezier(0.42,0,0.58,1) */
     double c = t < 0.5
-      ? 4.0 * t * t * t                         /* ease-in */
-      : 1.0 - pow(-2.0 * t + 2.0, 3.0) / 2.0;   /* ease-out */
-    term.cblink_expand = (int)(255.0 * (1.0 - c));
-  } else {
-    /* 80..100%: hold at 0 */
-    term.cblink_expand = 0;
+      ? 4.0 * t * t * t
+      : 1.0 - pow(-2.0 * t + 2.0, 3.0) / 2.0;
+    scale = reverse ? 1.0 - c : c;
   }
+  else
+    scale = reverse ? 0.0 : 1.0;
+  term.cblink_expand = (int)(255.0 * scale + 0.5);
   term.cblink_alpha = 255;
   term.cblinker = 1;
   term.cursor_invalid = true;
@@ -527,14 +530,12 @@ cblink_cb(void)
   if (cfg.smooth_blink_cursor == ANIM_NONE) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
-    term.cblink_expand = 0;
+    term.cblink_expand = 255;
+    win_kill_timer(cblink_cb);
     win_kill_timer(cblink_fade_cb);
     win_kill_timer(cblink_phase_cb);
     win_kill_timer(cblink_expand_cb);
     fade_cblink.active = false;
-    term.cursor_invalid = true;
-    win_update_cursor();
-    return;
   }
   if (cfg.smooth_blink_cursor == ANIM_PHASE
       && term_cursor_blinks() && term.has_focus) {
@@ -570,12 +571,15 @@ term_schedule_cblink(void)
   if (cfg.smooth_blink_cursor == ANIM_NONE) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
-    term.cblink_expand = 0;
+    term.cblink_expand = 255;
     win_kill_timer(cblink_cb);
     win_kill_timer(cblink_fade_cb);
     win_kill_timer(cblink_phase_cb);
     win_kill_timer(cblink_expand_cb);
     fade_cblink.active = false;
+    term.cursor_invalid = true;
+    win_update_cursor();
+    return;
   }
   else if ((cfg.smooth_blink_cursor == ANIM_PHASE
             || cfg.smooth_blink_cursor == ANIM_EXPAND
@@ -586,7 +590,7 @@ term_schedule_cblink(void)
   else {
     term.cblinker = 1;  /* reset when not in use */
     term.cblink_alpha = 255;
-    term.cblink_expand = 0;
+    term.cblink_expand = 255;
     win_kill_timer(cblink_cb);
     win_kill_timer(cblink_fade_cb);
     win_kill_timer(cblink_phase_cb);
@@ -1645,7 +1649,7 @@ term_reconfig(void)
       || new_cfg.smooth_blink_attr == ANIM_NONE) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
-    term.cblink_expand = 0;
+    term.cblink_expand = 255;
     term.tblinker = 0;
     term.tblink_alpha = 255;
     term.tblink_expand = 0;
@@ -1655,7 +1659,7 @@ term_reconfig(void)
   if (new_cfg.smooth_blink_cursor != cfg.smooth_blink_cursor) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
-    term.cblink_expand = 0;
+    term.cblink_expand = 255;
     win_kill_timer(cblink_cb);
     win_kill_timer(cblink_fade_cb);
     win_kill_timer(cblink_phase_cb);

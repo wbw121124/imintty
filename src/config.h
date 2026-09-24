@@ -110,6 +110,7 @@ typedef struct {
    bool control_cursor_tail; // enable cursor trail (Neovide-style expand)
    char trail_mode;           // TRAIL_*: railgun / torpedo / pixiedust particle style
    bool cursor_smear;         // smear-cursor.nvim/Neovide: 4-corner lag body
+   bool cursor_invert;        // block cursor: reverse-video the covered cell
    bool cursor_separate_canvas; // separate cursor canvas, clear & redraw each frame
    char smooth_scroll;        // ANIM_*: scroll motion
    int smooth_scroll_duration;

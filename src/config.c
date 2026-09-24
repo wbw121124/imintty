@@ -18,6 +18,7 @@
 
 #include <windows.h>  // registry handling
 #include "winpriv.h"  // support_wsl, load_library_func
+#include "winlua.h"   // winlua_reload
 
 #include <termios.h>
 #ifdef __CYGWIN__
@@ -114,6 +115,7 @@ const config default_cfg = {
     .control_cursor_tail = false,
     .trail_mode = TRAIL_NONE,
     .cursor_smear = false,
+    .cursor_invert = false,
     .cursor_separate_canvas = false,
    .smooth_scroll = ANIM_SMOOTH,
   .smooth_scroll_duration = 100,
@@ -448,6 +450,7 @@ options[] = {
      {"ControlCursorTail", OPT_BOOL, offcfg(control_cursor_tail)},
      {"TrailMode", OPT_TRAILMODE, offcfg(trail_mode)},
      {"CursorSmear", OPT_BOOL, offcfg(cursor_smear)},
+     {"CursorInvert", OPT_BOOL, offcfg(cursor_invert)},
      {"CursorSeparateCanvas", OPT_BOOL, offcfg(cursor_separate_canvas)},
   {"SmoothScroll", OPT_ANIM, offcfg(smooth_scroll)},
   {"SmoothScrollDuration", OPT_INT, offcfg(smooth_scroll_duration)},
@@ -2394,6 +2397,16 @@ about_handler(control *unused(ctrl), int event)
 {
   if (event == EVENT_ACTION)
     win_show_about();
+}
+
+static void
+lua_reload_handler(control *unused(ctrl), int event)
+{
+  if (event == EVENT_ACTION) {
+    /* Commit any pending LuaConfig path change, then reload the script. */
+    apply_config(false);
+    winlua_reload();
+  }
 }
 
 
@@ -4614,6 +4627,11 @@ setup_config_box(controlbox * b)
     s, _("&Separate cursor canvas"),
     dlg_stdcheckbox_handler, &new_cfg.cursor_separate_canvas
   );
+  ctrl_checkbox(
+    //__ Options - Looks: block cursor reverse-video (invert covered cell)
+    s, _("&Invert (reverse video)"),
+    dlg_stdcheckbox_handler, &new_cfg.cursor_invert
+  );
 
   //__ Options - Animation: treeview label
   s = ctrl_new_set(b, _("Animation"),
@@ -4976,6 +4994,13 @@ setup_config_box(controlbox * b)
     _("Direct&2D"), RB_D2D,
     null
   );
+  ctrl_columns(s, 1, 100);
+  ctrl_columns(s, 2, 70, 30);
+  ctrl_editbox(
+    //__ Options - Text: OpenType features for FontRender=dwrite (e.g. ss01,zero,calt)
+    s, _("Font features"), 100, dlg_stdstringbox_handler, &new_cfg.font_features
+  )->column = 0;
+  ctrl_columns(s, 1, 100);
 
   /*
    * The Keys panel.
@@ -5550,6 +5575,20 @@ setup_config_box(controlbox * b)
     //__ Options - Terminal: bell
     s, _("&Popup"), dlg_stdcheckbox_handler, &new_cfg.bell_popup
   )->column = 2;
+
+  s = ctrl_new_set(b, _("Terminal"), null, 
+  //__ Options - Terminal: section title
+                      _("Lua config"));
+  ctrl_columns(s, 2, 70, 30);
+  ctrl_editbox(
+    //__ Options - Terminal: path to Lua config script
+    s, _("LuaConfig"), 100, dlg_stdstringbox_handler, &new_cfg.lua_config
+  )->column = 0;
+  ctrl_pushbutton(
+    //__ Options - Terminal: reload Lua config script
+    s, _("► &Reload"), lua_reload_handler, 0
+  )->column = 1;
+  ctrl_columns(s, 1, 100);
 
   s = ctrl_new_set(b, _("Terminal"), null, 
   //__ Options - Terminal: section title

@@ -1350,10 +1350,20 @@ draw_cursor_overlay_to_dc(void)
   if (!term.cursor_on || term.show_other_screen)
     return false;
   bool scroll_layer = term_scroll_anim_active();
+  /* Expand mode always owns the body so scaleY can animate the block. */
+  bool expand_mode = cfg.smooth_blink_cursor == ANIM_EXPAND
+                     && term_cursor_blinks() && term.has_focus
+                     && !cfg.cursor_invert;
   /* Cell path owns the static body unless animate/separate/smear-moving/scroll pin
      it here; otherwise term_paint + overlay double-draw and blink flickers. */
   bool own_body = scroll_layer || term.curs_animate || cfg.cursor_separate_canvas
-                  || (cfg.cursor_smear && term.curs_smear.moving);
+                  || (cfg.cursor_smear && term.curs_smear.moving)
+                  || expand_mode;
+  /* Invert: cell path already reverse-video'd the covered cell; no solid body. */
+  if (cfg.cursor_invert && !scroll_layer && !term.curs_animate
+      && !cfg.cursor_separate_canvas
+      && !(cfg.cursor_smear && term.curs_smear.moving))
+    own_body = false;
   bool have_fx = term.curs_particle_n > 0
                  || (term.curs_trail_len > 0 && term.curs_animate);
   if (!own_body && !have_fx)
@@ -1430,22 +1440,25 @@ draw_cursor_overlay_to_dc(void)
   if (w <= 0 || h <= 0)
     return false;
 
-  /* Expand mode: vertical-only cosine ease-in-out, clamped to cell bounds.
-     Suppressed while CursorSmear owns the body geometry (except expand). */
+  /* VSCode-style expand: scaleY around cell vertical center, 0..255 → height 0..h. */
   int expand = 0;
-  if (!cfg.cursor_smear
-      && cfg.smooth_blink_cursor == ANIM_EXPAND
-      && term_cursor_blinks()
-      && term.has_focus)
+  if (expand_mode)
     expand = term.cblink_expand;
-  /* dx = 0: no horizontal expansion; dy = expand*h/512 max h/2 (clamped below) */
-  int dy = expand * h / 512;
-  int uy = max(y, y - dy);        /* top clamped to cell top at worst */
-  int by = min(y + h, y + h + dy); /* bottom clamped to cell bottom at worst */
+  int drawn_h = h * expand / 255;
+  int uy = y + (h - drawn_h) / 2;
+  int by = uy + drawn_h;
+  int dy = (h - drawn_h) / 2;  /* distance from cell edge to drawn edge */
 
   /* Neovide smear: draw deformed quad from 4 corner springs instead of axis rect. */
   float smear[8];
   bool use_smear = !scroll_layer && term_curs_smear_pts(smear);
+  /* Scale smear points around cell center so expand and smear coexist. */
+  if (use_smear && expand < 255) {
+    float cy = y + h * 0.5f;
+    float s = h ? (float)drawn_h / h : 0.0f;
+    for (int i = 0; i < 4; i++)
+      smear[i * 2 + 1] = cy + (smear[i * 2 + 1] - cy) * s;
+  }
 
   /* RenderBackend=d2d: D2D shapes with true alpha (no blend_colour). */
   if (d2d_begin(dc)) {
@@ -1467,11 +1480,15 @@ draw_cursor_overlay_to_dc(void)
       int caret_width = max(2, w / 8);
       d2d_fill_rect(x, uy, caret_width, by - uy, cc, blink_a);
     }
-    else {  // CUR_UNDERSCORE
-      int th = max(2, h / 8);
-      int ut = max(y + h - th, y + h - th - dy);
-      int bt = min(y + h, y + h + dy);
-      d2d_fill_rect(x, ut, w, bt - ut, cc, blink_a);
+    else {  // CUR_UNDERSCORE: thickness scales around cell bottom edge region
+      int th_full = max(2, h / 8);
+      int th = th_full * expand / 255;
+      if (expand > 0 && th < 1)
+        th = 1;
+      int ut = y + h - dy - th;
+      int bt = y + h - dy;
+      if (th > 0)
+        d2d_fill_rect(x, ut, w, bt - ut, cc, blink_a);
     }
     if (term.curs_trail_len > 0 && term.curs_animate
         && cfg.smooth_cursor == ANIM_SMOOTH && !scroll_layer) {
@@ -1569,12 +1586,17 @@ draw_cursor_overlay_to_dc(void)
       DeleteObject(SelectObject(dc, oldbrush));
     }
     when CUR_UNDERSCORE: {
-      int th = max(2, h / 8);
-      int ut = max(y + h - th, y + h - th - dy);
-      int bt = min(y + h, y + h + dy);
-      HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
-      Rectangle(dc, x, ut, x + w, bt);
-      DeleteObject(SelectObject(dc, oldbrush));
+      int th_full = max(2, h / 8);
+      int th = th_full * expand / 255;
+      if (expand > 0 && th < 1)
+        th = 1;
+      int ut = y + h - dy - th;
+      int bt = y + h - dy;
+      if (th > 0) {
+        HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+        Rectangle(dc, x, ut, x + w, bt);
+        DeleteObject(SelectObject(dc, oldbrush));
+      }
     }
   }
   DeleteObject(SelectObject(dc, oldpen));
@@ -4157,14 +4179,40 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
 
     if ((attr.attr & TATTR_ACTCURS) && term_cursor_type() == CUR_BLOCK) {
       colour cell_fg = fg, cell_bg = bg;
-      fg = colours[CURSOR_TEXT_COLOUR_I];
-      if (too_close && colour_dist(cursor_colour, fg) < mindist)
+      /* Invert: swap the covered cell's own colours (reverse video). */
+      if (cfg.cursor_invert) {
         fg = cell_bg;
-      bg = cursor_colour;
-      if (term_cursor_blinks() && term.has_focus && term.cblink_alpha < 255)
-      {
-        fg = blend_colour(cell_fg, fg, term.cblink_alpha);
-        bg = blend_colour(cell_bg, bg, term.cblink_alpha);
+        bg = cell_fg;
+        default_bg = false;
+        if (term_cursor_blinks() && term.has_focus && term.cblink_alpha < 255) {
+          fg = blend_colour(cell_fg, fg, term.cblink_alpha);
+          bg = blend_colour(cell_bg, bg, term.cblink_alpha);
+        }
+      }
+      else if (cfg.smooth_blink_cursor == ANIM_EXPAND
+               && term_cursor_blinks() && term.has_focus) {
+        /* Expand: overlay draws the scaled solid body; keep cell text normal.
+           At rest (expand=255) fall through to solid cursor colours. */
+        if (term.cblink_expand < 255) {
+          /* leave fg/bg as cell colours */
+        }
+        else {
+          fg = colours[CURSOR_TEXT_COLOUR_I];
+          if (too_close && colour_dist(cursor_colour, fg) < mindist)
+            fg = cell_bg;
+          bg = cursor_colour;
+        }
+      }
+      else {
+        fg = colours[CURSOR_TEXT_COLOUR_I];
+        if (too_close && colour_dist(cursor_colour, fg) < mindist)
+          fg = cell_bg;
+        bg = cursor_colour;
+        if (term_cursor_blinks() && term.has_focus && term.cblink_alpha < 255)
+        {
+          fg = blend_colour(cell_fg, fg, term.cblink_alpha);
+          bg = blend_colour(cell_bg, bg, term.cblink_alpha);
+        }
       }
 #ifdef debug_cursor
       printf("set cursor (colour %06X) @(row %d col %d) cursor_on %d\n", bg, (y - PADDING - OFFSET) / cell_height, (x - PADDING) / char_width, term.cursor_on);
@@ -5605,15 +5653,16 @@ skip_drawing:;
     printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
 #endif
     int expand = 0;
-    if (!cfg.cursor_smear
-        && cfg.smooth_blink_cursor == ANIM_EXPAND
-        && term_cursor_blinks()
-        && term.has_focus)
+    bool expand_mode = cfg.smooth_blink_cursor == ANIM_EXPAND
+                       && term_cursor_blinks() && term.has_focus;
+    if (expand_mode)
       expand = term.cblink_expand;
-    /* vertical-only expansion, clamped to cell bounds */
-    int edy = expand * cell_height / 512;
-    int uy = max(y, y - edy);
-    int by = min(y + cell_height, y + cell_height + edy);
+    /* VSCode-style: scaleY around cell center, height = h * expand/255. */
+    int drawn_h = cell_height * expand / 255;
+    int uy = y + (cell_height - drawn_h) / 2;
+    int by = uy + drawn_h;
+    /* Overlay owns the active body in expand mode (and invert uses cell colours). */
+    bool skip_active = expand_mode || cfg.cursor_invert;
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
     switch (term_cursor_type()) {
       when CUR_BLOCK:  // solid block cursor
@@ -5623,9 +5672,11 @@ skip_drawing:;
           SelectObject(dc, oldbrush);
         }
       when CUR_BOX: {  // hollow box cursor
+        if (!(attr.attr & TATTR_ACTCURS) || !skip_active) {
         HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
         Rectangle(dc, x, uy, x + char_width, by);
         SelectObject(dc, oldbrush);
+        }
       }
       when CUR_LINE: {  // vertical line cursor
         int caret_width = cursor_size(cell_width);
@@ -5643,7 +5694,7 @@ skip_drawing:;
         int xx = x;
         if (attr.attr & TATTR_RIGHTCURS)
           xx += char_width - caret_width;
-        if (attr.attr & TATTR_ACTCURS) {
+        if (attr.attr & TATTR_ACTCURS && !skip_active) {
 #ifdef cursor_painted_with_rectangle
           HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
           Rectangle(dc, xx, uy, xx + caret_width, by);
@@ -5672,7 +5723,7 @@ skip_drawing:;
           if (lattr == LATTR_BOT)
             yy += cell_height;
         }
-        if (attr.attr & TATTR_ACTCURS) {
+        if (attr.attr & TATTR_ACTCURS && !skip_active) {
           int up = cursor_size(cell_height);
           if (up) {
             int yct = max(yy - up, yt);

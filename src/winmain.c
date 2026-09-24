@@ -3997,7 +3997,11 @@ win_reconfig(void)
     new_cfg.font.isbold != cfg.font.isbold ||
     new_cfg.bold_as_font != cfg.bold_as_font ||
     new_cfg.bold_as_colour != cfg.bold_as_colour ||
-    new_cfg.font_smoothing != cfg.font_smoothing;
+    new_cfg.font_smoothing != cfg.font_smoothing ||
+    new_cfg.font_render != cfg.font_render ||
+    (new_cfg.font_features && cfg.font_features
+      ? wcscmp(new_cfg.font_features, cfg.font_features) != 0
+      : new_cfg.font_features != cfg.font_features);
 
   bool emojistyle_changed = new_cfg.emojis != cfg.emojis;
   bool lua_changed = wcscmp(new_cfg.lua_config, cfg.lua_config) != 0;

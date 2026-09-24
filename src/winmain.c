@@ -6152,6 +6152,7 @@ exit_imintty(void)
   winlua_shutdown();
   child_close_log();
   d2d_shutdown();
+  win_layers_release();
 
   report_pos();
 

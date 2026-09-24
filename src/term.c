@@ -435,13 +435,13 @@ cblink_fade_cb(void)
     term.cblink_alpha = 255;
     term.cblinker = 1;
     term.cursor_invalid = true;
-    win_update(false);
+    win_update_cursor();
     return;
   }
   fade_advance(&fade_cblink, &term.cblink_alpha, cblink_fade_cb);
   term.cblinker = term.cblink_alpha > 127;
   term.cursor_invalid = true;
-  win_update(false);
+  win_update_cursor();
 }
 
 /* Phase mode: sine-wave alpha driven by continuous phase angle. */
@@ -466,7 +466,7 @@ cblink_phase_cb(void)
   term.cursor_invalid = true;
   if (term.curs_animate)
     curs_anim_invalidate();
-  win_update(false);
+  win_update_cursor();
   win_set_timer(cblink_phase_cb, 20);
 }
 
@@ -485,7 +485,7 @@ cblink_expand_cb(void)
     int dys = term.curs.y - term.disptop;
     term_invalidate(term.curs.x - 1, dys - 1,
                     term.curs.x + 1, dys + 1);
-    win_update(false);
+    win_update_cursor();
     return;
   }
   /* VSCode-style expand: hold scaleY(1) for 20%, ease-out to scaleY(0) for
@@ -517,7 +517,7 @@ cblink_expand_cb(void)
                   term.curs.x + 1, dys + 1);
   if (term.curs_animate)
     curs_anim_invalidate();
-  win_update(false);
+  win_update_cursor();
   win_set_timer(cblink_expand_cb, 20);
 }
 
@@ -533,7 +533,7 @@ cblink_cb(void)
     win_kill_timer(cblink_expand_cb);
     fade_cblink.active = false;
     term.cursor_invalid = true;
-    win_update(false);
+    win_update_cursor();
     return;
   }
   if (cfg.smooth_blink_cursor == ANIM_PHASE
@@ -559,7 +559,7 @@ cblink_cb(void)
     term.cblinker = !term.cblinker;
     term.cblink_alpha = term.cblinker ? 255 : 0;
     term.cursor_invalid = true;
-    win_update(false);
+    win_update_cursor();
   }
   term_schedule_cblink();
 }
@@ -1176,7 +1176,7 @@ curs_anim_cb(void)
     if (term.curs_particle_n > 0 || smear_anim || smear_settled) {
       term.cursor_invalid = true;
       curs_anim_invalidate();
-      win_update(false);
+      win_update_cursor();
       if (term.curs_particle_n > 0 || smear_anim)
         win_set_timer(curs_anim_cb, 16);
     }
@@ -1188,7 +1188,7 @@ curs_anim_cb(void)
     term.curs_animate = false;
     term.cursor_invalid = true;
     curs_anim_invalidate();
-    win_update(false);
+    win_update_cursor();
     if (term.curs_particle_n > 0 || smear_anim)
       win_set_timer(curs_anim_cb, 16);
     return;
@@ -1208,7 +1208,7 @@ curs_anim_cb(void)
     term.curs_trail[0][1] = py;
   }
   curs_anim_invalidate();
-  win_update(false);
+  win_update_cursor();
   win_set_timer(curs_anim_cb, 16);
 }
 

@@ -1689,6 +1689,18 @@ draw_cursor_to_canvas(HDC screen_dc)
   if (w <= 0 || h <= 0)
     return;
 
+  if (!pAlphaBlend)
+    pAlphaBlend = load_library_func("msimg32.dll", "AlphaBlend");
+  /* No AlphaBlend: drawing the transparent canvas with BitBlt would paste
+     opaque black over the terminal. Draw the cursor directly instead. */
+  if (!pAlphaBlend) {
+    HDC old_dc = dc;
+    dc = screen_dc;
+    draw_cursor_overlay_to_dc();
+    dc = old_dc;
+    return;
+  }
+
   /* Create or resize cursor canvas as a 32bpp top-down DIBSection */
   if (!cursor_canvas_dc
       || cursor_canvas_w != w || cursor_canvas_h != h) {
@@ -1764,16 +1776,37 @@ draw_cursor_to_canvas(HDC screen_dc)
   if (!drew)
     return;
 
-  /* Composite cursor layer onto screen with per-pixel alpha (AC_SRC_ALPHA).
-     GDI-only draws leave alpha=0; force opaque alpha for non-zero pixels first. */
+  /* GDI draws leave alpha=0; force opaque only within the cursor bbox
+     (full-window scan every 16ms was a smear hot path). */
   {
     BITMAP bm;
     if (GetObject(cursor_canvas_bm, sizeof bm, &bm) && bm.bmBits) {
+      int y0 = term.curs.y * cell_height + OFFSET + PADDING - cell_height * 2;
+      int y1 = y0 + cell_height * (cfg.cursor_trail_size > 0
+                                   ? cfg.cursor_trail_size + 4 : 6);
+      int x0 = PADDING - cell_width * 2;
+      int x1 = PADDING + term.cols * cell_width + cell_width * 2;
+      float smear[8];
+      bool has_smear = cfg.cursor_smear && term_curs_smear_pts(smear);
+      if (has_smear) {
+        for (int i = 0; i < 4; i++) {
+          int sx = (int)smear[i * 2];
+          int sy = (int)smear[i * 2 + 1];
+          if (sx - cell_width * 2 < x0) x0 = sx - cell_width * 2;
+          if (sx + cell_width * 3 > x1) x1 = sx + cell_width * 3;
+          if (sy - cell_height * 2 < y0) y0 = sy - cell_height * 2;
+          if (sy + cell_height * 3 > y1) y1 = sy + cell_height * 3;
+        }
+      }
+      if (y0 < 0) y0 = 0;
+      if (x0 < 0) x0 = 0;
+      if (y1 > h) y1 = h;
+      if (x1 > w) x1 = w;
       unsigned char * p = bm.bmBits;
       int stride = bm.bmWidthBytes;
-      for (int yy = 0; yy < h; yy++) {
+      for (int yy = y0; yy < y1; yy++) {
         unsigned char * row = p + (size_t)yy * stride;
-        for (int xx = 0; xx < w; xx++) {
+        for (int xx = x0; xx < x1; xx++) {
           unsigned char * px = row + xx * 4;
           if (px[0] | px[1] | px[2])
             px[3] = 255;
@@ -1782,21 +1815,13 @@ draw_cursor_to_canvas(HDC screen_dc)
     }
   }
 
-  if (!pAlphaBlend) {
-    pAlphaBlend = load_library_func("msimg32.dll", "AlphaBlend");
-  }
-  if (pAlphaBlend) {
-    BLENDFUNCTION bf = {
-      .BlendOp = AC_SRC_OVER,
-      .BlendFlags = 0,
-      .SourceConstantAlpha = 255,
-      .AlphaFormat = AC_SRC_ALPHA
-    };
-    pAlphaBlend(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, w, h, bf);
-  }
-  else {
-    BitBlt(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, SRCCOPY);
-  }
+  BLENDFUNCTION bf = {
+    .BlendOp = AC_SRC_OVER,
+    .BlendFlags = 0,
+    .SourceConstantAlpha = 255,
+    .AlphaFormat = AC_SRC_ALPHA
+  };
+  pAlphaBlend(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, w, h, bf);
 }
 
 #define dont_debug_cursor 1
@@ -2145,55 +2170,168 @@ show_curchar_info(char tag)
 
 #define update_timer 16
 
-/* Persistent back-buffer for do_update/win_paint (avoids mid-frame
-   erase→draw flicker on the visible HDC; Phase A2/flicker fix). */
-static HDC bb_dc;
-static HBITMAP bb_bm, bb_oldbm;
-static int bb_w, bb_h;
+/* Layered presentation (flicker + async cursor fix):
+   content_dc  - terminal content only; never copied from the screen
+                 (BeginPaint DCs are only valid inside the update region).
+   present_dc  - content + cursor layer composed; single blit to screen.
+   Cursor-only frames recomposite without term_paint (smear/blink/anim). */
+static HDC content_dc;
+static HBITMAP content_bm, content_oldbm;
+static int content_w, content_h;
+static bool content_valid;
+
+static HDC present_dc;
+static HBITMAP present_bm, present_oldbm;
+static int present_w, present_h;
+
+static void
+layer_release(HDC * dcp, HBITMAP * bmp, HBITMAP * old, int *w, int *h)
+{
+  if (*dcp) {
+    SelectObject(*dcp, *old);
+    DeleteObject(*bmp);
+    DeleteDC(*dcp);
+    *dcp = 0;
+    *bmp = 0;
+  }
+  *w = *h = 0;
+}
 
 static bool
-bb_begin(HDC screen_dc, RECT *crc)
+layer_create(HDC * dcp, HBITMAP * bmp, HBITMAP * old, int *w, int *h,
+             HDC ref, int mw, int mh)
 {
-  if (!screen_dc)
+  layer_release(dcp, bmp, old, w, h);
+  *dcp = CreateCompatibleDC(ref);
+  *bmp = CreateCompatibleBitmap(ref, mw, mh);
+  if (!*dcp || !*bmp) {
+    if (*bmp)
+      DeleteObject(*bmp);
+    if (*dcp)
+      DeleteDC(*dcp);
+    *dcp = 0;
+    *bmp = 0;
     return false;
-  GetClientRect(wnd, crc);
-  int mw = max(1, crc->right), mh = max(1, crc->bottom);
-  if (!bb_dc || bb_w != mw || bb_h != mh) {
-    if (bb_dc) {
-      SelectObject(bb_dc, bb_oldbm);
-      DeleteObject(bb_bm);
-      DeleteDC(bb_dc);
-      bb_dc = 0;
-      bb_bm = 0;
-    }
-    bb_dc = CreateCompatibleDC(screen_dc);
-    bb_bm = CreateCompatibleBitmap(screen_dc, mw, mh);
-    if (!bb_dc || !bb_bm) {
-      if (bb_bm)
-        DeleteObject(bb_bm);
-      if (bb_dc)
-        DeleteDC(bb_dc);
-      bb_dc = 0;
-      bb_bm = 0;
-      return false;
-    }
-    bb_oldbm = SelectObject(bb_dc, bb_bm);
-    bb_w = mw;
-    bb_h = mh;
   }
-  BitBlt(bb_dc, 0, 0, bb_w, bb_h, screen_dc, 0, 0, SRCCOPY);
-  dc = bb_dc;
+  *old = SelectObject(*dcp, *bmp);
+  *w = mw;
+  *h = mh;
   return true;
 }
 
-static void
-bb_end(HDC screen_dc, const RECT *crc)
+/* Ensure content/present buffers. Never BitBlt from screen. */
+static bool
+layers_begin(HDC ref, RECT *crc)
 {
-  if (!bb_dc || !screen_dc)
+  if (!ref)
+    return false;
+  GetClientRect(wnd, crc);
+  int mw = max(1, crc->right), mh = max(1, crc->bottom);
+  if (!content_dc || content_w != mw || content_h != mh) {
+    if (!layer_create(&content_dc, &content_bm, &content_oldbm,
+                      &content_w, &content_h, ref, mw, mh))
+      return false;
+    content_valid = false;
+    colour bg = colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
+    HBRUSH br = CreateSolidBrush(bg);
+    RECT all = {0, 0, mw, mh};
+    FillRect(content_dc, &all, br);
+    DeleteObject(br);
+  }
+  if (!present_dc || present_w != mw || present_h != mh) {
+    if (!layer_create(&present_dc, &present_bm, &present_oldbm,
+                      &present_w, &present_h, ref, mw, mh))
+      present_dc = 0;
+  }
+  XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+  if (content_dc)
+    SetWorldTransform(content_dc, &id);
+  if (present_dc)
+    SetWorldTransform(present_dc, &id);
+  dc = content_dc;
+  return content_dc != 0;
+}
+
+static void
+layers_release(void)
+{
+  layer_release(&content_dc, &content_bm, &content_oldbm, &content_w, &content_h);
+  layer_release(&present_dc, &present_bm, &present_oldbm, &present_w, &present_h);
+  content_valid = false;
+}
+
+/* Drop content/present surfaces (font/size changes, exit). */
+void
+win_layers_release(void)
+{
+  layers_release();
+}
+
+/* Compose content + cursor layer into present, blit once to screen.
+   dirty: optional clip in client pixels; null = full client. */
+static void
+layers_present(HDC screen_dc, const RECT *crc, const RECT *dirty)
+{
+  if (!screen_dc || !content_dc)
     return;
   XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
-  SetWorldTransform(bb_dc, &id);
-  BitBlt(screen_dc, 0, 0, crc->right, crc->bottom, bb_dc, 0, 0, SRCCOPY);
+  int w = crc->right, h = crc->bottom;
+  if (w <= 0 || h <= 0)
+    return;
+
+  if (!present_dc) {
+    SetWorldTransform(content_dc, &id);
+    BitBlt(screen_dc, 0, 0, w, h, content_dc, 0, 0, SRCCOPY);
+    return;
+  }
+
+  SetWorldTransform(content_dc, &id);
+  SetWorldTransform(present_dc, &id);
+  BitBlt(present_dc, 0, 0, w, h, content_dc, 0, 0, SRCCOPY);
+
+  /* Match content's horclip so cursor/scroll layers align with cells. */
+  int dx = -horclip();
+  bool has_xf = false;
+  if (dx && SetGraphicsMode(present_dc, GM_ADVANCED)) {
+    XFORM xform = {1.0f, 0.0f, 0.0f, 1.0f, (float)dx, 0.0f};
+    has_xf = SetWorldTransform(present_dc, &xform) != 0;
+  }
+
+  HDC old_dc = dc;
+  /* Smooth-scroll displacement is a frame overlay, not terminal content. */
+  if (!tek_mode && term_scroll_anim_active()) {
+    int total = term.scroll_anim_lines * cell_height;
+    int remaining = term_scroll_anim_offset();
+    win_scroll_overlay(present_dc, remaining - total,
+                       term.scroll_anim_top, term.scroll_anim_bot);
+  }
+  /* Cursor layer onto present (async path may call this alone). */
+  if (cfg.cursor_separate_canvas)
+    draw_cursor_to_canvas(present_dc);
+  else {
+    dc = present_dc;
+    draw_cursor_overlay();
+  }
+  dc = old_dc;
+  if (has_xf)
+    SetWorldTransform(present_dc, &id);
+
+  /* Keep the search bar (painted by its own path) out of the present blit. */
+  if (win_search_visible())
+    ExcludeClipRect(screen_dc, 0, h - SEARCHBAR_HEIGHT, w, h);
+
+  if (dirty) {
+    RECT r = *dirty;
+    if (r.left < 0) r.left = 0;
+    if (r.top < 0) r.top = 0;
+    if (r.right > w) r.right = w;
+    if (r.bottom > h) r.bottom = h;
+    if (r.right > r.left && r.bottom > r.top)
+      BitBlt(screen_dc, r.left, r.top, r.right - r.left, r.bottom - r.top,
+             present_dc, r.left, r.top, SRCCOPY);
+  }
+  else
+    BitBlt(screen_dc, 0, 0, w, h, present_dc, 0, 0, SRCCOPY);
 }
 
 void
@@ -2235,7 +2373,7 @@ do_update(void)
   RECT crc = {0};
 
   HDC screen_dc = GetDC(wnd);
-  bool buffered = bb_begin(screen_dc, &crc);
+  bool buffered = layers_begin(screen_dc, &crc);
   if (!buffered)
     dc = screen_dc;
 
@@ -2264,24 +2402,10 @@ do_update(void)
     winimgs_paint(dc);
     if (has_xf)
       SetWorldTransform(dc, &xf_save);
-    if (term_scroll_anim_active()) {
-      int total = term.scroll_anim_lines * cell_height;
-      int remaining = term_scroll_anim_offset();
-      /* old content displaced by (remaining - total) from its pre-scroll seat */
-      win_scroll_overlay(dc, remaining - total,
-                         term.scroll_anim_top, term.scroll_anim_bot);
-    }
-    if (!cfg.cursor_separate_canvas)
-      draw_cursor_overlay();
   }
+  content_valid = true;
 
-  if (buffered) {
-    bb_end(screen_dc, &crc);
-    dc = 0;
-  }
-  /* Separate cursor canvas: draw cursor onto its own layer, then composite */
-  if (cfg.cursor_separate_canvas)
-    draw_cursor_to_canvas(screen_dc);
+  layers_present(screen_dc, &crc, 0);
   if (screen_dc)
     ReleaseDC(wnd, screen_dc);
   dc = 0;
@@ -2317,7 +2441,11 @@ do_update(void)
   // Schedule next update; clear BLOCKED so the timer chain survives (A2).
   if (update_state == UPDATE_BLOCKED)
     update_state = UPDATE_IDLE;
-  win_set_timer(do_update, update_timer);
+  /* Only keep the 16ms self-timer while another pass is already pending
+     or a scroll animation needs it; otherwise idle churn keeps the CPU busy
+     and competes with the async cursor path. */
+  if (update_state == UPDATE_PENDING || term_scroll_anim_active())
+    win_set_timer(do_update, update_timer);
 }
 
 #include <math.h>
@@ -2429,6 +2557,31 @@ win_schedule_update(void)
   if (update_state == UPDATE_IDLE)
     win_set_timer(do_update, update_timer);
   update_state = UPDATE_PENDING;
+}
+
+/* Cursor-layer-only refresh: composite content + cursor without term_paint.
+   Used by smear/blink/anim timers so the terminal scan cost is not paid
+   every 16ms. Falls back to a full update if content is not yet valid. */
+void
+win_update_cursor(void)
+{
+  if (update_state == UPDATE_BLOCKED || !content_valid || tek_mode) {
+    win_update(false);
+    return;
+  }
+  RECT crc = {0};
+  HDC screen_dc = GetDC(wnd);
+  if (!screen_dc)
+    return;
+  if (!layers_begin(screen_dc, &crc)) {
+    ReleaseDC(wnd, screen_dc);
+    win_update(false);
+    return;
+  }
+  /* Only recompose; do not schedule a content pass. */
+  layers_present(screen_dc, &crc, 0);
+  ReleaseDC(wnd, screen_dc);
+  dc = 0;
 }
 
 
@@ -6502,7 +6655,7 @@ win_paint(void)
   HDC screen_dc = BeginPaint(wnd, &p);
   RECT crc = {0};
 
-  bool buffered = bb_begin(screen_dc, &crc);
+  bool buffered = layers_begin(screen_dc, &crc);
   if (!buffered)
     dc = screen_dc;
 
@@ -6542,17 +6695,10 @@ win_paint(void)
         if (has_xf)
           SetWorldTransform(dc, &xf_save);
       }
-      if (term_scroll_anim_active()) {
-        int total = term.scroll_anim_lines * cell_height;
-        int remaining = term_scroll_anim_offset();
-        win_scroll_overlay(dc, remaining - total,
-                           term.scroll_anim_top, term.scroll_anim_bot);
-       }
-       if (!cfg.cursor_separate_canvas)
-         draw_cursor_overlay();
-       if (has_xf_paint)
+      if (has_xf_paint)
         SetWorldTransform(dc, &xf_paint);
     }
+    content_valid = true;
   }
 
   if (// check whether no background was configured and successfully loaded
@@ -6611,13 +6757,16 @@ win_paint(void)
   }
 
   if (buffered) {
-    bb_end(screen_dc, &crc);
+    /* Present only the invalid region; BeginPaint DC cannot be read
+       outside rcPaint, so content comes from content_dc. */
+    RECT dirty = p.rcPaint;
+    layers_present(screen_dc, &crc, &dirty);
     dc = 0;
   }
-  /* Separate cursor canvas: draw cursor onto its own layer, then composite */
-  if (cfg.cursor_separate_canvas)
-    draw_cursor_to_canvas(screen_dc);
-  dc = 0;
+  else {
+    layers_present(screen_dc, &crc, &p.rcPaint);
+    dc = 0;
+  }
 
   EndPaint(wnd, &p);
 }

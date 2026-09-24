@@ -2246,10 +2246,16 @@ layers_begin(HDC ref, RECT *crc)
       present_dc = 0;
   }
   XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
-  if (content_dc)
+  /* Drop leftover clip from padding/search painting — BitBlt and term_paint
+     would otherwise honour a stale region and skip the text cells. */
+  if (content_dc) {
     SetWorldTransform(content_dc, &id);
-  if (present_dc)
+    SelectClipRgn(content_dc, 0);
+  }
+  if (present_dc) {
     SetWorldTransform(present_dc, &id);
+    SelectClipRgn(present_dc, 0);
+  }
   dc = content_dc;
   return content_dc != 0;
 }
@@ -2283,12 +2289,15 @@ layers_present(HDC screen_dc, const RECT *crc, const RECT *dirty)
 
   if (!present_dc) {
     SetWorldTransform(content_dc, &id);
+    SelectClipRgn(content_dc, 0);
     BitBlt(screen_dc, 0, 0, w, h, content_dc, 0, 0, SRCCOPY);
     return;
   }
 
   SetWorldTransform(content_dc, &id);
   SetWorldTransform(present_dc, &id);
+  SelectClipRgn(content_dc, 0);
+  SelectClipRgn(present_dc, 0);
   BitBlt(present_dc, 0, 0, w, h, content_dc, 0, 0, SRCCOPY);
 
   /* Match content's horclip so cursor/scroll layers align with cells. */
@@ -2380,6 +2389,8 @@ do_update(void)
     dc = screen_dc;
 
   // horizontal scrolling of terminal view
+  int draw_clip = SaveDC(dc);
+
   int dx = - horclip();
   if (dx) {
     XFORM xform = (XFORM){1.0, 0.0, 0.0, 1.0, (float)dx, 0.0};
@@ -2407,6 +2418,8 @@ do_update(void)
   }
   content_valid = true;
 
+  /* Restore full clip/transform so the present blit copies every pixel. */
+  RestoreDC(dc, draw_clip);
   layers_present(screen_dc, &crc, 0);
   if (screen_dc)
     ReleaseDC(wnd, screen_dc);
@@ -6733,6 +6746,8 @@ win_paint(void)
     // visualize background for testing
     bg_colour = RGB(222, 0, 0);
 #endif
+    int pad_clip = SaveDC(dc);
+
     HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(bg_colour));
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, bg_colour));
 
@@ -6753,6 +6768,7 @@ win_paint(void)
 
     DeleteObject(SelectObject(dc, oldbrush));
     DeleteObject(SelectObject(dc, oldpen));
+    RestoreDC(dc, pad_clip);
 #ifdef debug_padding_background
     // show visualized background for testing
     usleep(900000);
@@ -6763,6 +6779,8 @@ win_paint(void)
     /* Present only the invalid region; BeginPaint DC cannot be read
        outside rcPaint, so content comes from content_dc. */
     RECT dirty = p.rcPaint;
+    /* Padding drawing must not leave a text-area exclusion on content. */
+    SelectClipRgn(dc, 0);
     layers_present(screen_dc, &crc, &dirty);
     dc = 0;
   }

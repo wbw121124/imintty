@@ -673,8 +673,16 @@ term_create_html(bool all, FILE * hf, int level)
       fprintf(hf, "%s", buf);
     else {
       if (hbuf_len + len > hbuf_cap) {
-        hbuf_cap = hbuf_cap ? hbuf_cap * 5 / 4 : 5555;
-        hbuf = renewn(hbuf, hbuf_cap + 1);
+        size_t ncap = hbuf_cap ? hbuf_cap * 5 / 4 : 5555;
+        while (hbuf_len + (size_t)len > ncap)
+          ncap = ncap * 5 / 4;
+        char * nhbuf = renewn(hbuf, ncap + 1);
+        if (nhbuf) {
+          hbuf = nhbuf;
+          hbuf_cap = ncap;
+        }
+        else
+          return;  // OOM: drop this chunk rather than overflow
       }
 
       //strcat(hbuf, buf);

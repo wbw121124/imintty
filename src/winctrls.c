@@ -1753,6 +1753,9 @@ winctrl_handle_command(UINT msg, WPARAM wParam, LPARAM lParam)
     RECT r = di->rcItem;
     SIZE s;
 
+    if (!c->data)
+      return 0;
+
     SetMapMode(dc, MM_TEXT);   /* ensure logical units == pixels */
 
     GetTextExtentPoint32A(dc, (char *) c->data, strlen((char *) c->data), &s);
@@ -1932,6 +1935,8 @@ dlg_radiobutton_get(control *ctrl)
 {
   winctrl *c = ctrl->plat_ctrl;
   int i;
+  if (!c)
+    return 0;
   assert(c && c->ctrl->type == CTRL_RADIO);
   for (i = 0; i < c->ctrl->radio.nbuttons; i++)
     if (IsDlgButtonChecked(dlg.wnd, c->base_id + 1 + i))
@@ -1944,6 +1949,8 @@ void
 dlg_checkbox_set(control *ctrl, bool checked)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return;
   assert(c && c->ctrl->type == CTRL_CHECKBOX);
   CheckDlgButton(dlg.wnd, c->base_id, checked);
 }
@@ -1952,6 +1959,8 @@ bool
 dlg_checkbox_get(control *ctrl)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return false;
   assert(c && c->ctrl->type == CTRL_CHECKBOX);
   return IsDlgButtonChecked(dlg.wnd, c->base_id);
 }
@@ -1968,6 +1977,8 @@ dlg_editbox_set(control *ctrl, string text)
   }
 
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return;
   assert(c && c->ctrl->type == CTRL_EDITBOX);
   SetDlgItemTextA(dlg.wnd, c->base_id + 1, text);
 }
@@ -1976,6 +1987,8 @@ void
 dlg_editbox_set_w(control *ctrl, wstring text)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return;
   assert(c &&
          (c->ctrl->type == CTRL_EDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
@@ -2007,6 +2020,8 @@ void
 dlg_editbox_get(control *ctrl, string *text_p)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return;
   assert(c &&
          (c->ctrl->type == CTRL_EDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
@@ -2022,6 +2037,8 @@ void
 dlg_editbox_get_w(control *ctrl, wstring *text_p)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return;
   assert(c &&
          (c->ctrl->type == CTRL_EDITBOX
          ||c->ctrl->type == CTRL_LISTBOX));
@@ -2055,6 +2072,8 @@ dlg_listbox_clear(control *ctrl)
 {
   winctrl *c = ctrl->plat_ctrl;
   int msg;
+  if (!c)
+    return;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
           (c->ctrl->type == CTRL_EDITBOX &&
@@ -2077,6 +2096,8 @@ dlg_listbox_add(control *ctrl, string text)
 
   winctrl *c = ctrl->plat_ctrl;
   int msg;
+  if (!c)
+    return;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
           (c->ctrl->type == CTRL_EDITBOX &&
@@ -2091,6 +2112,8 @@ dlg_listbox_add_w(control *ctrl, wstring text)
 {
   winctrl *c = ctrl->plat_ctrl;
   int msg;
+  if (!c)
+    return;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
           (c->ctrl->type == CTRL_EDITBOX &&
@@ -2104,6 +2127,8 @@ int
 dlg_listbox_getcur(control *ctrl)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return -1;
   assert(c &&
          (c->ctrl->type == CTRL_LISTBOX ||
           (c->ctrl->type == CTRL_EDITBOX &&
@@ -2122,6 +2147,8 @@ void
 dlg_fontsel_set(control *ctrl, font_spec *fs)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return;
   assert(c && c->ctrl->type == CTRL_FONTSELECT);
 
   trace_fontsel(("fontsel_set <%ls>\n", fs->name));
@@ -2166,6 +2193,8 @@ void
 dlg_fontsel_get(control *ctrl, font_spec *fs)
 {
   winctrl *c = ctrl->plat_ctrl;
+  if (!c)
+    return;
   assert(c && c->ctrl->type == CTRL_FONTSELECT);
   trace_fontsel(("fontsel_get <%ls>\n", ((font_spec*)c->data)->name));
   *fs = *(font_spec *) c->data;  /* structure copy */
@@ -2176,6 +2205,8 @@ dlg_set_focus(control *ctrl)
 {
   winctrl *c = ctrl->plat_ctrl;
   int id;
+  if (!c)
+    return;
   switch (ctrl->type) {
     when CTRL_EDITBOX or CTRL_LISTBOX: id = c->base_id + 1;
     when CTRL_FONTSELECT: id = c->base_id + 2;

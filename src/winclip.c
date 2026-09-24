@@ -767,7 +767,20 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
    /*
     * Finally - Write the colour table
     */
-    rtf = renewn(rtf, rtfsize + (numcolours * 25));
+    {
+      char * nrtf = renewn(rtf, rtfsize + (numcolours * 25));
+      if (!nrtf) {
+        free(rtf);
+        rtf = null;
+      }
+      else {
+        rtf = nrtf;
+        rtfsize += numcolours * 25;
+      }
+    }
+    if (!rtf)
+      clipdata3 = 0;
+    else {
     strcat(rtf, "{\\colortbl;");
     rtflen = strlen(rtf);
 
@@ -815,8 +828,17 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
         uint attr = cattrs[uindex].attr;
 
         if (rtfsize < rtflen + 64) {
-          rtfsize = rtflen + 512;
-          rtf = renewn(rtf, rtfsize);
+          int need = rtflen + 512;
+          if (rtfsize * 2 > need)
+            need = rtfsize * 2;
+          char * nrtf = renewn(rtf, need);
+          if (!nrtf) {
+            free(rtf);
+            rtf = null;
+            break;
+          }
+          rtf = nrtf;
+          rtfsize = need;
         }
 
        /*
@@ -908,8 +930,17 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
       }
 
       if (rtfsize < rtflen + totallen + 3) {
-        rtfsize = rtflen + totallen + 512;
-        rtf = renewn(rtf, rtfsize);
+        int need = rtflen + totallen + 512;
+        if (rtfsize * 2 > need)
+          need = rtfsize * 2;
+        char * nrtf = renewn(rtf, need);
+        if (!nrtf) {
+          free(rtf);
+          rtf = null;
+          break;
+        }
+        rtf = nrtf;
+        rtfsize = need;
       }
 
       strcpy(rtf + rtflen, before);
@@ -937,16 +968,19 @@ win_copy_as(const wchar *data, cattr *cattrs, int len, char what)
       uindex++;
     }
 
-    rtf[rtflen++] = '}';        /* Terminate RTF stream */
-    rtf[rtflen++] = '\0';
-    rtf[rtflen++] = '\0';
+    if (rtf) {
+      rtf[rtflen++] = '}';        /* Terminate RTF stream */
+      rtf[rtflen++] = '\0';
+      rtf[rtflen++] = '\0';
 
-    clipdata3 = GlobalAlloc(GMEM_DDESHARE | GMEM_MOVEABLE, rtflen);
-    if (clipdata3 && (lock3 = GlobalLock(clipdata3)) != null) {
-      memcpy(lock3, rtf, rtflen);
-      GlobalUnlock(clipdata3);
+      clipdata3 = GlobalAlloc(GMEM_DDESHARE | GMEM_MOVEABLE, rtflen);
+      if (clipdata3 && (lock3 = GlobalLock(clipdata3)) != null) {
+        memcpy(lock3, rtf, rtflen);
+        GlobalUnlock(clipdata3);
+      }
+      free(rtf);
     }
-    free(rtf);
+    }
   }
 
   GlobalUnlock(clipdata);

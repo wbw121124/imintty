@@ -51,13 +51,15 @@
 > **边界变更**：原「不做 GPU/Direct2D 全量重写」已废止，改为「分层迁移 + `RenderBackend` 可回退到 GDI」。
 
 #### B1 DirectWrite 文字路径（先落实现 `FontRender=dwrite`）
-- 修复死代码：`use_dwrite` 宏定义位置、作用域错误 → 新建 `src/windwrite.c`。
-- `IDWriteTextFormat` + `IDWriteTextLayout` + `IDWriteTypography::AddFontFeature`（`FontFeatures=ss01,zero,calt,…`）。
-- `IDWriteFontFallback::MapCharacters`（`FontFallback=yes`；与 `FontChoice`/`FontSubst` 优先级对齐）。
-- **cluster→cell 映射**：等宽契约，advance 聚类回格（连字不破格对齐，参考 #601）。
-- 字形检测统一走 DWrite（逐步废弃 `GetGlyphIndicesW` 双源）。
-- 宽度测量：`GetGlyphMetrics` advance 替代 `win_char_width` 扫像素（保留 `@cjkwide` 等特判）。
-- 配置：`FontFeatures`、`FontFallback`、`FontRender=dwrite|uniscribe|textout`。
+- [x] 修复死代码：`use_dwrite` 宏定义位置、作用域错误 → 新建 `src/windwrite.c`（TextAnalyzer shaping + cluster→cell + `ExtTextOutW(ETO_GLYPH_INDEX)` GDI 合成）。
+- [x] `FontFeatures=ss01,zero,calt,…`（`dw_parse_features`；`Ligatures>1` 且无显式 features 时强制 liga+calt）。
+- [ ] `IDWriteFontFallback::MapCharacters`（`FontFallback=yes`；与 `FontChoice`/`FontSubst` 优先级对齐）。
+- [x] **cluster→cell 映射**：等宽契约，advance 聚类回格（连字不破格对齐，参考 #601）。
+- [ ] 字形检测统一走 DWrite（逐步废弃 `GetGlyphIndicesW` 双源）。
+- [ ] 宽度测量：`GetGlyphMetrics` advance 替代 `win_char_width` 扫像素（保留 `@cjkwide` 等特判）。
+- [x] 配置：`FontFeatures`（`OPT_WSTRING` + `config.template`）；`FontRender=dwrite|uniscribe|textout` 已有。
+- [x] `wintext.c` 接线：删死块；`use_dwtext` 运行时 flag（与 `#define use_dwrite` 宏隔离）；`text_out_*` 三路分派；`win_init_fontfamily` 挂 `dw_font_changed`；combining / `wscale!=100` / 测量路径关闭 DWrite。
+- [x] 验证：`make -j4` 零警告；`FontRender=dwrite|uniscribe|textout` 冒烟 exit 0。
 
 #### B2 Direct2D 渲染目标
 - `ID2D1HwndRenderTarget`（后期可评估 DXGI swapchain）接管客户区。
@@ -74,12 +76,12 @@
 - 连字/样式集：`hb_feature_from_string` 与 `FontFeatures` 同一解析入口。
 
 #### B4 分阶段落地（每步可编译可跑、独立 commit）
-1. B1 纯文字 DWrite（仍与 GDI 合成）
-2. B2 光标 + overlay 进 D2D
-3. B2 文字进 D2D
-4. B3 HarfBuzz 接入
-5. 图像层（WIC + D2D bitmap）迁移
-6. 默认 `RenderBackend=d2d`，GDI 仍可选
+1. [x] B1 纯文字 DWrite（仍与 GDI 合成）
+2. [ ] B2 光标 + overlay 进 D2D
+3. [ ] B2 文字进 D2D
+4. [ ] B3 HarfBuzz 接入
+5. [ ] 图像层（WIC + D2D bitmap）迁移
+6. [ ] 默认 `RenderBackend=d2d`，GDI 仍可选
 
 #### B 验证
 - 每步 `make -C src` 零警告；中英/RTL/连字/emoji/sixel 冒烟；`FontRender` 与 `RenderBackend` 回退路径回归。

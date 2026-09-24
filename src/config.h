@@ -90,6 +90,7 @@ typedef struct {
   bool show_hidden_fonts;
   char font_smoothing;
   char font_render;
+  wstring font_features;   // OpenType features for FontRender=dwrite, e.g. "ss01,zero,calt"
   bool dim_as_font;
   bool bold_as_font;
   bool bold_as_colour;

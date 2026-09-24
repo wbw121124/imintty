@@ -101,7 +101,7 @@
 
 ## Phase A — 光标画布透明 + 动画渲染修复（回验）
 
-> **状态：待 C/B 之后回验问题是否仍在**（此前已有相关修复提交，需目测确认）。
+> **状态：expand 已按 VSCode 关键帧重写（`84a8624`），待目测关闭**；分离画布/动画矩阵仍待跑。
 
 ### A1 分离光标画布背景透明
 - `draw_cursor_to_canvas`（`wintext.c`）：
@@ -116,11 +116,19 @@
 - 动画 tick：`term_invalidate` 路径补 `win_schedule_update` 兜底。
 - 验证矩阵：块/竖线/下划线 × smooth/expand/phase/trail × 分离画布 on/off。
 
+### A3 VSCode expand 关键帧（`84a8624`）
+- `cblink_expand_cb`：`alternate` 半周期 0.5s（20ms tick ×50），前半 0→1、后半 1→0；0–20% hold、20–80% ease-in-out、80–100% hold；静息 `cblink_expand=255`。
+- 几何：`drawn_h = h*expand/255`，`uy/y+(h-drawn_h)/2`（中心原点 scaleY）；smear 顶点绕格心中线同步缩放。
+- overlay 在 expand 模式始终 `own_body`；cell path 动画中保持原格 fg/bg，静息 255 才上实心色。
+- `CursorInvert`：块光标覆盖格 fg/bg 互换（反色），overlay 跳过实心 body。
+- Options：Looks>Cursor「Invert」、Terminal>LuaConfig+Reload、Text>Font features。
+
 ### A 验证步骤（C/B 完成后执行）
 1. 启动后 Options → 动画 → 各模式切换，观察光标是否正常出现/消失。
 2. 开启 `CursorSeparateCanvas=yes`，确认光标层背景透明（文本不被纯色盖住）。
-3. 光标平滑移动 + 拖尾 + expand 闪烁目测。
-4. 若问题仍在 → 按 A1/A2 修复并提交；若已不在 → 记录「已由既有提交覆盖」并关闭。
+3. 光标平滑移动 + 拖尾 + expand 闪烁目测（`SmoothBlinkCursor=expand`：应见从中线长/缩、0.5s 交替）。
+4. `CursorInvert=yes` + 块光标：覆盖字符反色，无实心盖字。
+5. 若问题仍在 → 按 A1/A2/A3 修复并提交；若已不在 → 记录「已由既有提交覆盖」并关闭。
 
 ---
 
@@ -176,4 +184,4 @@
 - 不上游 PR（imintty 政策），改动留本地仓库。
 
 ## 目前不实现
-> FontFeatures/FontFallback 的 GUI 细化完善、Kitty 图形 mode 0（仅传输不显示）验证、实际 PNG e2e 渲染测试；D2D DXGI swapchain / 独立合成线程（B2 之后再评估）。
+> FontFallback 的 GUI 细化完善（FontFeatures 编辑框已进 `84a8624`）、Kitty 图形 mode 0（仅传输不显示）验证、实际 PNG e2e 渲染测试；D2D DXGI swapchain / 独立合成线程（B2 之后再评估）。

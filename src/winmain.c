@@ -25,6 +25,7 @@ char * imintty_debug;
 #include "tek.h"
 #include "print.h"  // list_printers
 #include "winlua.h"
+#include "wind2d.h"
 
 #include <locale.h>
 #include <getopt.h>
@@ -6146,6 +6147,7 @@ exit_imintty(void)
 {
   winlua_shutdown();
   child_close_log();
+  d2d_shutdown();
 
   report_pos();
 

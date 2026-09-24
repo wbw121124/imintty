@@ -16,6 +16,7 @@ enum { FS_DEFAULT, FS_PARTIAL, FS_NONE, FS_FULL };
 enum { ANIM_NONE = 0, ANIM_DEFAULT = 1, ANIM_SMOOTH = 2,
        ANIM_PHASE = 3, ANIM_EXPAND = 4 };
 enum { FR_TEXTOUT, FR_UNISCRIBE, FR_DWRITE };
+enum { RB_GDI, RB_D2D };
 enum { MC_VOID, MC_PASTE, MC_EXTEND, MC_ENTER };
 enum { RC_MENU, RC_PASTE, RC_EXTEND, RC_ENTER };
 enum { BORDER_NORMAL, BORDER_FRAME, BORDER_VOID };
@@ -91,6 +92,7 @@ typedef struct {
   char font_smoothing;
   char font_render;
   wstring font_features;   // OpenType features for FontRender=dwrite, e.g. "ss01,zero,calt"
+  char render_backend;      // RB_GDI | RB_D2D (cursor/overlay path first)
   bool dim_as_font;
   bool bold_as_font;
   bool bold_as_colour;

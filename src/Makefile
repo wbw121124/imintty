@@ -134,9 +134,10 @@ downldlib=
 ifneq ($(platform), msys)
   emojilib = -lGdiPlus
   scriptlib += -lDWrite
+  d2dlib = -ld2d1
 endif
 lualib=-llua
-extralibs=$(scriptlib) $(downldlib) $(emojilib) $(lualib) -lshlwapi
+extralibs=$(scriptlib) $(downldlib) $(emojilib) $(d2dlib) $(lualib) -lshlwapi
 LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
 LDLIBS := -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid -lmpr
 

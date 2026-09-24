@@ -62,12 +62,14 @@
 - [x] 验证：`make -j4` 零警告；`FontRender=dwrite|uniscribe|textout` 冒烟 exit 0。
 
 #### B2 Direct2D 渲染目标
-- `ID2D1HwndRenderTarget`（后期可评估 DXGI swapchain）接管客户区。
-- 文字：`DrawGlyphRun`（消费 B1 排版结果）。
-- 光标 / overlay / 滚动：D2D 形状 + 真 alpha（取代 `blend_colour` 假 alpha）。
-- sixel / emoji / iTerm2 / Kitty 图像：`ID2D1Bitmap`（WIC 解码）+ alpha 合成；GDI+ 路径保留为 fallback。
-- RTL：`minibidi` 双向重排保留；shaping 换 HarfBuzz；`SetWorldTransform` 镜像改 D2D transform。
-- 配置：`RenderBackend=d2d|gdi`（默认迁移完成后 d2d，可回退）。
+- [x] `ID2D1DCRenderTarget`（先绑 paint HDC；后续可评估 `ID2D1HwndRenderTarget` / DXGI swapchain）接管光标层。
+- [ ] 文字：`DrawGlyphRun`（消费 B1 排版结果）。
+- [x] 光标 overlay：D2D 形状 + 真 alpha（`d2d_fill_rect`/`d2d_stroke_rect`，取代光标路径 `blend_colour` 假 alpha；trail 同路径）。
+- [ ] sixel / emoji / iTerm2 / Kitty 图像：`ID2D1Bitmap`（WIC 解码）+ alpha 合成；GDI+ 路径保留为 fallback。
+- [ ] RTL：`minibidi` 双向重排保留；shaping 换 HarfBuzz；`SetWorldTransform` 镜像改 D2D transform。
+- [x] 配置：`RenderBackend=d2d|gdi`（默认 gdi，可回退；GUI Text 面板 radiobutton）。
+- [x] `src/wind2d.c` + `wind2d.h`：factory/DC RT 单例、`d2d_begin/end`、`d2d_shutdown` 挂 `exit_imintty`。
+- [x] Makefile：`-ld2d1`；`make -j4` 零警告；`RenderBackend=d2d|gdi` 冒烟 exit 0。
 
 #### B3 HarfBuzz + OpenType shaping
 - 字体 blob：`IDWriteFontFace` → `hb_blob_create`（或 FreeType 后端，按包可用性定）。
@@ -77,7 +79,7 @@
 
 #### B4 分阶段落地（每步可编译可跑、独立 commit）
 1. [x] B1 纯文字 DWrite（仍与 GDI 合成）
-2. [ ] B2 光标 + overlay 进 D2D
+2. [x] B2 光标 + overlay 进 D2D（DCRenderTarget + 真 alpha）
 3. [ ] B2 文字进 D2D
 4. [ ] B3 HarfBuzz 接入
 5. [ ] 图像层（WIC + D2D bitmap）迁移

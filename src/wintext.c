@@ -11,6 +11,7 @@
 #include "tek.h"
 #include "child.h"   // child_tty
 #include "windwrite.h"
+#include "wind2d.h"
 
 #include <winnls.h>
 #include <usp10.h>  // Uniscribe
@@ -1403,8 +1404,9 @@ draw_cursor_overlay(void)
 
   colour bg = win_get_colour(BG_COLOUR_I);
   colour cc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
+  int blink_a = 255;
   if (term_cursor_blinks() && term.has_focus && term.cblink_alpha < 255)
-    cc = blend_colour(bg, cc, term.cblink_alpha);
+    blink_a = term.cblink_alpha;
 
   int w = cell_width;
   int h = cell_height;
@@ -1421,6 +1423,53 @@ draw_cursor_overlay(void)
   int dy = expand * h / 512;
   int uy = max(y, y - dy);        /* top clamped to cell top at worst */
   int by = min(y + h, y + h + dy); /* bottom clamped to cell bottom at worst */
+
+  /* RenderBackend=d2d: D2D shapes with true alpha (no blend_colour). */
+  if (d2d_begin(dc)) {
+    char ctype = term_cursor_type();
+    if (ctype == CUR_BLOCK)
+      d2d_fill_rect(x, uy, w, by - uy, cc, blink_a);
+    else if (ctype == CUR_BOX)
+      d2d_stroke_rect(x, uy, w, by - uy, cc, blink_a, 1.0f);
+    else if (ctype == CUR_LINE) {
+      int caret_width = max(2, w / 8);
+      d2d_fill_rect(x, uy, caret_width, by - uy, cc, blink_a);
+    }
+    else {  // CUR_UNDERSCORE
+      int th = max(2, h / 8);
+      int ut = max(y + h - th, y + h - th - dy);
+      int bt = min(y + h, y + h + dy);
+      d2d_fill_rect(x, ut, w, bt - ut, cc, blink_a);
+    }
+    if (term.curs_trail_len > 0 && term.curs_animate
+        && cfg.smooth_cursor == ANIM_SMOOTH && !scroll_layer) {
+      int n = term.curs_trail_len;
+      for (int i = n - 1; i >= 0; i--) {
+        int alpha = 255 * (i + 1) / (n + 1);
+        if (alpha < 16)
+          continue;
+        int gx = term.curs_trail[i][0];
+        int gy = term.curs_trail[i][1];
+        if (ctype == CUR_BLOCK)
+          d2d_fill_rect(gx, gy, w, h, cc, alpha);
+        else if (ctype == CUR_BOX)
+          d2d_stroke_rect(gx, gy, w, h, cc, alpha, 1.0f);
+        else if (ctype == CUR_LINE) {
+          int tw = max(2, w / 8);
+          d2d_fill_rect(gx, gy, tw, h, cc, alpha);
+        }
+        else {
+          int th = max(2, h / 8);
+          d2d_fill_rect(gx, gy + h - th, w, th, cc, alpha);
+        }
+      }
+    }
+    d2d_end();
+    (void)bg;
+    return;
+  }
+
+  cc = blend_colour(bg, cc, blink_a);
 
   HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
   switch (term_cursor_type()) {

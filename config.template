@@ -92,6 +92,9 @@
 # DirectWrite OpenType features when FontRender=dwrite (comma-separated 4-char tags).
 #FontFeatures=ss01,zero,calt
 
+# Cursor/overlay render backend while Phase B migrates (gdi keeps full GDI path).
+#RenderBackend=gdi
+
 # load a Lua script after this config file (POSIX, Windows, or long paths).
 # The script may use imintty.set / get / rc / on / command / key / expand_path.
 #LuaConfig=~/.config/imintty/init.lua

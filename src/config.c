@@ -98,6 +98,7 @@ const config default_cfg = {
   .font_smoothing = FS_DEFAULT,
   .font_render = FR_UNISCRIBE,
   .font_features = W(""),
+  .render_backend = RB_GDI,
   .dim_as_font = true,
   .bold_as_font = true,
   .bold_as_colour = true,
@@ -360,7 +361,7 @@ typedef enum {
   OPT_HOLD, OPT_ANIM,
   OPT_INT, OPT_COLOUR, OPT_COLOUR_PAIR, OPT_STRING, OPT_WSTRING,
   OPT_CHARWIDTH, OPT_EMOJIS, OPT_EMOJI_PLACEMENT,
-  OPT_COMPOSE_KEY,
+  OPT_COMPOSE_KEY, OPT_RENDERBACKEND,
   OPT_TYPE_MASK = 0x1F,
   OPT_LEGACY = 0x20,
   OPT_KEEPCR = 0x40
@@ -454,6 +455,7 @@ options[] = {
   {"OldLocale", OPT_BOOL, offcfg(old_locale)},
   {"FontRender", OPT_FONTRENDER, offcfg(font_render)},
   {"FontFeatures", OPT_WSTRING, offcfg(font_features)},
+  {"RenderBackend", OPT_RENDERBACKEND, offcfg(render_backend)},
   {"FontMenu", OPT_INT, offcfg(fontmenu)},
   {"OldFontMenu", OPT_INT | OPT_LEGACY, offcfg(fontmenu)},
   {"Font1", OPT_WSTRING, offcfg(fontfams[1].name)},
@@ -835,6 +837,11 @@ static opt_val * const opt_vals[] = {
     {"textout", FR_TEXTOUT},
     {"uniscribe", FR_UNISCRIBE},
     {"dwrite", FR_DWRITE},
+    {0, 0}
+  },
+  [OPT_RENDERBACKEND] = (opt_val[]) {
+    {"gdi", RB_GDI},
+    {"d2d", RB_D2D},
     {0, 0}
   },
   [OPT_MIDDLECLICK] = (opt_val[]) {
@@ -4921,6 +4928,14 @@ setup_config_box(controlbox * b)
     _("T&extOut"), FR_TEXTOUT,
     _("&Uniscribe"), FR_UNISCRIBE,
     _("D&Write"), FR_DWRITE,
+    null
+  );
+  ctrl_radiobuttons(
+    //__ Options - Text: cursor/overlay backend (Phase B)
+    s, _("Render backend"), 2,
+    dlg_stdradiobutton_handler, &new_cfg.render_backend,
+    _("GDI"), RB_GDI,
+    _("Direct&2D"), RB_D2D,
     null
   );
 

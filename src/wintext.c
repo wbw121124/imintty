@@ -2237,6 +2237,8 @@ layers_begin(HDC ref, RECT *crc)
     RECT all = {0, 0, mw, mh};
     FillRect(content_dc, &all, br);
     DeleteObject(br);
+    /* New content is blank; displines still look clean — force full repaint. */
+    term_invalidate(0, 0, term.cols - 1, term_allrows - 1);
   }
   if (!present_dc || present_w != mw || present_h != mh) {
     if (!layer_create(&present_dc, &present_bm, &present_oldbm,
@@ -6670,8 +6672,9 @@ win_paint(void)
   );
 
   //if (kb_trace) printf("[%ld] win_paint state %d (idl/blk/pnd)\n", mtime(), update_state);
-  // During smooth scroll, always compose a frame even if a timer update is pending
-  if (update_state != UPDATE_PENDING || anim) {
+  // During smooth scroll or after content recreate, always compose a frame
+  // even if a timer update is pending (otherwise blank content is presented).
+  if (update_state != UPDATE_PENDING || anim || !content_valid) {
     if (tek_mode)
       tek_paint();
     else {

@@ -91,9 +91,11 @@
 4. [ ] B3 HarfBuzz 接入
 5. [ ] 图像层（WIC + D2D bitmap）迁移
 6. [x] 默认 `RenderBackend=d2d`，GDI 仍可选
+7. [x] 分层 content/present 后 fg 上屏（clip 泄漏修复）
 
 #### B 验证
 - 每步 `make -C src` 零警告；中英/RTL/连字/emoji/sixel 冒烟；`FontRender` 与 `RenderBackend` 回退路径回归。
+- [x] e2e 截图：关闭分离画布时 `FG_E2E_OK_12345` / `SECOND_LINE` 可见，光标可见；另三条反馈仍通过。
 
 ---
 

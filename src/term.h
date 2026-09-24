@@ -545,6 +545,7 @@ struct term {
       float stiff[4];        /* per-corner stiffness 0..1 (smear-cursor.nvim) */
       unsigned last_ms;      /* last update tick for real dt */
       bool inited;
+      bool moving;           /* springs still settling; overlay owns body */
     } curs_smear;
   /* Smooth scroll (Phase 3): pixel-space animation of visible scroll */
   bool scroll_animate;    /* scroll animation in progress */

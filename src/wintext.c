@@ -1350,10 +1350,10 @@ draw_cursor_overlay_to_dc(void)
   if (!term.cursor_on || term.show_other_screen)
     return false;
   bool scroll_layer = term_scroll_anim_active();
-  /* Cell path owns the static body unless animate/separate/smear/scroll pin
+  /* Cell path owns the static body unless animate/separate/smear-moving/scroll pin
      it here; otherwise term_paint + overlay double-draw and blink flickers. */
   bool own_body = scroll_layer || term.curs_animate || cfg.cursor_separate_canvas
-                  || (cfg.cursor_smear && term.curs_smear.inited);
+                  || (cfg.cursor_smear && term.curs_smear.moving);
   bool have_fx = term.curs_particle_n > 0
                  || (term.curs_trail_len > 0 && term.curs_animate);
   if (!own_body && !have_fx)
@@ -2145,6 +2145,57 @@ show_curchar_info(char tag)
 
 #define update_timer 16
 
+/* Persistent back-buffer for do_update/win_paint (avoids mid-frame
+   erase→draw flicker on the visible HDC; Phase A2/flicker fix). */
+static HDC bb_dc;
+static HBITMAP bb_bm, bb_oldbm;
+static int bb_w, bb_h;
+
+static bool
+bb_begin(HDC screen_dc, RECT *crc)
+{
+  if (!screen_dc)
+    return false;
+  GetClientRect(wnd, crc);
+  int mw = max(1, crc->right), mh = max(1, crc->bottom);
+  if (!bb_dc || bb_w != mw || bb_h != mh) {
+    if (bb_dc) {
+      SelectObject(bb_dc, bb_oldbm);
+      DeleteObject(bb_bm);
+      DeleteDC(bb_dc);
+      bb_dc = 0;
+      bb_bm = 0;
+    }
+    bb_dc = CreateCompatibleDC(screen_dc);
+    bb_bm = CreateCompatibleBitmap(screen_dc, mw, mh);
+    if (!bb_dc || !bb_bm) {
+      if (bb_bm)
+        DeleteObject(bb_bm);
+      if (bb_dc)
+        DeleteDC(bb_dc);
+      bb_dc = 0;
+      bb_bm = 0;
+      return false;
+    }
+    bb_oldbm = SelectObject(bb_dc, bb_bm);
+    bb_w = mw;
+    bb_h = mh;
+  }
+  BitBlt(bb_dc, 0, 0, bb_w, bb_h, screen_dc, 0, 0, SRCCOPY);
+  dc = bb_dc;
+  return true;
+}
+
+static void
+bb_end(HDC screen_dc, const RECT *crc)
+{
+  if (!bb_dc || !screen_dc)
+    return;
+  XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+  SetWorldTransform(bb_dc, &id);
+  BitBlt(screen_dc, 0, 0, crc->right, crc->bottom, bb_dc, 0, 0, SRCCOPY);
+}
+
 void
 do_update(void)
 {
@@ -2181,35 +2232,11 @@ do_update(void)
 
   show_curchar_info('u');
 
-  bool anim = term_scroll_anim_active();
   RECT crc = {0};
-  if (anim)
-    GetClientRect(wnd, &crc);
 
   HDC screen_dc = GetDC(wnd);
-  HDC mem_dc = 0;
-  HBITMAP mem_bm = 0, mem_oldbm = 0;
-
-  if (anim && screen_dc) {
-    int mw = max(1, crc.right), mh = max(1, crc.bottom);
-    mem_dc = CreateCompatibleDC(screen_dc);
-    mem_bm = CreateCompatibleBitmap(screen_dc, mw, mh);
-    if (mem_dc && mem_bm) {
-      mem_oldbm = SelectObject(mem_dc, mem_bm);
-      BitBlt(mem_dc, 0, 0, mw, mh, screen_dc, 0, 0, SRCCOPY);
-      dc = mem_dc;
-    }
-    else {
-      if (mem_bm)
-        DeleteObject(mem_bm);
-      if (mem_dc)
-        DeleteDC(mem_dc);
-      mem_dc = 0;
-      mem_bm = 0;
-      dc = screen_dc;
-    }
-  }
-  else
+  bool buffered = bb_begin(screen_dc, &crc);
+  if (!buffered)
     dc = screen_dc;
 
   // horizontal scrolling of terminal view
@@ -2248,13 +2275,8 @@ do_update(void)
       draw_cursor_overlay();
   }
 
-  if (mem_dc && mem_bm) {
-    XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
-    SetWorldTransform(mem_dc, &id);
-    BitBlt(screen_dc, 0, 0, crc.right, crc.bottom, mem_dc, 0, 0, SRCCOPY);
-    SelectObject(mem_dc, mem_oldbm);
-    DeleteObject(mem_bm);
-    DeleteDC(mem_dc);
+  if (buffered) {
+    bb_end(screen_dc, &crc);
     dc = 0;
   }
   /* Separate cursor canvas: draw cursor onto its own layer, then composite */
@@ -6478,31 +6500,10 @@ win_paint(void)
   PAINTSTRUCT p;
   bool anim = term_scroll_anim_active() && !tek_mode;
   HDC screen_dc = BeginPaint(wnd, &p);
-  HDC mem_dc = 0;
-  HBITMAP mem_bm = 0, mem_oldbm = 0;
   RECT crc = {0};
 
-  if (anim && screen_dc) {
-    GetClientRect(wnd, &crc);
-    int mw = max(1, crc.right), mh = max(1, crc.bottom);
-    mem_dc = CreateCompatibleDC(screen_dc);
-    mem_bm = CreateCompatibleBitmap(screen_dc, mw, mh);
-    if (mem_dc && mem_bm) {
-      mem_oldbm = SelectObject(mem_dc, mem_bm);
-      BitBlt(mem_dc, 0, 0, mw, mh, screen_dc, 0, 0, SRCCOPY);
-      dc = mem_dc;
-    }
-    else {
-      if (mem_bm)
-        DeleteObject(mem_bm);
-      if (mem_dc)
-        DeleteDC(mem_dc);
-      mem_dc = 0;
-      mem_bm = 0;
-      dc = screen_dc;
-    }
-  }
-  else
+  bool buffered = bb_begin(screen_dc, &crc);
+  if (!buffered)
     dc = screen_dc;
 
   // better invalidate more than less; limited to text area in term_invalidate
@@ -6609,13 +6610,9 @@ win_paint(void)
 #endif
   }
 
-  if (mem_dc && mem_bm) {
-    XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
-    SetWorldTransform(mem_dc, &id);
-    BitBlt(screen_dc, 0, 0, crc.right, crc.bottom, mem_dc, 0, 0, SRCCOPY);
-    SelectObject(mem_dc, mem_oldbm);
-    DeleteObject(mem_bm);
-    DeleteDC(mem_dc);
+  if (buffered) {
+    bb_end(screen_dc, &crc);
+    dc = 0;
   }
   /* Separate cursor canvas: draw cursor onto its own layer, then composite */
   if (cfg.cursor_separate_canvas)

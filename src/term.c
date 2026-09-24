@@ -668,6 +668,7 @@ curs_anim_cancel(void)
   term.curs_trail_len = 0;
   term.curs_particle_n = 0;
   term.curs_smear.inited = false;
+  term.curs_smear.moving = false;
 }
 
 /* Spawn Neovide-style trail particles along the move from (x0,y0) to (x1,y1). */
@@ -753,8 +754,10 @@ curs_update_particles(float dt)
 static bool
 smear_update(float dt)
 {
-  if (!cfg.cursor_smear || !term.curs_smear.inited)
+  if (!cfg.cursor_smear || !term.curs_smear.inited) {
+    term.curs_smear.moving = false;
     return false;
+  }
 
   unsigned now = (unsigned)get_tick_count();
   unsigned last = term.curs_smear.last_ms;
@@ -821,6 +824,7 @@ smear_update(float dt)
   float stop = cell_width * 0.1f;
   if (stop < 1.0f)
     stop = 1.0f;
+  bool was_moving = term.curs_smear.moving;
   if (max_d2 <= stop * stop && max_v <= stop) {
     for (int i = 0; i < 4; i++) {
       term.curs_smear.x[i] = term.curs_smear.dx[i];
@@ -829,6 +833,11 @@ smear_update(float dt)
       term.curs_smear.ox[i] = term.curs_smear.oy[i] = 0;
     }
     anim = false;
+  }
+  term.curs_smear.moving = anim;
+  if (was_moving && !anim) {
+    term.cursor_invalid = true;
+    curs_anim_invalidate();
   }
   return anim;
 }
@@ -924,6 +933,7 @@ smear_on_jump(int from_cx, int from_cy, int to_cx, int to_cy)
     }
     term.curs_smear.inited = true;
     term.curs_smear.last_ms = 0;
+    term.curs_smear.moving = false;
     if (from_cx == to_cx && from_cy == to_cy) {
       for (int i = 0; i < 4; i++) {
         term.curs_smear.x[i] = dst[i * 2];
@@ -934,6 +944,7 @@ smear_on_jump(int from_cx, int from_cy, int to_cx, int to_cy)
       return;
     }
   }
+  term.curs_smear.moving = true;
 
   /* Retarget: keep current visual pos, aim at new dest. */
   for (int i = 0; i < 4; i++) {
@@ -1154,17 +1165,20 @@ curs_anim_cb(void)
   if (term.curs_particle_n > 0)
     curs_update_particles(0.016f);
 
+  bool smear_was_moving = term.curs_smear.moving;
   bool smear_anim = smear_update(0.016f);
+  bool smear_settled = smear_was_moving && !smear_anim;
 
   /* Keep timer alive while smear/particles still settling (even if smooth done). */
   if (!term.curs_animate || cfg.smooth_cursor != ANIM_SMOOTH) {
     if (!smear_anim && term.curs_particle_n == 0)
       term.curs_animate = false;
-    if (term.curs_particle_n > 0 || smear_anim) {
+    if (term.curs_particle_n > 0 || smear_anim || smear_settled) {
       term.cursor_invalid = true;
       curs_anim_invalidate();
       win_update(false);
-      win_set_timer(curs_anim_cb, 16);
+      if (term.curs_particle_n > 0 || smear_anim)
+        win_set_timer(curs_anim_cb, 16);
     }
     return;
   }
@@ -1499,6 +1513,7 @@ term_reset(bool full)
   term.curs_animate = false;
   term.curs_last_x = term.curs_last_y = -1;
   term.curs_smear.inited = false;
+  term.curs_smear.moving = false;
   term_scroll_anim_cancel();
   if (full) {
     term.blink_is_real = cfg.allow_blinking;
@@ -1577,6 +1592,7 @@ show_screen(bool other_screen, bool flip)
   term.curs_animate = false;
   term.curs_last_x = term.curs_last_y = -1;
   term.curs_smear.inited = false;
+  term.curs_smear.moving = false;
   term_scroll_anim_cancel();
 
   // Reset cursor blinking.
@@ -1617,8 +1633,10 @@ term_reconfig(void)
   }
   if (new_cfg.smooth_cursor != ANIM_SMOOTH && !new_cfg.cursor_smear)
     curs_anim_cancel();
-  else if (!new_cfg.cursor_smear)
+  else if (!new_cfg.cursor_smear) {
     term.curs_smear.inited = false;
+    term.curs_smear.moving = false;
+  }
   else if (new_cfg.smooth_cursor != ANIM_SMOOTH)
     term.curs_animate = false;
   if (new_cfg.smooth_scroll != ANIM_SMOOTH)
@@ -5093,7 +5111,7 @@ term_paint(void)
         (scroll_band_cursor ? 0 :
          !term.has_focus ? TATTR_PASCURS :
          term.curs_animate || cfg.cursor_separate_canvas
-         || (cfg.cursor_smear && term.curs_smear.inited) ? 0 :
+         || (cfg.cursor_smear && term.curs_smear.moving) ? 0 :
          term.cblink_alpha > 0 || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
         (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);
 

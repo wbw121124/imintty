@@ -1344,6 +1344,7 @@ draw_cursor_overlay(void)
   if (!term.cursor_on || term.show_other_screen)
     return;
   bool scroll_layer = term_scroll_anim_active();
+  int cx = -1, cy = -1;
   if (scroll_layer) {
     /* Overlay only pins the cursor inside the scroll band; elsewhere
        term_paint already applied TATTR_ACTCURS/PASCURS. */
@@ -1352,8 +1353,14 @@ draw_cursor_overlay(void)
     if (cy < term.scroll_anim_top || cy >= term.scroll_anim_bot)
       return;
   }
-  else if (!term.curs_animate || cfg.smooth_cursor != ANIM_SMOOTH)
-    return;
+  else if (!term.curs_animate || cfg.smooth_cursor != ANIM_SMOOTH) {
+    /* Static cursor: draw at current cell position. */
+    cy = term.curs.y - term.disptop;
+    cx = term.curs.x;
+    if (cy < 0 || cy >= term.rows || cx < 0 || cx >= term.cols)
+      return;
+    /* fall through to draw static cursor below */
+  }
 
   int x, y;
   if (term.curs_animate && cfg.smooth_cursor == ANIM_SMOOTH) {
@@ -1376,10 +1383,15 @@ draw_cursor_overlay(void)
     y = term.curs_py0 + (term.curs_py1 - term.curs_py0) * eased / max(dur, 1);
   }
   else {
-    /* scroll overlay: pin to final cell */
+    /* scroll overlay: pin to final cell; or static cursor for separate canvas */
     if (term.curs_last_x >= 0 && term.curs_last_y >= 0) {
       x = term.curs_last_x * cell_width + PADDING;
       y = term.curs_last_y * cell_height + OFFSET + PADDING;
+    }
+    else if (cx >= 0 && cy >= 0) {
+      /* static cursor for separate canvas */
+      x = cx * cell_width + PADDING;
+      y = cy * cell_height + OFFSET + PADDING;
     }
     else {
       x = term.curs_px1;
@@ -1504,8 +1516,9 @@ draw_cursor_to_canvas(HDC screen_dc)
     cursor_canvas_w = w;
     cursor_canvas_h = h;
   }
-  /* Clear cursor canvas */
-  HBRUSH clr = CreateSolidBrush(RGB(0, 0, 0));
+  /* Clear cursor canvas to terminal background (not black) */
+  colour bg = win_get_colour(BG_COLOUR_I);
+  HBRUSH clr = CreateSolidBrush(RGB(GetRValue(bg), GetGValue(bg), GetBValue(bg)));
   HBRUSH old_brush = SelectObject(cursor_canvas_dc, clr);
   Rectangle(cursor_canvas_dc, 0, 0, w, h);
   SelectObject(cursor_canvas_dc, old_brush);

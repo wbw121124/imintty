@@ -448,7 +448,6 @@ msgstr "闪烁(&G)"
 #: config.c:4536
 msgid "&Separate cursor canvas"
 msgstr "分离光标画布"
-msgstr ""
 
 #. __ Options - Animation: treeview label
 #. __ Options - Animation: panel title
@@ -542,7 +541,6 @@ msgstr "滚动行数"
 #: config.c:4615
 msgid "Neovide &expand blink"
 msgstr "Neovide 扩展闪烁"
-msgstr ""
 
 #: config.c:4620
 msgid "Cursor trail"

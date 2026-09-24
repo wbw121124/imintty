@@ -778,6 +778,9 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
     * and doesn't require any control creation at all.
     */
     if (ctrl->type == CTRL_COLUMNS) {
+      if (ncols == 1 && ctrl->columns.ncols == 1)
+        continue;  // already one column; percentages is null for ncols==1
+
       assert((ctrl->columns.ncols == 1) ^ (ncols == 1));
 
       if (ncols == 1) {
@@ -793,7 +796,8 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
 
         lpercent = 0;
         for (i = 0; i < ncols; i++) {
-          rpercent = lpercent + ctrl->columns.percentages[i];
+          int pct = ctrl->columns.percentages ? ctrl->columns.percentages[i] : 100 / ncols;
+          rpercent = lpercent + pct;
           lx =
             columns[i].xoff + lpercent * (columns[i].width + GAPBETWEEN) / 100;
           rx =

@@ -6,63 +6,155 @@
 |---|---|
 | 工作目录 | `E:\吴邦玮\项目\imintty`（clone 到当前目录根） |
 | 构建链 | MSYS2 位于 `F:\msys64`（`usr\bin` 有 gcc/make），PATH 需会话级设置；imintty 官方支持 MSYS2 构建 |
-| imintty 已有 | Unicode 17、真彩、sixel/ReGIS、OSC 8、undercurl、Uniscribe 连字（`Ligatures` 选项）、tabbar、iTerm2 图片 |
-| 主要缺口 | Kitty 键盘协议、Kitty 图形协议、OpenType 风格集开关、DirectWrite 字体回退、平滑滚动/光标/闪烁、默认体验调优 |
+| imintty 已有 | Unicode 17、真彩、sixel/ReGIS、OSC 8、undercurl、Uniscribe 连字（`Ligatures`）、tabbar、iTerm2 图片 |
+| 主要缺口 | 渲染引擎全量迁移（D2D+DWrite+HarfBuzz）、LuaConfig 脚本引擎、光标画布透明与动画渲染修复、OpenType 风格集完善 |
 
-## 实施顺序（按性价比排序）
+## 实施顺序（当前）
 
-### Phase 0 — 环境与基线构建
-1. `git clone https://github.com/imintty/imintty.git .` 到当前目录。
-2. 会话级 PATH：`$env:PATH = "F:\msys64\usr\bin;$env:PATH"`（不持久化污染系统）。
-3. `make -C src` 产出 `bin/imintty.exe`，确认零修改基线可编译可运行。
+> 顺序已确认：**plan.md → Phase C（Lua）→ Phase B（渲染）→ 回验 Phase A**
 
-### Phase 1 — 平滑闪烁（三路独立配置）
-- 改动：`src/term.c`（ATTR_BLINK）、光标闪烁/BEL 闪屏定时器（`src/winmain.c` / `src/wintext.c`）。
-- 定时器 + `AlphaBlend` 多帧 alpha 过渡替代硬开关。
-- 配置（`config.c` + `config.template`）：
-  - `SmoothBlinkAttr=yes/no` — ANSI SGR 5 属性闪烁
-  - `SmoothBlinkCursor=yes/no` — 光标闪烁
-  - `SmoothBlinkBell=yes/no` — `\a` 响铃屏幕闪光
-  - `SmoothBlinkDuration`（ms）
+### Phase C — LuaConfig 完整脚本配置引擎
 
-### Phase 2 — 平滑光标（类 VS Code）
-- 改动：`src/wintext.c` 光标绘制 + 定时器。
-- 单元格移动时保存上一帧/目标矩形，逐帧插值；缓冲避免字符残影；支持块/下划线/竖线。
-- 配置：`SmoothCursor=yes/no`、`SmoothCursorDuration`。
+#### C1 选项与路径
+- 新选项 `LuaConfig`（`OPT_WSTRING`，`.iminttyrc`：`LuaConfig=~/.config/imintty/init.lua`）。
+- 路径展开统一 helper（复用/扩展 `path_posix_to_win_w`）：
+  - MSYS2 POSIX：`/c/Users/...`、`~/...`
+  - Windows：`C:\...`
+  - 超长路径：`\\?\` 前缀规范化（读写前统一加/剥策略）
+- 加载时机：`load_config` 读完 rc 后求值；主题切换 / Options Apply 可重入；错误 pcall + 初始化期报告。
 
-### Phase 3 — 平滑滚动
-- 改动：`term.c` 屏幕滚动 → `winmain.c` 失效重绘路径。
-- 逻辑状态立即更新，显示层记录像素偏移，定时器插值到 0；每帧背缓冲 `BitBlt` + 新行绘制；兼容图片/sixel 叠层。
-- 配置：`SmoothScroll=yes/no`、`SmoothScrollDuration`、`SmoothScrollLines`（阈值）。
+#### C2 嵌入与 API（Lua 5.4 静态链接）
+- `LICENSE.bundling` 增加 Lua 许可条目；Makefile 链接 `-llua` 或内置子树（按 MSYS2 包可用性定）。
+- 首期完整 API：
+  - `imintty.set(key, value)` / `get(key)` — 走 `set_option` 同一类型系统（只进内存 `cfg`，不回写 rc）
+  - `imintty.rc(path)` — 读取子 rc/theme（复用 `load_config`）
+  - `imintty.on(event, fn)` — 钩子：`config_loaded`、`bell`、`command`（逐步扩展）
+  - `imintty.command(name, fn)` — 注册命令（对接 UserCommands 分发）
+  - `imintty.key(keyspec, action)` — 键绑定（对接 KeyFunctions）
+  - 受控 `io`/`os`（路径经 helper；`os.execute` 默认禁用）
+- GUI：选项对话框展示 `LuaConfig` 路径 + “重新加载 Lua”（可选）。
+- 改动不回写 `.iminttyrc`（函数/表无法序列化为 `name=value`）。
 
-### Phase 4 — 渲染性能 + 默认配置 + UI 打磨
-- 性能：审计脏矩形，减少全窗重绘；连字/闪烁/光标帧增量绘制。
-- 默认值：`LigaturesSupport=2`、平滑项默认开、ScrollbackLines、现代光标默认等（`config.c`）。
-- UI：选项对话框（`windialog.c`/`winctrls.c`）暴露新配置。
+#### C3 验证
+- `make -C src` 零警告；冒烟：`LuaConfig` 指向示例 `init.lua`，`set` 生效、错误脚本不崩溃。
 
-### Phase 5 — Kitty 键盘协议
-- 解析（`termout.c`）：`CSI = flags ; mode u`、`CSI > flags u` / `CSI < u`（pop）、`CSI ? flags u` 查询（DA1 前回）；模式栈。
-- 编码（`wininput.c`）：5 渐进位——① 消歧义；② press/release/repeat（WM_KEYUP）；③ 备选键位；④ 全键 CSI u；⑤ 关联文本。
-- DA1 能力位；配置 `KittyKeyboard=yes/no`；文档 `wiki/CtrlSeqs.md`。
+---
 
-### Phase 6 — OpenType 字体特性 + DirectWrite 回退（共用后端）
-- 新路径 `FontRender=dwrite`（新增 `src/windwrite.c`）：`IDWriteTextLayout` + `IDWriteTypography`（`AddFontFeature`）+ `IDWriteFontFallback::MapCharacters`；保留 Uniscribe/TextOut 可回退。
-- 配置：`FontFeatures=ss01,ss02,zero,calt,…`；`FontFallback=yes/no`（默认开，`FontChoice` 显式配置优先）。
-- 难点：等宽约束（参考 #601）；CJK/Arabic 与 `FontSubst`(#1352) 衔接。
-- 参考：Vim `gui_dwrite.cpp`、Windows Terminal 回退逻辑。
+### Phase B — 渲染引擎全量迁移（D2D + DirectWrite + OpenType + HarfBuzz）
 
-### Phase 7 — Kitty 图形协议核心子集
-- 解析：`termout.c` APC（`ESC _ G … ST`）。
-- 子集：传输 `t/T`（分块 base64、`m=0/1/2`、PNG 走 WIC）；placement 复用 `winimg.c` 按格叠层；删除 `d`；查询 `q=?` 先于 DA1 立即应答；DA1 加能力位。
-- 暂缓：动画协议、RGBA+zlib（二期）。
-- 配置：`KittyGraphics=yes/no`。
+> **边界变更**：原「不做 GPU/Direct2D 全量重写」已废止，改为「分层迁移 + `RenderBackend` 可回退到 GDI」。
+
+#### B1 DirectWrite 文字路径（先落实现 `FontRender=dwrite`）
+- 修复死代码：`use_dwrite` 宏定义位置、作用域错误 → 新建 `src/windwrite.c`。
+- `IDWriteTextFormat` + `IDWriteTextLayout` + `IDWriteTypography::AddFontFeature`（`FontFeatures=ss01,zero,calt,…`）。
+- `IDWriteFontFallback::MapCharacters`（`FontFallback=yes`；与 `FontChoice`/`FontSubst` 优先级对齐）。
+- **cluster→cell 映射**：等宽契约，advance 聚类回格（连字不破格对齐，参考 #601）。
+- 字形检测统一走 DWrite（逐步废弃 `GetGlyphIndicesW` 双源）。
+- 宽度测量：`GetGlyphMetrics` advance 替代 `win_char_width` 扫像素（保留 `@cjkwide` 等特判）。
+- 配置：`FontFeatures`、`FontFallback`、`FontRender=dwrite|uniscribe|textout`。
+
+#### B2 Direct2D 渲染目标
+- `ID2D1HwndRenderTarget`（后期可评估 DXGI swapchain）接管客户区。
+- 文字：`DrawGlyphRun`（消费 B1 排版结果）。
+- 光标 / overlay / 滚动：D2D 形状 + 真 alpha（取代 `blend_colour` 假 alpha）。
+- sixel / emoji / iTerm2 / Kitty 图像：`ID2D1Bitmap`（WIC 解码）+ alpha 合成；GDI+ 路径保留为 fallback。
+- RTL：`minibidi` 双向重排保留；shaping 换 HarfBuzz；`SetWorldTransform` 镜像改 D2D transform。
+- 配置：`RenderBackend=d2d|gdi`（默认迁移完成后 d2d，可回退）。
+
+#### B3 HarfBuzz + OpenType shaping
+- 字体 blob：`IDWriteFontFace` → `hb_blob_create`（或 FreeType 后端，按包可用性定）。
+- 替换 `do_shape` / 逐步退役 Uniscribe 成 `hb_shape`；`minibidi` 只做 bidi。
+- 配置：`ShapingEngine=harfbuzz|uniscribe`（默认 harfbuzz，可回退）。
+- 连字/样式集：`hb_feature_from_string` 与 `FontFeatures` 同一解析入口。
+
+#### B4 分阶段落地（每步可编译可跑、独立 commit）
+1. B1 纯文字 DWrite（仍与 GDI 合成）
+2. B2 光标 + overlay 进 D2D
+3. B2 文字进 D2D
+4. B3 HarfBuzz 接入
+5. 图像层（WIC + D2D bitmap）迁移
+6. 默认 `RenderBackend=d2d`，GDI 仍可选
+
+#### B 验证
+- 每步 `make -C src` 零警告；中英/RTL/连字/emoji/sixel 冒烟；`FontRender` 与 `RenderBackend` 回退路径回归。
+
+---
+
+## Phase A — 光标画布透明 + 动画渲染修复（回验）
+
+> **状态：待 C/B 之后回验问题是否仍在**（此前已有相关修复提交，需目测确认）。
+
+### A1 分离光标画布背景透明
+- `draw_cursor_to_canvas`（`wintext.c`）：
+  - `CreateCompatibleBitmap` → **32bpp DIBSection**；清 alpha=0，去掉整幅不透明 `Rectangle(bg)`。
+  - overlay 提前 `return` 时跳过合成（避免纯背景盖全窗）。
+  - 合成：`BitBlt(SRCCOPY)` → 光标脏矩形 blit 或 `AlphaBlend(AC_SRC_ALPHA)`。
+  - 合成前复位 `SetWorldTransform`（与 win_paint 路径对齐）。
+
+### A2 动画不渲染
+- `draw_cursor_overlay` 返回条件不得触发全窗覆盖。
+- `do_update` 状态机 `BLOCKED→IDLE` 丢帧：恢复时重新排程自续定时器。
+- 动画 tick：`term_invalidate` 路径补 `win_schedule_update` 兜底。
+- 验证矩阵：块/竖线/下划线 × smooth/expand/phase/trail × 分离画布 on/off。
+
+### A 验证步骤（C/B 完成后执行）
+1. 启动后 Options → 动画 → 各模式切换，观察光标是否正常出现/消失。
+2. 开启 `CursorSeparateCanvas=yes`，确认光标层背景透明（文本不被纯色盖住）。
+3. 光标平滑移动 + 拖尾 + expand 闪烁目测。
+4. 若问题仍在 → 按 A1/A2 修复并提交；若已不在 → 记录「已由既有提交覆盖」并关闭。
+
+---
+
+## 已完成阶段归档（原 Phase 0–7）
+
+> 以下阶段代码已落地（含后续 bugfix），保留作对照；后续文档以「当前实施顺序」为准。
+
+### Phase 0 — 环境与基线构建 ✅
+1. `git clone …` 到当前目录。
+2. 会话级 PATH 指向 `F:\msys64\usr\bin`。
+3. `make -C src` 产出 `bin/imintty.exe`。
+
+### Phase 1 — 平滑闪烁（三路独立配置）✅
+- 配置：`SmoothBlinkAttr/Cursor/Bell`、`SmoothBlinkDuration`（动画模式：blink/smooth/phase/expand/solid）。
+
+### Phase 2 — 平滑光标（类 VS Code）✅
+- 配置：`SmoothCursor`、`SmoothCursorDuration`；光标拖尾 `ControlCursorTail`；分离画布 `CursorSeparateCanvas`（透明与动画问题见 Phase A 回验）。
+
+### Phase 3 — 平滑滚动 ✅
+- 配置：`SmoothScroll`、`SmoothScrollDuration`、`SmoothScrollLines`；背缓冲 + 插值。
+
+### Phase 4 — 渲染性能 + 默认配置 + UI 打磨 ✅（部分持续）
+- 脏矩形、`LigaturesSupport` 默认、选项对话框暴露动画/光标配置（Animation 面板空列崩溃已修）。
+
+### Phase 5 — Kitty 键盘协议 ✅
+- CSI u 解析/编码、5 渐进位、DA1、`KittyKeyboard` 配置、wiki 文档。
+
+### Phase 6 — OpenType 字体特性 + DirectWrite 回退 → **并入 Phase B**
+- 原单文件 `windwrite.c` 桩已确认不可用（宏/作用域问题），按 B1 重做。
+
+### Phase 7 — Kitty 图形协议核心子集 ✅
+- APC 解析、`t/T` 分块、`q=?` 应答、`KittyGraphics` 配置；动画/RGBA+zlib 仍暂缓。
+
+### 已修 bug（近期）
+- 大选区复制卡死（RTF O(N²) 增长）+ 对话框 `plat_ctrl` 空指针。
+- Options → 动画面板 `CTRL_COLUMNS` 空 percentages 崩溃。
+- `cursor_neovide_expand` → `ControlCursorTail` 重命名；中文文案与 po 同步。
+
+---
 
 ## 验证策略
-- 每 Phase 结束：`make -C src` 零警告回归 + 启动冒烟。
-- 协议：kitty 官方测试序列 / `printf` 脚本验证键盘 5 标志位、`q=?` 探测、PNG 显示。
-- 动画：目测 + 可配置关断。
+- 每 Phase / 每 B 子步结束：`make -C src` 零警告回归 + 启动冒烟。
+- 协议：kitty 官方测试序列 / `printf` 脚本验证键盘标志位、`q=?` 探测、PNG 显示。
+- 动画与光标：按 Phase A 矩阵目测；可配置关断。
+- Lua：示例 `init.lua`（set/on/command/key）+ 错误脚本容错。
+- 渲染：`FontRender` 三档 × `RenderBackend` 两档交叉冒烟（中/英/RTL/emoji/sixel）。
 
 ## 风险与边界
-- Phase 6/7 工作量大；Phase 1–5 完成即为可交付版本。
+- Phase B 工作量大：B1→B4 分层提交，始终保持 GDI 回退可编译。
+- 等宽契约与 cluster→cell 映射是 DWrite/HarfBuzz 最大回归面（连字、CJK、emoji overhang）。
+- RTL：`minibidi` 负责 bidi 缓存（鼠标/选择依赖），不可整体删除；HarfBuzz 只替换 shape。
+- Lua：静态链接许可需记入 `LICENSE.bundling`；`os.execute` 默认禁用；脚本改动不回写 rc。
 - 不上游 PR（imintty 政策），改动留本地仓库。
-- 不做 GPU/Direct2D 全量重写。
+
+## 目前不实现
+> FontFeatures/FontFallback 的 GUI 细化完善、Kitty 图形 mode 0（仅传输不显示）验证、实际 PNG e2e 渲染测试；D2D DXGI swapchain / 独立合成线程（B2 之后再评估）。

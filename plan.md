@@ -47,20 +47,25 @@
 
 ## 阶段明细
 
-### P0 收尾（半天）
-- 提交已改好的光标 height=0 修复（`wintext.c` 三处：overlay/cell 路径 `expand=255`、invert 跳绘限 CUR_BLOCK）+ 本计划 + `plan.md` C3 勾选，排除 `README.md`。
-- expand e2e 重测：按 PID/标题取**自己启动的**窗口（禁 `clean.ps1`），`measure_expand.py` 采样区改 y≈70–95。
+### P0 收尾（半天）~~已完成~~
+- ~~提交已改好的光标 height=0 修复（`wintext.c` 三处：overlay/cell 路径 `expand=255`、invert 跳绘限 CUR_BLOCK）+ 本计划 + `plan.md` C3 勾选，排除 `README.md`。~~
+- ~~expand e2e 重测：按 PID/标题取**自己启动的**窗口（禁 `clean.ps1`），`measure_expand.py` 采样区改 y≈70–95。~~
+- **实测结论（2026-09-25）**：expand 光标高度稳定 10px（cell_height=19 的 52%），符合 expand 动画预期 ✓。
+- **附加修复**：光标竞态消失（`af81ae2`）、光标 alpha 遮盖字形（`cef7e1c`）、光标移动消失（`b1cd00c`）、GDI brush 缓存（`87ca8a7`）。
 
-### P1 lua5.5 源码静态内嵌（1–2 天）
-- vendored `third_party/lua55/`（官方 tarball，MIT，`LICENSE.bundled` 已有条目）。
-- Makefile：删 `lualib=-llua`，lua `.c` 单独 CFLAGS（避开 `-Werror`），链进 `imintty.exe`。
-- 删除 `bin/msys-lua-5.5.dll` 依赖。
-- 验证：`objdump -p` 无 lua dll 导入；`config_loaded`/坏脚本冒烟回归。
+### P1 lua5.5 源码静态内嵌（1–2 天）~~已完成~~
+- ~~vendored `third_party/lua55/`（官方 tarball，MIT，`LICENSE.bundled` 已有条目）。~~
+- ~~Makefile：删 `lualib=-llua`，lua `.c` 单独 CFLAGS（避开 `-Werror`），链进 `imintty.exe`。~~
+- ~~删除 `bin/msys-lua-5.5.dll` 依赖。~~
+- ~~验证：`objdump -p` 无 lua dll 导入；`config_loaded`/坏脚本冒烟回归。~~
+- **实测结论（2026-09-25）**：Lua 5.5.1 源码已内嵌（32 个 .c 文件），零 DLL 依赖 ✓。
+- Commit: `dd38dd7 feat: Lua 5.5 静态内嵌 + ConPTY 检测基础设施 (P1+P2a)`
 
 ### P2 ConPTY 后端 + spawn 解耦（1–2 周，核心基座）
-- **P2a 子模块**：浅克隆 `microsoft/terminal` 固定 commit → MSBuild 构 `conpty.dll` + `OpenConsole.exe` → app-local 放 `bin/`（winconpty `_ConsoleHostPath` 找同目录 `OpenConsole.exe`，找不到回退 inbox conhost）。
-  - **不依赖 WIL**：接线代码自写 `src/conpty.c`（Handle RAII 用 goto/`CloseHandle` 手写）或 patch vendored winconpty.cpp 去 WIL，编译期 `-I` 不含 wil 路径。
-  - **旧系统兼容**：ConPTY 三 API 动态 `GetProcAddress`（kernel32 缺失即回退 msys 后端），`objdump -p` 校验导入表无这三个符号；SDK/头文件按 <10.0.17763 可用性选。
+- **P2a 子模块** ~~已完成~~：浅克隆 `microsoft/terminal` 固定 commit → MSBuild 构 `conpty.dll` + `OpenConsole.exe` → app-local 放 `bin/`（winconpty `_ConsoleHostPath` 找同目录 `OpenConsole.exe`，找不到回退 inbox conhost）。
+  - ~~**不依赖 WIL**：接线代码自写 `src/conpty.c`（Handle RAII 用 goto/`CloseHandle` 手写）或 patch vendored winconpty.cpp 去 WIL，编译期 `-I` 不含 wil 路径。~~
+  - ~~**旧系统兼容**：ConPTY 三 API 动态 `GetProcAddress`（kernel32 缺失即回退 msys 后端），`objdump -p` 校验导入表无这三个符号；SDK/头文件按 <10.0.17763 可用性选。~~
+  - **实测结论**：`conpty.c/h` 已实现 `conpty_available()` / `conpty_create()` / `conpty_resize()` / `conpty_close()`，动态加载 API ✓。
 - **P2b child.c 双后端**：新选项 `PtyBackend=conpty|msys`（先默认 msys，验证后切）。
   - conpty 路径：动态加载 app-local `conpty.dll`（`ConptyCreatePseudoConsole`，失败回退 kernel32）→ pipes ×2 → `STARTUPINFOEXW` + `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE` → `CreateProcessW(shell)`。
   - I/O 泵重构：select(pty_fd, win_fd) 对 HANDLE pipe 失效 → **reader 线程 + 自定义消息**并入现有消息泵；`winsize` → `ResizePseudoConsole`；环境块构造（继承 + `IMINTTY_*`）；shell 路径 POSIX→Windows 解析。

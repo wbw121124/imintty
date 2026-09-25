@@ -1765,7 +1765,7 @@ draw_cursor_overlay_to_dc(void)
   /* Neovide-style particle trail (TrailMode railgun/torpedo/pixiedust). */
   if (term.curs_particle_n > 0 && !scroll_layer) {
     colour pcc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
-    int d2d = d2d_begin(dc);
+    bool d2d = d2d_begin(dc);
     for (int i = 0; i < term.curs_particle_n; i++) {
       float life = term.curs_particles[i].life;
       if (life <= 0)
@@ -2350,10 +2350,17 @@ layers_begin(HDC ref, RECT *crc)
       return false;
     content_valid = false;
     colour bg = colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
-    HBRUSH br = cache_create_brush(bg);
-    RECT all = {0, 0, mw, mh};
-    FillRect(content_dc, &all, br);
-    DeleteObject(br);
+    /* Use D2D for background fill when available (GPU-accelerated). */
+    if (d2d_begin(content_dc)) {
+      d2d_fill_rect(0, 0, (float)mw, (float)mh, bg, 255);
+      d2d_end();
+    }
+    else {
+      HBRUSH br = cache_create_brush(bg);
+      RECT all = {0, 0, mw, mh};
+      FillRect(content_dc, &all, br);
+      DeleteObject(br);
+    }
     /* New content is blank; displines still look clean — force full repaint. */
     term_invalidate(0, 0, term.cols - 1, term_allrows - 1);
   }

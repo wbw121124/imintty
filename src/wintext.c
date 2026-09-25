@@ -17,7 +17,6 @@
 #include <usp10.h>  // Uniscribe
 #include <math.h>
 
-
 #define dont_debug_bold 1
 
 #define dont_narrow_via_font
@@ -1372,14 +1371,18 @@ draw_cursor_overlay_to_dc(void)
   bool expand_mode = cfg.smooth_blink_cursor == ANIM_EXPAND
                      && term_cursor_blinks() && term.has_focus
                      && !cfg.cursor_invert;
-  /* Cell path owns the static body unless animate/smear-moving/scroll/expand
-     pin it here; otherwise term_paint + overlay double-draw and blink flickers.
-     CursorSeparateCanvas only selects the composite path (canvas vs direct);
-     it must not take body ownership away from the cell path, or the solid
-     overlay body covers the glyph it sits on (#D1 吞字). */
-  bool own_body = scroll_layer || term.curs_animate
-                  || (cfg.cursor_smear && term.curs_smear.moving)
-                  || expand_mode;
+   /* Cell path owns the static body unless animate/smear-moving/scroll/expand
+      pin it here; otherwise term_paint + overlay double-draw and blink flickers.
+      CursorSeparateCanvas only selects the composite path (canvas vs direct);
+      it must not take body ownership away from the cell path, or the solid
+      overlay body covers the glyph it sits on (#D1 吞字). */
+   bool own_body = scroll_layer || term.curs_animate
+                   || (cfg.cursor_smear && term.curs_smear.moving)
+                   || expand_mode
+                   /* During blink fade, cell path suppresses ACTCURS;
+                      overlay must own body to draw the fading cursor. */
+                   || (term_cursor_blinks() && term.has_focus
+                       && term.cblink_alpha < 255);
   bool have_fx = term.curs_particle_n > 0
                  || (term.curs_trail_len > 0 && term.curs_animate);
   if (!own_body && !have_fx)
@@ -1481,7 +1484,28 @@ draw_cursor_overlay_to_dc(void)
   if (d2d_begin(dc)) {
     char ctype = term_cursor_type();
     if (!own_body) {
-      /* effects only; cell path already painted the body */
+      /* effects only; cell path already painted the body.
+         Block cursor is fully handled by cell-path reversal;
+         line/box/underscore need the overlay to render their shape. */
+      char ctype = term_cursor_type();
+      if (ctype != CUR_BLOCK) {
+        if (ctype == CUR_BOX)
+          d2d_stroke_rect(x, uy, w, by - uy, cc, blink_a, 1.0f);
+        else if (ctype == CUR_LINE) {
+          int caret_width = max(2, w / 8);
+          d2d_fill_rect(x, uy, caret_width, by - uy, cc, blink_a);
+        }
+        else {  // CUR_UNDERSCORE
+          int th_full = max(2, h / 8);
+          int th = th_full * expand / 255;
+          if (expand > 0 && th < 1)
+            th = 1;
+          int ut = y + h - dy - th;
+          int bt = y + h - dy;
+          if (th > 0)
+            d2d_fill_rect(x, ut, w, bt - ut, cc, blink_a);
+        }
+      }
     }
     else if (use_smear) {
       if (ctype == CUR_BOX)
@@ -1559,7 +1583,38 @@ draw_cursor_overlay_to_dc(void)
   cc = blend_colour(bg, cc, blink_a);
 
   if (!own_body) {
-    /* effects only; body already painted by term_paint */
+    /* effects only; body already painted by term_paint.
+       Block cursor is fully handled by cell-path reversal;
+       line/box/underscore need the overlay to render their shape. */
+    char ctype = term_cursor_type();
+    if (ctype != CUR_BLOCK) {
+      HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
+      if (ctype == CUR_BOX) {
+        HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+        Rectangle(dc, x, uy, x + w, by);
+        SelectObject(dc, oldbrush);
+      }
+      else if (ctype == CUR_LINE) {
+        int caret_width = max(2, w / 8);
+        HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+        Rectangle(dc, x, uy, x + caret_width, by);
+        DeleteObject(SelectObject(dc, oldbrush));
+      }
+      else {  // CUR_UNDERSCORE
+        int th_full = max(2, h / 8);
+        int th = th_full * expand / 255;
+        if (expand > 0 && th < 1)
+          th = 1;
+        int ut = y + h - dy - th;
+        int bt = y + h - dy;
+        if (th > 0) {
+          HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+          Rectangle(dc, x, ut, x + w, bt);
+          DeleteObject(SelectObject(dc, oldbrush));
+        }
+      }
+      DeleteObject(SelectObject(dc, oldpen));
+    }
   }
   else if (use_smear) {
     POINT pts[4];

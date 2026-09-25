@@ -1379,14 +1379,26 @@ draw_cursor_overlay_to_dc(void)
    bool own_body = scroll_layer || term.curs_animate
                    || (cfg.cursor_smear && term.curs_smear.moving)
                    || expand_mode
-                   /* During blink fade (0 < alpha < 255), cell path suppresses
-                      ACTCURS; overlay must own body to draw the fading cursor. */
+                   /* During blink fade (alpha < 255), cell path suppresses
+                      ACTCURS; overlay must own body to draw the fading cursor.
+                      Must use < 255 (not > 0 && < 255) to avoid race when
+                      cblink_alpha hits exactly 0 between fade ticks. */
                    || (term_cursor_blinks() && term.has_focus
-                       && term.cblink_alpha > 0 && term.cblink_alpha < 255);
-  bool have_fx = term.curs_particle_n > 0
-                 || (term.curs_trail_len > 0 && term.curs_animate);
-  if (!own_body && !have_fx)
-    return false;
+                       && term.cblink_alpha < 255);
+   bool have_fx = term.curs_particle_n > 0
+                  || (term.curs_trail_len > 0 && term.curs_animate);
+#ifdef dont_debug_cursor
+   /* debugging disabled */
+#else
+   static int debug_count = 0;
+   if (debug_count++ < 200) {
+     fprintf(stderr, "[%d] own=%d have_fx=%d anim=%d blink_a=%d cblinker=%d scroll=%d\n",
+             debug_count, own_body, have_fx, term.curs_animate, term.cblink_alpha,
+             term.cblinker, scroll_layer);
+   }
+#endif
+   if (!own_body && !have_fx)
+     return false;
   int cx = -1, cy = -1;
   if (scroll_layer) {
     /* Overlay only pins the cursor inside the scroll band; elsewhere
@@ -1887,6 +1899,8 @@ draw_cursor_to_canvas(HDC screen_dc)
 }
 
 #define dont_debug_cursor 1
+/* TEMP: enable for cursor visibility debugging */
+/* #define debug_cursor 1 */
 
 static struct charnameentry {
   xchar uc;

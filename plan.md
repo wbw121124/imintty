@@ -1,187 +1,194 @@
-# imintty 现代终端特性与体验增强计划
+# imintty 下一阶段实施计划
 
-## 现状结论
+## 已确认的决策
 
-| 项 | 结论 |
+| 取舍 | 决定 |
 |---|---|
-| 工作目录 | `E:\吴邦玮\项目\imintty`（clone 到当前目录根） |
-| 构建链 | MSYS2 位于 `F:\msys64`（`usr\bin` 有 gcc/make），PATH 需会话级设置；imintty 官方支持 MSYS2 构建 |
-| imintty 已有 | Unicode 17、真彩、sixel/ReGIS、OSC 8、undercurl、Uniscribe 连字（`Ligatures`）、tabbar、iTerm2 图片 |
-| 主要缺口 | 渲染引擎全量迁移（D2D+DWrite+HarfBuzz）、LuaConfig 脚本引擎、光标画布透明与动画渲染修复、OpenType 风格集完善 |
+| msys 去除 | **两步渐进**：P1/P2 保留 MSYS2 工具链，先去 `msys-lua-5.5.dll` 和 forkpty；P8 全量 MinGW-w64 去 `msys-2.0.dll` |
+| OpenConsole | **源码子模块构建**：`git submodule microsoft/terminal`，MSVC 2022 MSBuild 只构 conpty.dll + OpenConsole.exe，固定 commit，记入 `LICENSE.bundled` |
+| 标签/窗格 | **容器子窗口 + chrome-like 标签渲染休眠**，直接替换 wintab.c 跨进程 tabset（无双模式过渡） |
+| GPU | 分阶段：S1 纯 CPU 滚动优化 → S2 `ID2D1HwndRenderTarget` → S3 评估 flip-model |
+| 主题 | 四项全做（ANSI-16 GUI、Lua 即时刷新、JSON 格式+管理器、动态/分标签主题） |
+| LuaConfig GUI | 两者都做（脚本管理面板 + 全量选项 GUI 补全） |
+| 顺序 | 基座先行（P0→P9），每步可编译可跑、独立 commit |
 
-## 实施顺序（当前）
+## 必修动画缺陷（优先于/穿插于 P0–P3）
 
-> 顺序已确认：**plan.md → Phase C（Lua）→ Phase B（渲染）→ 回验 Phase A**
+> 三个用户可见缺陷，与 P0 光标修复、P3 平滑滚动同域，随 P0 起步、在 P3 前闭环。
 
-### Phase C — LuaConfig 完整脚本配置引擎
+### D1 block cursor 在 smooth 闪烁时吞字
+- 现象：块光标 + `SmoothBlinkCursor=smooth` 时，光标覆盖的字符被吃掉（闪烁周期内字符消失）。
+- 方向：cell path 在 `expand!=255`/动画中间态不应走实心覆盖；对照 `CursorInvert` 与 `own_body`/overlay 合成顺序（`wintext.c` overlay ~1444、cell path ~5655）。
+- 验收：块光标 smooth 闪烁全程被覆盖字符始终可见（仅 fg/bg 或叠加变化，不丢字）；expand/trail/smear 各模式交叉无回归。
 
-#### C1 选项与路径
-- 新选项 `LuaConfig`（`OPT_WSTRING`，`.iminttyrc`：`LuaConfig=~/.config/imintty/init.lua`）。
-- 路径展开统一 helper（复用/扩展 `path_posix_to_win_w`）：
-  - MSYS2 POSIX：`/c/Users/...`、`~/...`
-  - Windows：`C:\...`
-  - 超长路径：`\\?\` 前缀规范化（读写前统一加/剥策略）
-- 加载时机：`load_config` 读完 rc 后求值；主题切换 / Options Apply 可重入；错误 pcall + 初始化期报告。
+### D2 平滑滚动动画方向反了
+- 现象：`SmoothScroll` 滚动动画移动方向与实际滚动方向相反。
+- 方向：backbuffer 插值偏移量符号（`SmoothScroll` 实现处），新内容从错误一侧进入。
+- 验收：滚轮/键盘上下滚，动画位移方向与最终停靠一致且自然。
 
-#### C2 嵌入与 API（MSYS2 Lua 5.5，`-llua` 动态链接）
-- `LICENSE.bundling` 已增加 Lua 许可条目；Makefile `lualib=-llua`（系统包 `lua 5.5.x`，`msys-lua-5.5.dll` 运行时）。
-- 首期完整 API：
-  - `imintty.set(key, value)` / `get(key)` — 走 `set_option` 同一类型系统（只进内存 `cfg`，不回写 rc）
-  - `imintty.rc(path)` — 读取子 rc/theme（复用 `load_config`）
-  - `imintty.on(event, fn)` — 钩子：`config_loaded`、`bell`、`command`（逐步扩展）
-  - `imintty.command(name, fn)` — 注册命令（对接 UserCommands 分发）
-  - `imintty.key(keyspec, action)` — 键绑定（对接 KeyFunctions）
-  - `imintty.expand_path(path)` / `imintty.home` — 路径与家目录
-  - 标准库全开（`luaL_openlibs`：io/os/string/table/…）；完整脚本 API，不额外禁用 `os.execute`
-- 加载：`finish_config()` 后 `winlua_init` → `winlua_load_config` → `fire("config_loaded")`；`win_reconfig` 检测 `LuaConfig` 变更则 `winlua_reload`；`exit_imintty` → `winlua_shutdown`。
-- 事件：`config_loaded`、`bell`；命令：`KeyFunctions`/`UserCommands` 未命中内置名时查 `imintty.command`。
-- GUI：选项对话框展示 `LuaConfig` 路径 + “重新加载 Lua”（可选，未做）。
-- 改动不回写 `.iminttyrc`（函数/表无法序列化为 `name=value`）。
+### D3 平滑滚动没有带着光标
+- 现象：滚动动画期间光标不随文本移动（原地或跳变），动画结束才归位。
+- 方向：光标 overlay/cursor layer 未纳入滚动插值；光标 y 应随滚动 offset 同步插值，或动画期隐藏、结束归位（择一并统一）。
+- 验收：滚动全程光标与所在行相对位置不变（或采用隐藏策略且文档化）；块/竖线/下划线 × 各动画模式交叉。
 
-#### C3 验证
-- [x] `make -C src` 零警告（`-Werror`）
-- [x] 冒烟：`LuaConfig=~/.config/imintty/init.lua`，`config_loaded` 中 `set("Rows","24")` → stderr `lua ok rows=24`，exit 0
-- [x] 坏脚本 `error(` → 报告 `unexpected symbol`，exit 0 不崩溃
-- [ ] GUI 选项框 LuaConfig 路径 + 重新加载按钮（可选）
+每条：复现脚本（printf 滚动序列/光标闪烁计时）→ 修复 → `make -j4` 零警告 → 冒烟 → 独立 commit → e2e 截图按 PID 取窗验证（禁 `clean.ps1`）。
+
+## 阶段明细
+
+### P0 收尾（半天）
+- 提交已改好的光标 height=0 修复（`wintext.c` 三处：overlay/cell 路径 `expand=255`、invert 跳绘限 CUR_BLOCK）+ 本计划 + `plan.md` C3 勾选，排除 `README.md`。
+- expand e2e 重测：按 PID/标题取**自己启动的**窗口（禁 `clean.ps1`），`measure_expand.py` 采样区改 y≈70–95。
+
+### P1 lua5.5 源码静态内嵌（1–2 天）
+- vendored `third_party/lua55/`（官方 tarball，MIT，`LICENSE.bundled` 已有条目）。
+- Makefile：删 `lualib=-llua`，lua `.c` 单独 CFLAGS（避开 `-Werror`），链进 `imintty.exe`。
+- 删除 `bin/msys-lua-5.5.dll` 依赖。
+- 验证：`objdump -p` 无 lua dll 导入；`config_loaded`/坏脚本冒烟回归。
+
+### P2 ConPTY 后端 + spawn 解耦（1–2 周，核心基座）
+- **P2a 子模块**：浅克隆 `microsoft/terminal` 固定 commit → MSBuild 构 `conpty.dll` + `OpenConsole.exe` → app-local 放 `bin/`（winconpty `_ConsoleHostPath` 找同目录 `OpenConsole.exe`，找不到回退 inbox conhost）。
+- **P2b child.c 双后端**：新选项 `PtyBackend=conpty|msys`（先默认 msys，验证后切）。
+  - conpty 路径：动态加载 app-local `conpty.dll`（`ConptyCreatePseudoConsole`，失败回退 kernel32）→ pipes ×2 → `STARTUPINFOEXW` + `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE` → `CreateProcessW(shell)`。
+  - I/O 泵重构：select(pty_fd, win_fd) 对 HANDLE pipe 失效 → **reader 线程 + 自定义消息**并入现有消息泵；`winsize` → `ResizePseudoConsole`；环境块构造（继承 + `IMINTTY_*`）；shell 路径 POSIX→Windows 解析。
+  - termios/forkpty 在 conpty 路径整体跳过。
+- **P2c 标签 spawn 改 CreateProcess**：新标签不再 `fork()` 自身（`do_child_fork` 主路径退役；仅剩 beep/keyclick/help 等零星 fork 留给 P8）。
+- 验证：bash 交互、vim/clear、Ctrl+C、resize、多行输出吞吐对比、`PtyBackend=msys` 回退回归。
+
+### P3 平滑滚动视觉+性能 = GPU S1（3–5 天）
+- 性能：content 缓冲 GDI DDB → **32bpp DIBSection**；滚动由「整带重绘」改 **BitBlt 平移 + 仅重绘暴露行**；双快照省重绘；`GetTickCount` → **QPC 帧时钟**；可选 `DwmFlush` 对齐 vsync。
+- 视觉：缓动曲线（`SmoothScrollEase=easeout|quart|linear`）、连续滚轮输入聚合成单次动画、长距离滚动降级策略。
+- **D2/D3 在此阶段闭环**（若未在 P0 期修复）。
+- 验证：`measure_smooth.py` 帧时间/掉帧对比 + 录屏目测。
+
+### P4 GPU S2 — ID2D1HwndRenderTarget（1–2 周）
+- `wind2d.c`：DCRenderTarget(逐帧 BindDC) → **HwndRenderTarget**（绑主窗口），`RenderBackend=d2d|gdi` 语义不变，GDI 仍可回退。
+- 合成管线三次 BitBlt → D2D 单帧：`DrawGlyphRun` + WIC/`ID2D1Bitmap` 图像层（关闭 B2 未勾的 sixel/kitty/emoji 图像 D2D 项）+ 光标层真 alpha。
+- 与 layered 透明共存：HwndRT 画进窗口 DC，`SetLayeredWindowAttributes` 路径保留；脏矩形用 PushAxisAlignedClip。
+- **S3（仅评估，不默认做）**：flip-model + DirectComposition 与 WS_EX_LAYERED 冲突需重做透明——列量化门槛（P3/P4 后帧时间、CPU 占用仍不达标才启动）。
+- 验证：中/英/RTL/连字/emoji/sixel 冒烟 × d2d/gdi 回退交叉；帧时间对比 P3 基线。
+
+### P5 多标签容器 + 窗格（2–4 周，最大功能件）
+- **架构**：新增容器 chrome 窗口（自绘 tab strip：标签、关闭、新建、右键菜单；pane splitter 树）。每个 tab/pane = **独立 imintty 进程**，`SetParent` 嵌入容器；新标签 = `CreateProcess(self, --embed <hwnd>)`（P2c 已备好）。
+- **渲染休眠**：非活动 tab → 子窗口不绘制（激活门控 `win_schedule_update`）、停光标定时器；输出继续解析进 term 缓冲，激活时全量重绘（CPU 休眠但不丢输出）。
+- **直接替换**：wintab.c 兄弟窗口枚举 + layered 隐藏 hack 全删。
+- **窗格**：tab 内 pane 树（h/v split、分隔条拖拽 → 双方 `WM_SIZE`/`ResizePseudoConsole`）、快捷键、关闭汇总确认。
+- **第一步先做 spike**（1–2 天）：容器 + 1 个跨进程子窗口 PoC，验证键盘焦点路由（跨进程 `SetFocus` 无效，需子进程自行聚焦/钩子）、DPI、鼠标、Alt+F4——**spike 不过则回退报告**。
+- 验证：3 标签×2×2 网格、切 tab 焦点保持、休眠 tab CPU≈0、拖 splitter、关中间 tab、`TabMode` 配置。
+
+### P6 主题全家桶（1–2 周）
+1. **ANSI-16 调色板 GUI**：Options>Colours 加 16 色 swatch 网格 + fg/bg/cursor/selection，复用现有 ChooseColor。
+2. **Lua 改色即时刷新**：`imintty.set` 染色项触发 `win_reset_colours` + `term_invalidate`。
+3. **切换叠加语义**：区分 theme-derived 与 session 运行时覆盖，换主题不再重置覆盖。
+4. **JSON 结构化主题 schema**（`name/author/version/thumbnail/colors`）+ 导入兼容现有 vscode/wt/iterm2 路径不动。
+5. **主题管理器面板**：列表、搜索、缩略预览、应用、导入/导出、dark/light 归属。
+6. **动态主题**：基于 2 的 Lua 渐变/时间感知示例；**分标签主题**由 P5 独立进程 + `--theme` 参数实现（依赖 P5）。
+
+### P7 LuaConfig/选项 GUI 完善（1 周）
+- **脚本管理面板**：启用开关、路径、自动重载（mtime 轮询）、状态+最近错误、测试运行、已注册命令/事件列表（winlua 新增 introspection API）。
+- **全量选项补全**：先盘点 `config.c options[]` vs 各面板 ctrls 差集（机械清单），把 rc-only 选项（FontChoice/FontSubst/KittyGraphics/…）补进对应面板——ctrls 声明式框架，多数是搬运。
+
+### P8 MinGW-w64 全量移植去 msys-2.0.dll（2–4 周，风险最高）
+- 工具链 `F:\msys64\mingw64`（gcc/g++/windows.h 已验证）；Makefile 双 target 渐进。
+- child.c：forkpty/select 全删（P2 已换 ConPTY+reader 线程，这里收尾）；`/proc` tty 进程检索 → **Toolhelp32**；setenv/unsetenv → `SetEnvironmentVariableW`；popen → `_popen`；`cygwin_conv_path` → 内部路径转换；`std.h` 剥 `unistd.h` 强制包含；`CYGWIN_VERSION` 分支清扫。
+- winmain/std/windialog 零星 `fork()`（beep/keyclick/help）→ 线程或 CreateProcess。
+- **前置小实验**：MinGW 构建的 exe 挂 msys `bash.exe` 到 ConPTY 的行为验证（wsltty 同构，预期可行）。
+- 验证：导入表仅 KERNEL32/USER32/D2D… 无 `msys-2.0.dll`；全功能回归；发布包不再带 msys dll。
+
+### P9「目前不实现」四项（3–5 天）
+1. `IDWriteFontFallback::MapCharacters`（windwrite.c，与 FontChoice/FontSubst 优先级对齐）+ GUI 开关。
+2. Kitty graphics mode 0 语义补齐/验证（termout.c:4573）。
+3. PNG e2e：CSI 12 i 落盘 + kitty PNG 显示截图验证。
+4. DXGI swapchain/合成线程 → 从"不实现"移入 **P4-S3 评估项**。
+
+## 依赖关系
+```
+P0 ─ P1 ─┐
+P0 ─ P2 ─┼─ P5(容器) ─ P6.6(分标签主题)
+         ├─ P3 ─ P4 ─ P4-S3(评估)
+         └─ P8(需 P2 ConPTY + P2c CreateProcess 收尾)
+P7、P6.1–6.5、P9 可穿插任意窗口期（不依赖基座）
+D1–D3 随 P0 起步，P3 前闭环
+```
+
+## 贯穿规范
+每子步 `make -j4` 零警告 → 冒烟 → commit（排除 `README.md`）；shell 走 msys bash（PATH 前置）；e2e 按 PID 取窗、禁 `clean.ps1`；sub-agent 只分析；截图不提交；`plan.md` 随勾选同步；microsoft/terminal 固定 commit + `LICENSE.bundled` 记录；不上游 PR。
+
+## 三个需先验证的风险点（建议最先做）
+1. **P5 spike**：跨进程 SetParent 的键盘/DPI/焦点路由可行性——决定容器方案成败。
+2. **P2a 构建**：microsoft/terminal 浅克隆 + MSBuild 构 conpty/OpenConsole 是否在本机一次通过。
+3. **P8 前置**：MinGW exe + msys bash-on-ConPTY 行为。
 
 ---
 
-### Phase B — 渲染引擎全量迁移（D2D + DirectWrite + OpenType + HarfBuzz）
-
-> **边界变更**：原「不做 GPU/Direct2D 全量重写」已废止，改为「分层迁移 + `RenderBackend` 可回退到 GDI」。
-
-#### B1 DirectWrite 文字路径（先落实现 `FontRender=dwrite`）
-- [x] 修复死代码：`use_dwrite` 宏定义位置、作用域错误 → 新建 `src/windwrite.c`（TextAnalyzer shaping + cluster→cell + `ExtTextOutW(ETO_GLYPH_INDEX)` GDI 合成）。
-- [x] `FontFeatures=ss01,zero,calt,…`（`dw_parse_features`；`Ligatures>1` 且无显式 features 时强制 liga+calt）。
-- [ ] `IDWriteFontFallback::MapCharacters`（`FontFallback=yes`；与 `FontChoice`/`FontSubst` 优先级对齐）。
-- [x] **cluster→cell 映射**：等宽契约，advance 聚类回格（连字不破格对齐，参考 #601）。
-- [ ] 字形检测统一走 DWrite（逐步废弃 `GetGlyphIndicesW` 双源）。
-- [ ] 宽度测量：`GetGlyphMetrics` advance 替代 `win_char_width` 扫像素（保留 `@cjkwide` 等特判）。
-- [x] 配置：`FontFeatures`（`OPT_WSTRING` + `config.template`）；`FontRender=dwrite|uniscribe|textout` 已有。
-- [x] `wintext.c` 接线：删死块；`use_dwtext` 运行时 flag（与 `#define use_dwrite` 宏隔离）；`text_out_*` 三路分派；`win_init_fontfamily` 挂 `dw_font_changed`；combining / `wscale!=100` / 测量路径关闭 DWrite。
-- [x] 验证：`make -j4` 零警告；`FontRender=dwrite|uniscribe|textout` 冒烟 exit 0。
-
-#### B2 Direct2D 渲染目标
-- [x] `ID2D1DCRenderTarget`（先绑 paint HDC；后续可评估 `ID2D1HwndRenderTarget` / DXGI swapchain）接管光标层。
-- [x] 文字：`DrawGlyphRun`（消费 B1 排版结果；`RenderBackend=d2d` 且 `FontRender=dwrite` 时走 D2D，失败回退 GDI `ETO_GLYPH_INDEX`）。
-- [x] 光标 overlay：D2D 形状 + 真 alpha（`d2d_fill_rect`/`d2d_stroke_rect`，取代光标路径 `blend_colour` 假 alpha；trail 同路径）。
-- [ ] sixel / emoji / iTerm2 / Kitty 图像：`ID2D1Bitmap`（WIC 解码）+ alpha 合成；GDI+ 路径保留为 fallback。
-- [ ] RTL：`minibidi` 双向重排保留；shaping 换 HarfBuzz；`SetWorldTransform` 镜像改 D2D transform。
-- [x] 配置：`RenderBackend=d2d|gdi`（**默认 d2d**，GDI 仍可选；GUI Text 面板 radiobutton）。
-- [x] `src/wind2d.c` + `wind2d.h`：factory/DC RT 单例、`d2d_begin/end`、`d2d_shutdown` 挂 `exit_imintty`；`d2d_fill_polygon`/`d2d_stroke_polygon`（smear 四边形）。
-- [x] Makefile：`-ld2d1`；`make -j4` 零警告；`RenderBackend=d2d|gdi` 冒烟 exit 0。
-
-#### B2b Smear cursor（smear-cursor.nvim / Neovide Animated Cursor）
-- [x] 配置：`CursorSmear=yes|no`（默认 no；Animation 面板「涂抹动画」；`config.template`）。
-- [x] 四角弹簧（smear-cursor.nvim）：head/tail stiffness（0.6/0.45，trailing_exponent=3）、anticipation=0.2、damping=0.85、`max_length=25` cells 钳制、`distance_stop_animating≈0.1` cell、真实 dt；状态 `term.curs_smear`。
-- [x] 与其它光标动画正交：smooth/blink/trail/particles 可同时开；**仅抑制 expand 几何**（`CursorSmear` 时不画 `cblink_expand`）。
-- [x] 渲染：D2D `FillGeometry`/`DrawGeometry` 四边形；GDI `Polygon`；`term_curs_smear_pts()` 供 overlay。
-- [x] 冒烟：`CursorSmear=yes` + d2d + trail/railgun exit 0。
-
-#### B3 HarfBuzz + OpenType shaping
-- 字体 blob：`IDWriteFontFace` → `hb_blob_create`（或 FreeType 后端，按包可用性定）。
-- 替换 `do_shape` / 逐步退役 Uniscribe 成 `hb_shape`；`minibidi` 只做 bidi。
-- 配置：`ShapingEngine=harfbuzz|uniscribe`（默认 harfbuzz，可回退）。
-- 连字/样式集：`hb_feature_from_string` 与 `FontFeatures` 同一解析入口。
-
-#### B4 分阶段落地（每步可编译可跑、独立 commit）
-1. [x] B1 纯文字 DWrite（仍与 GDI 合成）
-2. [x] B2 光标 + overlay 进 D2D（DCRenderTarget + 真 alpha）
-3. [x] B2 文字进 D2D
-4. [ ] B3 HarfBuzz 接入
-5. [ ] 图像层（WIC + D2D bitmap）迁移
-6. [x] 默认 `RenderBackend=d2d`，GDI 仍可选
-7. [x] 分层 content/present 后 fg 上屏（clip 泄漏修复）
-
-#### B 验证
-- 每步 `make -C src` 零警告；中英/RTL/连字/emoji/sixel 冒烟；`FontRender` 与 `RenderBackend` 回退路径回归。
-- [x] e2e 截图：关闭分离画布时 `FG_E2E_OK_12345` / `SECOND_LINE` 可见，光标可见；另三条反馈仍通过。
-
----
+# 旧阶段状态（未完成部分，保留跟踪）
 
 ## Phase A — 光标画布透明 + 动画渲染修复（回验）
-
-> **状态：expand 已按 VSCode 关键帧重写（`84a8624`），待目测关闭**；分离画布/动画矩阵仍待跑。
+> **状态：expand 已按 VSCode 关键帧重写（`84a8624`）；height=0 回归已修（本计划 P0 提交）；待目测关闭**。
 
 ### A1 分离光标画布背景透明
-- `draw_cursor_to_canvas`（`wintext.c`）：
-  - `CreateCompatibleBitmap` → **32bpp DIBSection**；清 alpha=0，去掉整幅不透明 `Rectangle(bg)`。
-  - overlay 提前 `return` 时跳过合成（避免纯背景盖全窗）。
-  - 合成：`BitBlt(SRCCOPY)` → 光标脏矩形 blit 或 `AlphaBlend(AC_SRC_ALPHA)`。
-  - 合成前复位 `SetWorldTransform`（与 win_paint 路径对齐）。
+- `draw_cursor_to_canvas`（`wintext.c`）：32bpp DIBSection、alpha=0、跳过合成条件、光标脏矩形 blit/AlphaBlend、合成前复位 WorldTransform。
 
 ### A2 动画不渲染
-- `draw_cursor_overlay` 返回条件不得触发全窗覆盖。
-- `do_update` 状态机 `BLOCKED→IDLE` 丢帧：恢复时重新排程自续定时器。
-- 动画 tick：`term_invalidate` 路径补 `win_schedule_update` 兜底。
+- `draw_cursor_overlay` 返回条件不得触发全窗覆盖；`do_update` 丢帧恢复；动画 tick 补 `win_schedule_update` 兜底。
 - 验证矩阵：块/竖线/下划线 × smooth/expand/phase/trail × 分离画布 on/off。
 
 ### A3 VSCode expand 关键帧（`84a8624`）
-- `cblink_expand_cb`：`alternate` 半周期 0.5s（20ms tick ×50），前半 0→1、后半 1→0；0–20% hold、20–80% ease-in-out、80–100% hold；静息 `cblink_expand=255`。
-- 几何：`drawn_h = h*expand/255`，`uy/y+(h-drawn_h)/2`（中心原点 scaleY）；smear 顶点绕格心中线同步缩放。
-- overlay 在 expand 模式始终 `own_body`；cell path 动画中保持原格 fg/bg，静息 255 才上实心色。
-- `CursorInvert`：块光标覆盖格 fg/bg 互换（反色），overlay 跳过实心 body。
-- Options：Looks>Cursor「Invert」、Terminal>LuaConfig+Reload、Text>Font features。
+- `cblink_expand_cb`：alternate 半周期 0.5s，0–20% hold、20–80% ease-in-out、80–100% hold；静息 255。
+- 几何：`drawn_h = h*expand/255`；`CursorInvert` 块光标 fg/bg 互换。
 
-### A 验证步骤（C/B 完成后执行）
-1. 启动后 Options → 动画 → 各模式切换，观察光标是否正常出现/消失。
-2. 开启 `CursorSeparateCanvas=yes`，确认光标层背景透明（文本不被纯色盖住）。
-3. 光标平滑移动 + 拖尾 + expand 闪烁目测（`SmoothBlinkCursor=expand`：应见从中线长/缩、0.5s 交替）。
-4. `CursorInvert=yes` + 块光标：覆盖字符反色，无实心盖字。
-5. 若问题仍在 → 按 A1/A2/A3 修复并提交；若已不在 → 记录「已由既有提交覆盖」并关闭。
+### A 验证步骤
+1. Options → 动画各模式切换，光标正常出现/消失。
+2. `CursorSeparateCanvas=yes` 光标层背景透明。
+3. 平滑移动+拖尾+expand 闪烁目测。
+4. `CursorInvert=yes` 块光标覆盖字符反色，无实心盖字。
+
+## Phase B — 渲染引擎迁移（剩余未勾项 → 并入 P4/P9）
+- [ ] `IDWriteFontFallback::MapCharacters`（→ P9.1）
+- [ ] 字形检测统一走 DWrite；宽度测量用 `GetGlyphMetrics`
+- [ ] sixel/emoji/iTerm2/Kitty 图像 `ID2D1Bitmap`（→ P4）
+- [ ] RTL：shaping 换 HarfBuzz（B3 独立，未排期）；`SetWorldTransform` 镜像改 D2D transform
+- [ ] B3 HarfBuzz 接入；B4 步 5 图像层
+
+## Phase C — LuaConfig ✅
+- C1/C2/C3 全部完成（C3 四项已勾，含 `84a8624` GUI）。
 
 ---
 
-## 已完成阶段归档（原 Phase 0–7）
-
-> 以下阶段代码已落地（含后续 bugfix），保留作对照；后续文档以「当前实施顺序」为准。
+# 已完成阶段归档（原 Phase 0–7）
 
 ### Phase 0 — 环境与基线构建 ✅
-1. `git clone …` 到当前目录。
-2. 会话级 PATH 指向 `F:\msys64\usr\bin`。
-3. `make -C src` 产出 `bin/imintty.exe`。
-
 ### Phase 1 — 平滑闪烁（三路独立配置）✅
-- 配置：`SmoothBlinkAttr/Cursor/Bell`、`SmoothBlinkDuration`（动画模式：blink/smooth/phase/expand/solid）。
-
+- `SmoothBlinkAttr/Cursor/Bell`、`SmoothBlinkDuration`（blink/smooth/phase/expand/solid）。
 ### Phase 2 — 平滑光标（类 VS Code）✅
-- 配置：`SmoothCursor`、`SmoothCursorDuration`；光标拖尾 `ControlCursorTail`；分离画布 `CursorSeparateCanvas`（透明与动画问题见 Phase A 回验）。
-
-### Phase 3 — 平滑滚动 ✅
-- 配置：`SmoothScroll`、`SmoothScrollDuration`、`SmoothScrollLines`；背缓冲 + 插值。
-
-### Phase 4 — 渲染性能 + 默认配置 + UI 打磨 ✅（部分持续）
-- 脏矩形、`LigaturesSupport` 默认、选项对话框暴露动画/光标配置（Animation 面板空列崩溃已修）。
-
+- `SmoothCursor`、`SmoothCursorDuration`、`ControlCursorTail`、`CursorSeparateCanvas`。
+### Phase 3 — 平滑滚动 ✅（缺陷见 D2/D3）
+- `SmoothScroll`、`SmoothScrollDuration`、`SmoothScrollLines`；背缓冲 + 插值。
+### Phase 4 — 渲染性能 + 默认配置 + UI 打磨 ✅
+- 脏矩形、`LigaturesSupport` 默认、选项对话框暴露动画/光标配置。
 ### Phase 5 — Kitty 键盘协议 ✅
-- CSI u 解析/编码、5 渐进位、DA1、`KittyKeyboard` 配置、wiki 文档。
-
-### Phase 6 — OpenType 字体特性 + DirectWrite 回退 → **并入 Phase B**
-- 原单文件 `windwrite.c` 桩已确认不可用（宏/作用域问题），按 B1 重做。
-
-### Phase 7 — Kitty 图形协议核心子集 ✅
-- APC 解析、`t/T` 分块、`q=?` 应答、`KittyGraphics` 配置；动画/RGBA+zlib 仍暂缓。
+### Phase 6 — OpenType 字体特性 + DirectWrite 回退 → 并入 Phase B
+### Phase 7 — Kitty 图形协议核心子集 ✅（动画/RGBA+zlib 暂缓）
 
 ### 已修 bug（近期）
-- 大选区复制卡死（RTF O(N²) 增长）+ 对话框 `plat_ctrl` 空指针。
+- 大选区复制卡死（RTF O(N²)）+ 对话框 `plat_ctrl` 空指针。
 - Options → 动画面板 `CTRL_COLUMNS` 空 percentages 崩溃。
 - `cursor_neovide_expand` → `ControlCursorTail` 重命名；中文文案与 po 同步。
 
 ---
 
 ## 验证策略
-- 每 Phase / 每 B 子步结束：`make -C src` 零警告回归 + 启动冒烟。
+- 每 Phase / 每子步结束：`make -C src` 零警告回归 + 启动冒烟。
 - 协议：kitty 官方测试序列 / `printf` 脚本验证键盘标志位、`q=?` 探测、PNG 显示。
-- 动画与光标：按 Phase A 矩阵目测；可配置关断。
+- 动画与光标：按 A 矩阵 + D1–D3 验收目测；可配置关断。
 - Lua：示例 `init.lua`（set/on/command/key）+ 错误脚本容错。
 - 渲染：`FontRender` 三档 × `RenderBackend` 两档交叉冒烟（中/英/RTL/emoji/sixel）。
 
 ## 风险与边界
-- Phase B 工作量大：B1→B4 分层提交，始终保持 GDI 回退可编译。
+- Phase B 工作量大：分层提交，始终保持 GDI 回退可编译。
 - 等宽契约与 cluster→cell 映射是 DWrite/HarfBuzz 最大回归面（连字、CJK、emoji overhang）。
-- RTL：`minibidi` 负责 bidi 缓存（鼠标/选择依赖），不可整体删除；HarfBuzz 只替换 shape。
-- Lua：静态链接许可需记入 `LICENSE.bundling`；`os.execute` 默认禁用；脚本改动不回写 rc。
+- RTL：`minibidi` 负责 bidi 缓存，不可整体删除；HarfBuzz 只替换 shape。
+- Lua：静态链接许可记入 `LICENSE.bundled`；脚本改动不回写 rc。
 - 不上游 PR（imintty 政策），改动留本地仓库。
 
-## 目前不实现
-> FontFallback 的 GUI 细化完善（FontFeatures 编辑框已进 `84a8624`）、Kitty 图形 mode 0（仅传输不显示）验证、实际 PNG e2e 渲染测试；D2D DXGI swapchain / 独立合成线程（B2 之后再评估）。
+## 目前不实现（更新）
+> FontFallback GUI 细化（→ P9.1）、Kitty 图形 mode 0 验证（→ P9.2）、PNG e2e（→ P9.3）；D2D DXGI swapchain / 独立合成线程（→ P4-S3 评估项）。

@@ -1359,8 +1359,10 @@ draw_cursor_overlay_to_dc(void)
   bool own_body = scroll_layer || term.curs_animate || cfg.cursor_separate_canvas
                   || (cfg.cursor_smear && term.curs_smear.moving)
                   || expand_mode;
-  /* Invert: cell path already reverse-video'd the covered cell; no solid body. */
-  if (cfg.cursor_invert && !scroll_layer && !term.curs_animate
+  /* Invert: cell path reverse-video'd the covered block; no solid body there.
+     Only applies to CUR_BLOCK — other shapes keep their overlay body. */
+  if (cfg.cursor_invert && term_cursor_type() == CUR_BLOCK
+      && !scroll_layer && !term.curs_animate
       && !cfg.cursor_separate_canvas
       && !(cfg.cursor_smear && term.curs_smear.moving))
     own_body = false;
@@ -1440,8 +1442,9 @@ draw_cursor_overlay_to_dc(void)
   if (w <= 0 || h <= 0)
     return false;
 
-  /* VSCode-style expand: scaleY around cell vertical center, 0..255 → height 0..h. */
-  int expand = 0;
+  /* VSCode-style expand: scaleY around cell vertical center, 0..255 → height 0..h.
+     Non-expand modes must stay at 255 (full cell); 0 collapses uy/by to a line. */
+  int expand = 255;
   if (expand_mode)
     expand = term.cblink_expand;
   int drawn_h = h * expand / 255;
@@ -5652,7 +5655,7 @@ skip_drawing:;
 #if defined(debug_cursor) && debug_cursor > 1
     printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
 #endif
-    int expand = 0;
+    int expand = 255;
     bool expand_mode = cfg.smooth_blink_cursor == ANIM_EXPAND
                        && term_cursor_blinks() && term.has_focus;
     if (expand_mode)
@@ -5661,8 +5664,10 @@ skip_drawing:;
     int drawn_h = cell_height * expand / 255;
     int uy = y + (cell_height - drawn_h) / 2;
     int by = uy + drawn_h;
-    /* Overlay owns the active body in expand mode (and invert uses cell colours). */
-    bool skip_active = expand_mode || cfg.cursor_invert;
+    /* Overlay owns the active body in expand mode; invert only swaps cell
+       colours for CUR_BLOCK, so other shapes must still draw here. */
+    bool skip_active = expand_mode
+                       || (cfg.cursor_invert && term_cursor_type() == CUR_BLOCK);
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
     switch (term_cursor_type()) {
       when CUR_BLOCK:  // solid block cursor

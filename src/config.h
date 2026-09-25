@@ -272,6 +272,7 @@ typedef struct {
   wstring session_commands;
   wstring task_commands;
   char conpty_support;
+  char *pty_backend;
   bool login_from_shortcut;
   string menu_mouse;
   string menu_ctrlmouse;

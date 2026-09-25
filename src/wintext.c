@@ -17,6 +17,19 @@
 #include <usp10.h>  // Uniscribe
 #include <math.h>
 
+/* Log level macros: DBGx(level, ...) only emits when LOG_LEVEL >= level */
+#define LOG_SILENT 0
+#define LOG_FAIL   1
+#define LOG_ERROR  2
+#define LOG_WARN   3
+#define LOG_INFO   4
+#define LOG_DEBUG  5
+#define LOG_FULL   6
+#ifndef LOG_LEVEL
+#define LOG_LEVEL LOG_SILENT
+#endif
+#define DBGx(lvl, ...) do { if (LOG_LEVEL >= (lvl)) fprintf(stderr, __VA_ARGS__); } while(0)
+
 #define dont_debug_bold 1
 
 #define dont_narrow_via_font
@@ -1360,24 +1373,25 @@ win_scroll_overlay(HDC target, int dy, int top, int bot)
 
   int band_y = OFFSET + PADDING + top * cell_height;
   int phys_x = PADDING - horclip();
-  int phys_y = band_y + dy;
 
-  /* isolate transform so dest coords are device pixels */
-  XFORM saved, id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
-  bool has_tf = GetWorldTransform(target, &saved) != 0;
-  if (has_tf)
-    SetWorldTransform(target, &id);
-
+  /* Preserve the existing world transform (horizontal scroll dx) and apply
+     only the scroll Y displacement. */
   int save_dc = SaveDC(target);
-  /* clip to text-area band */
   IntersectClipRect(target, phys_x, band_y,
                     phys_x + scroll_snap_w, band_y + scroll_snap_h);
-  BitBlt(target, phys_x, phys_y, scroll_snap_w, scroll_snap_h,
+  {
+    XFORM saved;
+    bool has_tf = GetWorldTransform(target, &saved) != 0;
+    if (has_tf)
+      saved.eDy = 0.f;   // drop any previous Y offset
+    XFORM tx = {1.0f, 0.0f, 0.0f, 1.0f,
+                has_tf ? saved.eDx : (float)phys_x,
+                (float)band_y + (float)dy};
+    SetWorldTransform(target, &tx);
+  }
+  BitBlt(target, phys_x, band_y, scroll_snap_w, scroll_snap_h,
          scroll_snap_dc, 0, 0, SRCCOPY);
   RestoreDC(target, save_dc);
-
-  if (has_tf)
-    SetWorldTransform(target, &saved);
 }
 
 /* Draw floating cursor overlay during smooth cursor motion (Phase 2)
@@ -1409,20 +1423,13 @@ draw_cursor_overlay_to_dc(void)
                        invisible cursor at alpha=0. */
                     || (term_cursor_blinks() && term.has_focus
                         && term.cblink_alpha > 0 && term.cblink_alpha < 255);
-   bool have_fx = term.curs_particle_n > 0
-                  || (term.curs_trail_len > 0 && term.curs_animate);
-#ifdef dont_debug_cursor
-   /* debugging disabled */
-#else
-   static int debug_count = 0;
-   if (debug_count++ < 200) {
-     fprintf(stderr, "[%d] own=%d have_fx=%d anim=%d blink_a=%d cblinker=%d scroll=%d\n",
-             debug_count, own_body, have_fx, term.curs_animate, term.cblink_alpha,
-             term.cblinker, scroll_layer);
-   }
-#endif
-   if (!own_body && !have_fx)
-     return false;
+    bool have_fx = term.curs_particle_n > 0
+                   || (term.curs_trail_len > 0 && term.curs_animate);
+    DBGx(LOG_DEBUG, "own=%d have_fx=%d anim=%d blink_a=%d cblinker=%d scroll=%d\n",
+         own_body, have_fx, term.curs_animate, term.cblink_alpha,
+         term.cblinker, scroll_layer);
+    if (!own_body && !have_fx)
+      return false;
   int cx = -1, cy = -1;
   if (scroll_layer) {
     /* Overlay only pins the cursor inside the scroll band; elsewhere
@@ -1880,12 +1887,19 @@ draw_cursor_to_canvas(HDC screen_dc)
       memset(bm.bmBits, 0, (size_t)bm.bmWidthBytes * (size_t)h);
     }
     else {
-      // Fallback: GDI fill black (alpha still 0 from DIB create on first use).
-      HBRUSH clr = cache_create_brush(RGB(0, 0, 0));
-      HBRUSH old_brush = SelectObject(cursor_canvas_dc, clr);
-      PatBlt(cursor_canvas_dc, 0, 0, w, h, BLACKNESS);
-      SelectObject(cursor_canvas_dc, old_brush);
-      DeleteObject(clr);
+      // Fallback: D2D fill transparent (alpha=0) so AlphaBlend preserves
+      // underlying text; falls back to GDI if D2D unavailable.
+      if (d2d_begin(cursor_canvas_dc)) {
+        d2d_fill_rect(0.f, 0.f, (float)w, (float)h, RGB(0, 0, 0), 0);
+        d2d_end();
+      }
+      else {
+        HBRUSH clr = cache_create_brush(RGB(0, 0, 0));
+        HBRUSH old_brush = SelectObject(cursor_canvas_dc, clr);
+        PatBlt(cursor_canvas_dc, 0, 0, w, h, BLACKNESS);
+        SelectObject(cursor_canvas_dc, old_brush);
+        DeleteObject(clr);
+      }
     }
   }
 
@@ -1921,10 +1935,6 @@ draw_cursor_to_canvas(HDC screen_dc)
   };
   pAlphaBlend(screen_dc, 0, 0, w, h, cursor_canvas_dc, 0, 0, w, h, bf);
 }
-
-#define dont_debug_cursor 1
-/* TEMP: enable for cursor visibility debugging */
-/* #define debug_cursor 1 */
 
 static struct charnameentry {
   xchar uc;
@@ -2268,7 +2278,14 @@ show_curchar_info(char tag)
 }
 
 
-#define update_timer 16
+static int update_timer = 16;  /* adaptive; 16 ms active, 100 ms idle */
+
+/* Frame timing measurement (optional, controlled by LOG_LEVEL) */
+#ifdef USE_FRAME_TIMER
+static long long frame_times[60];
+static int frame_time_idx = 0;
+static int frame_time_count = 0;
+#endif
 
 /* Layered presentation (flicker + async cursor fix):
    content_dc  - terminal content only; never copied from the screen
@@ -2449,6 +2466,28 @@ layers_present(HDC screen_dc, const RECT *crc, const RECT *dirty)
 void
 do_update(void)
 {
+#ifdef USE_FRAME_TIMER
+  static long long last_frame = 0;
+  long long now = get_tick_count();
+  if (last_frame > 0) {
+    long long delta = now - last_frame;
+    frame_times[frame_time_idx % 60] = (int)delta;
+    frame_time_idx++;
+    frame_time_count = min(frame_time_count + 1, 60);
+    if (frame_time_count >= 30 && LOG_LEVEL >= LOG_INFO) {
+      int sum = 0, max_t = 0, min_t = 99999;
+      for (int i = 0; i < 30; i++) {
+        int t = frame_times[i];
+        sum += t;
+        if (t > max_t) max_t = t;
+        if (t < min_t) min_t = t;
+      }
+      DBGx(LOG_INFO, "FPS=%d avg=%dms max=%dms min=%dms\n",
+           1000 / (sum / 30), sum / 30, max_t, min_t);
+    }
+  }
+  last_frame = now;
+#endif
   //if (kb_trace) printf("[%ld] do_update\n", mtime());
 
 #if defined(debug_cursor) && debug_cursor > 1
@@ -2557,11 +2596,19 @@ do_update(void)
   // Schedule next update; clear BLOCKED so the timer chain survives (A2).
   if (update_state == UPDATE_BLOCKED)
     update_state = UPDATE_IDLE;
-  /* Only keep the 16ms self-timer while another pass is already pending
-     or a scroll animation needs it; otherwise idle churn keeps the CPU busy
-     and competes with the async cursor path. */
-  if (update_state == UPDATE_PENDING || term_scroll_anim_active())
+  /* Adaptive throttle: drop to 100 ms when idle (no scroll/cursor animation),
+     otherwise keep 16 ms for responsive cursor blink and smooth scroll. */
+  bool idle = !term_scroll_anim_active()
+           && !term.curs_animate
+           && !(term_cursor_blinks() && term.has_focus);
+  int tick = idle ? 100 : update_timer;
+  if (tick != update_timer) {
+    update_timer = tick;
     win_set_timer(do_update, update_timer);
+  }
+  else if (update_state == UPDATE_PENDING || term_scroll_anim_active()) {
+    win_set_timer(do_update, update_timer);
+  }
 }
 
 #include <math.h>

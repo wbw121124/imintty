@@ -10,6 +10,7 @@
 #include "winpriv.h"  /* win_prefix_title, win_update_now */
 #include "tek.h"      /* tek_mode for log filtering */
 #include "appinfo.h"  /* APPNAME, VERSION */
+#include "conpty.h"
 
 #include <pwd.h>
 #include <fcntl.h>
@@ -49,6 +50,11 @@ static bool killed = false;
 static int win_fd;
 static int pty_fd = -1;
 static int log_fd = -1;
+/* ConPTY backend state */
+static HPCON conpty_handle = null;
+static HANDLE conpty_input = null;
+static HANDLE conpty_output = null;
+static bool use_conpty = false;
 #if CYGWIN_VERSION_API_MINOR >= 74
 static struct winsize prev_winsize = {0, 0, 0, 0};
 #else
@@ -394,6 +400,22 @@ static char state = 0;
 void
 child_close_log(void)
 {
+  // Cleanup ConPTY resources
+  if (use_conpty) {
+    if (conpty_input) {
+      CloseHandle(conpty_input);
+      conpty_input = null;
+    }
+    if (conpty_output) {
+      CloseHandle(conpty_output);
+      conpty_output = null;
+    }
+    if (conpty_handle) {
+      conpty_close(conpty_handle);
+      conpty_handle = null;
+    }
+    use_conpty = false;
+  }
   term_log(&(char){'\e'}, 1);  // trigger term_log_flush();
 }
 
@@ -519,164 +541,336 @@ child_create(char *argv[], struct winsize *winp)
     }
   }
 
-  // Create the child process and pseudo terminal.
-  pid = forkpty(&pty_fd, 0, 0, winp);
-  if (pid < 0) {
-    bool rebase_prompt = (errno == EAGAIN);
-    //ENOENT  There are no available terminals.
-    //EAGAIN  Cannot allocate sufficient memory to allocate a task structure.
-    //EAGAIN  Not possible to create a new process; RLIMIT_NPROC limit.
-    //ENOMEM  Memory is tight.
-    childerror(_("Error: Could not fork child process"), true, errno, pid);
-    if (rebase_prompt)
-      childerror(_("DLL rebasing may be required; see 'rebaseall / rebase --help'"), false, 0, 0);
+  // Check if ConPTY backend should be used
+  use_conpty = (cfg.pty_backend != null && strcmp(cfg.pty_backend, "conpty") == 0) && conpty_available();
 
-    pid = 0;
-
-    term_hide_cursor();
-  }
-  else if (!pid) { // Child process.
-#if CYGWIN_VERSION_DLL_MAJOR < 1007
-    // Some native console programs require a console to be attached to the
-    // process, otherwise they pop one up themselves, which is rather annoying.
-    // Cygwin's exec function from 1.5 onwards automatically allocates a console
-    // on an invisible window station if necessary. Unfortunately that trick no
-    // longer works on Windows 7, which is why Cygwin 1.7 contains a new hack
-    // for creating the invisible console.
-    // On Cygwin versions before 1.5 and on Cygwin 1.5 running on Windows 7,
-    // we need to create the invisible console ourselves. The hack here is not
-    // as clever as Cygwin's, with the console briefly flashing up on startup,
-    // but it'll do.
-#if CYGWIN_VERSION_DLL_MAJOR == 1005
-    DWORD win_version = GetVersion();
-    win_version = ((win_version & 0xff) << 8) | ((win_version >> 8) & 0xff);
-    if (win_version >= 0x0601)  // Windows 7 is NT 6.1.
-#endif
-      if (AllocConsole()) {
-        HMODULE kernel = GetModuleHandleA("kernel32");
-        HWND (WINAPI *pGetConsoleWindow)(void) =
-          (void *)GetProcAddress(kernel, "GetConsoleWindow");
-        ShowWindowAsync(pGetConsoleWindow(), SW_HIDE);
-      }
-#endif
-
-    // Reset signals
-    signal(SIGHUP, SIG_DFL);
-    signal(SIGINT, SIG_DFL);
-    signal(SIGQUIT, SIG_DFL);
-    signal(SIGTERM, SIG_DFL);
-    signal(SIGCHLD, SIG_DFL);
-
-    // Mimick login's behavior by disabling the job control signals
-    signal(SIGTSTP, SIG_IGN);
-    signal(SIGTTIN, SIG_IGN);
-    signal(SIGTTOU, SIG_IGN);
-
-    setenv("TERM", cfg.term, true);
-    // unreliable info about terminal application (#881)
-    setenv("TERM_PROGRAM", APPNAME, true);
-    setenv("TERM_PROGRAM_VERSION", VERSION, true);
-
-    // If option Locale is used, set locale variables?
-    // https://github.com/imintty/imintty/issues/116#issuecomment-108888265
-    // Variables are now set in update_locale() which sets one of 
-    // LC_ALL or LC_CTYPE depending on previous setting of 
-    // LC_ALL or LC_CTYPE or LANG, stripping @cjk modifiers for WSL.
-    if (cfg.old_locale) {
-      //string lang = cs_lang();
-      string lang = cs_lang() ? cs_get_locale() : 0;
-      if (lang) {
-        unsetenv("LC_ALL");
-        unsetenv("LC_COLLATE");
-        unsetenv("LC_CTYPE");
-        unsetenv("LC_MONETARY");
-        unsetenv("LC_NUMERIC");
-        unsetenv("LC_TIME");
-        unsetenv("LC_MESSAGES");
-        setenv("LANG", lang, true);
-      }
+  if (use_conpty) {
+    // === ConPTY backend path ===
+    HANDLE hInput[2], hOutput[2];
+    if (!CreatePipe(&hInput[0], &hOutput[0], null, 0) ||
+        !CreatePipe(&hInput[1], &hOutput[1], null, 0)) {
+      childerror(_("Error: Could not create ConPTY pipes"), true, 0, 0);
+      return;
     }
 
-    // Terminal line settings
-    struct termios attr;
-    tcgetattr(0, &attr);
-    attr.c_cc[VERASE] = cfg.backspace_sends_bs ? CTRL('H') : CDEL;
-    attr.c_iflag |= IXANY | IMAXBEL;
-#ifdef IUTF8
-    bool utf8 = strcmp(nl_langinfo(CODESET), "UTF-8") == 0;
-    if (utf8)
-      attr.c_iflag |= IUTF8;
-    else
-      attr.c_iflag &= ~IUTF8;
+    // Security attributes to inherit handles
+    HANDLE hInputRead, hInputWrite, hOutputRead, hOutputWrite;
+    if (!DuplicateHandle(GetCurrentProcess(), hInput[0], GetCurrentProcess(), &hInputRead, 0, true, DUPLICATE_SAME_ACCESS) ||
+        !DuplicateHandle(GetCurrentProcess(), hOutput[1], GetCurrentProcess(), &hOutputWrite, 0, true, DUPLICATE_SAME_ACCESS) ||
+        !DuplicateHandle(GetCurrentProcess(), hOutput[0], GetCurrentProcess(), &hOutputRead, 0, true, DUPLICATE_SAME_ACCESS) ||
+        !DuplicateHandle(GetCurrentProcess(), hInput[1], GetCurrentProcess(), &hInputWrite, 0, true, DUPLICATE_SAME_ACCESS)) {
+      childerror(_("Error: Could not duplicate ConPTY handles"), true, 0, 0);
+      CloseHandle(hInput[0]);
+      CloseHandle(hInput[1]);
+      CloseHandle(hOutput[0]);
+      CloseHandle(hOutput[1]);
+      return;
+    }
+    CloseHandle(hInput[0]);
+    CloseHandle(hInput[1]);
+    CloseHandle(hOutput[0]);
+    CloseHandle(hOutput[1]);
+
+    // Create pseudo console
+    conpty_handle = conpty_create();
+    if (conpty_handle == null) {
+      childerror(_("Error: Could not create pseudo console"), true, 0, 0);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      return;
+    }
+
+    // Set process attributes for ConPTY
+    SIZE_T size = 0;
+    InitializeProcThreadAttributeList(null, 1, 0, &size);
+    BYTE *attr_buf = (BYTE *)malloc(size);
+    if (attr_buf == null) {
+      childerror(_("Error: Could not allocate process attributes"), true, 0, 0);
+      conpty_close(conpty_handle);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      return;
+    }
+
+    if (!InitializeProcThreadAttributeList((LPPROC_THREAD_ATTRIBUTE_LIST)attr_buf, 1, 0, &size)) {
+      childerror(_("Error: Could not initialize process attributes"), true, 0, 0);
+      free(attr_buf);
+      conpty_close(conpty_handle);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      return;
+    }
+
+    if (!UpdateProcThreadAttribute((LPPROC_THREAD_ATTRIBUTE_LIST)attr_buf, 0,
+        PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, conpty_handle, sizeof(HPCON), null, null)) {
+      childerror(_("Error: Could not set pseudo console attribute"), true, 0, 0);
+      free(attr_buf);
+      conpty_close(conpty_handle);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      return;
+    }
+
+    // Build startup info
+    STARTUPINFOEXW si;
+    ZeroMemory(&si, sizeof(si));
+    si.StartupInfo.cb = sizeof(si);
+    si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+    si.StartupInfo.hStdInput = hInputRead;
+    si.StartupInfo.hStdOutput = hOutputRead;
+    si.StartupInfo.hStdError = hOutputRead;
+    si.lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)attr_buf;
+
+    // Build command line
+    wchar_t *cmd_w = cs__utftowcs(cmd);
+    wchar_t *cmdline = (wchar_t *)malloc((wcslen(cmd_w) + 2) * sizeof(wchar_t));
+    if (cmdline == null) {
+      childerror(_("Error: Could not allocate command line"), true, 0, 0);
+      free(attr_buf);
+      conpty_close(conpty_handle);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      free(cmd_w);
+      return;
+    }
+    wcscpy(cmdline, cmd_w);
+    free(cmd_w);
+
+    // Build arguments
+    int argc = 0;
+    while (argv[argc]) argc++;
+    wchar_t **argv_w = (wchar_t **)malloc((argc + 1) * sizeof(wchar_t *));
+    if (argv_w == null) {
+      childerror(_("Error: Could not allocate argument array"), true, 0, 0);
+      free(attr_buf);
+      free(cmdline);
+      conpty_close(conpty_handle);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      return;
+    }
+    for (int i = 0; i < argc; i++) {
+      argv_w[i] = cs__utftowcs(argv[i]);
+      if (argv_w[i] == null) {
+        childerror(_("Error: Could not convert argument"), true, 0, 0);
+        for (int j = 0; j < i; j++) free(argv_w[j]);
+        free(argv_w);
+        free(attr_buf);
+        free(cmdline);
+        conpty_close(conpty_handle);
+        CloseHandle(hInputRead);
+        CloseHandle(hInputWrite);
+        CloseHandle(hOutputRead);
+        CloseHandle(hOutputWrite);
+        return;
+      }
+    }
+    argv_w[argc] = null;
+
+    // Create process
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+    if (!CreateProcessW(null, cmdline, null, null, true,
+        EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
+        null, null, (LPSTARTUPINFOW)&si, &pi)) {
+      childerror(_("Error: Could not create ConPTY child process"), true, 0, 0);
+      for (int i = 0; i < argc; i++) free(argv_w[i]);
+      free(argv_w);
+      free(attr_buf);
+      free(cmdline);
+      conpty_close(conpty_handle);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      return;
+    }
+
+    // Cleanup ConPTY-specific resources
+    free(attr_buf);
+    for (int i = 0; i < argc; i++) free(argv_w[i]);
+    free(argv_w);
+    free(cmdline);
+
+    // Store state
+    pid = pi.dwProcessId;
+    conpty_input = hInputWrite;
+    conpty_output = hOutputRead;
+    pty_fd = -1;  // Mark non-pty mode
+
+  } else {
+    // === MSYS/forkpty backend path (original) ===
+    // Create the child process and pseudo terminal.
+    pid = forkpty(&pty_fd, 0, 0, winp);
+    if (pid < 0) {
+      bool rebase_prompt = (errno == EAGAIN);
+      //ENOENT  There are no available terminals.
+      //EAGAIN  Cannot allocate sufficient memory to allocate a task structure.
+      //EAGAIN  Not possible to create a new process; RLIMIT_NPROC limit.
+      //ENOMEM  Memory is tight.
+      childerror(_("Error: Could not fork child process"), true, errno, pid);
+      if (rebase_prompt)
+        childerror(_("DLL rebasing may be required; see 'rebaseall / rebase --help'"), false, 0, 0);
+
+      pid = 0;
+
+      term_hide_cursor();
+    }
+    else if (!pid) { // Child process.
+#if CYGWIN_VERSION_DLL_MAJOR < 1007
+      // Some native console programs require a console to be attached to the
+      // process, otherwise they pop one up themselves, which is rather annoying.
+      // Cygwin's exec function from 1.5 onwards automatically allocates a console
+      // on an invisible window station if necessary. Unfortunately that trick no
+      // longer works on Windows 7, which is why Cygwin 1.7 contains a new hack
+      // for creating the invisible console.
+      // On Cygwin versions before 1.5 and on Cygwin 1.5 running on Windows 7,
+      // we need to create the invisible console ourselves. The hack here is not
+      // as clever as Cygwin's, with the console briefly flashing up on startup,
+      // but it'll do.
+#if CYGWIN_VERSION_DLL_MAJOR == 1005
+      DWORD win_version = GetVersion();
+      win_version = ((win_version & 0xff) << 8) | ((win_version >> 8) & 0xff);
+      if (win_version >= 0x0601)  // Windows 7 is NT 6.1.
 #endif
-    attr.c_lflag |= ECHOE | ECHOK | ECHOCTL | ECHOKE;
-    tcsetattr(0, TCSANOW, &attr);
+        if (AllocConsole()) {
+          HMODULE kernel = GetModuleHandleA("kernel32");
+          HWND (WINAPI *pGetConsoleWindow)(void) =
+            (void *)GetProcAddress(kernel, "GetConsoleWindow");
+          ShowWindowAsync(pGetConsoleWindow(), SW_HIDE);
+        }
+#endif
 
-    // Invoke command
-    execvp(cmd, argv);
+      // Reset signals
+      signal(SIGHUP, SIG_DFL);
+      signal(SIGINT, SIG_DFL);
+      signal(SIGQUIT, SIG_DFL);
+      signal(SIGTERM, SIG_DFL);
+      signal(SIGCHLD, SIG_DFL);
 
-    // If we get here, exec failed.
-    fprintf(stderr, "\033]701;C.UTF-8\007");
-    fprintf(stderr, "\033[30;41m\033[K");
-    //__ %1$s: client command (e.g. shell) to be run; %2$s: error message
-    fprintf(stderr, _("Failed to run '%s': %s"), cmd, strerror(errno));
-    fprintf(stderr, "\r\n");
-    fflush(stderr);
+      // Mimick login's behavior by disabling the job control signals
+      signal(SIGTSTP, SIG_IGN);
+      signal(SIGTTIN, SIG_IGN);
+      signal(SIGTTOU, SIG_IGN);
+
+      setenv("TERM", cfg.term, true);
+      // unreliable info about terminal application (#881)
+      setenv("TERM_PROGRAM", APPNAME, true);
+      setenv("TERM_PROGRAM_VERSION", VERSION, true);
+
+      // If option Locale is used, set locale variables?
+      // https://github.com/imintty/imintty/issues/116#issuecomment-108888265
+      // Variables are now set in update_locale() which sets one of 
+      // LC_ALL or LC_CTYPE depending on previous setting of 
+      // LC_ALL or LC_CTYPE or LANG, stripping @cjk modifiers for WSL.
+      if (cfg.old_locale) {
+        //string lang = cs_lang();
+        string lang = cs_lang() ? cs_get_locale() : 0;
+        if (lang) {
+          unsetenv("LC_ALL");
+          unsetenv("LC_COLLATE");
+          unsetenv("LC_CTYPE");
+          unsetenv("LC_MONETARY");
+          unsetenv("LC_NUMERIC");
+          unsetenv("LC_TIME");
+          unsetenv("LC_MESSAGES");
+          setenv("LANG", lang, true);
+        }
+      }
+
+      // Terminal line settings
+      struct termios attr;
+      tcgetattr(0, &attr);
+      attr.c_cc[VERASE] = cfg.backspace_sends_bs ? CTRL('H') : CDEL;
+      attr.c_iflag |= IXANY | IMAXBEL;
+#ifdef IUTF8
+      bool utf8 = strcmp(nl_langinfo(CODESET), "UTF-8") == 0;
+      if (utf8)
+        attr.c_iflag |= IUTF8;
+      else
+        attr.c_iflag &= ~IUTF8;
+#endif
+      attr.c_lflag |= ECHOE | ECHOK | ECHOCTL | ECHOKE;
+      tcsetattr(0, TCSANOW, &attr);
+
+      // Invoke command
+      execvp(cmd, argv);
+
+      // If we get here, exec failed.
+      fprintf(stderr, "\033]701;C.UTF-8\007");
+      fprintf(stderr, "\033[30;41m\033[K");
+      //__ %1$s: client command (e.g. shell) to be run; %2$s: error message
+      fprintf(stderr, _("Failed to run '%s': %s"), cmd, strerror(errno));
+      fprintf(stderr, "\r\n");
+      fflush(stderr);
 
 #if CYGWIN_VERSION_DLL_MAJOR < 1005
-    // Before Cygwin 1.5, the message above doesn't appear if we exit
-    // immediately. So have a little nap first.
-    usleep(200000);
+      // Before Cygwin 1.5, the message above doesn't appear if we exit
+      // immediately. So have a little nap first.
+      usleep(200000);
 #endif
 
-    exit(mexit);
-  }
-  else { // Parent process.
-    if (report_child_pid) {
-      printf("%d\n", pid);
-      fflush(stdout);
+      exit(mexit);
     }
-    if (report_child_tty) {
-      printf("%s\n", ptsname(pty_fd));
-      fflush(stdout);
-    }
+    else { // Parent process.
+      if (report_child_pid) {
+        printf("%d\n", pid);
+        fflush(stdout);
+      }
+      if (report_child_tty) {
+        printf("%s\n", ptsname(pty_fd));
+        fflush(stdout);
+      }
 
 #ifdef __midipix__
-    // This corrupts CR in cygwin
-    struct termios attr;
-    tcgetattr(pty_fd, &attr);
-    cfmakeraw(&attr);
-    tcsetattr(pty_fd, TCSANOW, &attr);
+      // This corrupts CR in cygwin
+      struct termios attr;
+      tcgetattr(pty_fd, &attr);
+      cfmakeraw(&attr);
+      tcsetattr(pty_fd, TCSANOW, &attr);
 #endif
 
-    fcntl(pty_fd, F_SETFL, O_NONBLOCK);
+      fcntl(pty_fd, F_SETFL, O_NONBLOCK);
 
-    //child_update_charset();  // could do it here or as above
+      //child_update_charset();  // could do it here or as above
 
-    if (cfg.create_utmp) {
-      char *dev = ptsname(pty_fd);
-      if (dev) {
-        struct utmp ut;
-        memset(&ut, 0, sizeof ut);
+      if (cfg.create_utmp) {
+        char *dev = ptsname(pty_fd);
+        if (dev) {
+          struct utmp ut;
+          memset(&ut, 0, sizeof ut);
 
-        if (!strncmp(dev, "/dev/", 5))
-          dev += 5;
-        strlcpy(ut.ut_line, dev, sizeof ut.ut_line);
+          if (!strncmp(dev, "/dev/", 5))
+            dev += 5;
+          strlcpy(ut.ut_line, dev, sizeof ut.ut_line);
 
-        if (dev[1] == 't' && dev[2] == 'y')
-          dev += 3;
-        else if (!strncmp(dev, "pts/", 4))
-          dev += 4;
-        //strncpy(ut.ut_id, dev, sizeof ut.ut_id);
-        for (uint i = 0; i < sizeof ut.ut_id && *dev; i++)
-          ut.ut_id[i] = *dev++;
+          if (dev[1] == 't' && dev[2] == 'y')
+            dev += 3;
+          else if (!strncmp(dev, "pts/", 4))
+            dev += 4;
+          //strncpy(ut.ut_id, dev, sizeof ut.ut_id);
+          for (uint i = 0; i < sizeof ut.ut_id && *dev; i++)
+            ut.ut_id[i] = *dev++;
 
-        ut.ut_type = USER_PROCESS;
-        ut.ut_pid = pid;
-        ut.ut_time = time(0);
-        strlcpy(ut.ut_user, getlogin() ?: "?", sizeof ut.ut_user);
-        gethostname(ut.ut_host, sizeof ut.ut_host);
-        login(&ut);
+          ut.ut_type = USER_PROCESS;
+          ut.ut_pid = pid;
+          ut.ut_time = time(0);
+          strlcpy(ut.ut_user, getlogin() ?: "?", sizeof ut.ut_user);
+          gethostname(ut.ut_host, sizeof ut.ut_host);
+          login(&ut);
+        }
       }
     }
   }
@@ -692,6 +886,8 @@ child_create(char *argv[], struct winsize *winp)
 char *
 child_tty(void)
 {
+  if (use_conpty)
+    return "conpty";
   return ptsname(pty_fd);
 }
 
@@ -699,6 +895,8 @@ uchar *
 child_termios_chars(void)
 {
 static struct termios attr;
+  if (use_conpty)
+    return null;
   tcgetattr(pty_fd, &attr);
   return attr.c_cc;
 }
@@ -808,7 +1006,51 @@ child_proc(void)
 #endif
 
     if (select(win_fd + 1, &fds, 0, 0, timeout_p) > 0) {
-      if (pty_fd >= 0 && FD_ISSET(pty_fd, &fds)) {
+      if (use_conpty) {
+        // ConPTY backend: use ReadFile on conpty_output handle
+        static char buf[4096];
+        DWORD bytes_read = 0;
+        if (conpty_output) {
+          // Check if process has exited (pipe closed = EOF)
+          if (!PeekNamedPipe(conpty_output, null, 0, null, &bytes_read, null)) {
+            // Pipe closed - process exited
+            pid = 0;
+            if (conpty_handle) {
+              conpty_close(conpty_handle);
+              conpty_handle = null;
+            }
+            if (conpty_input) {
+              CloseHandle(conpty_input);
+              conpty_input = null;
+            }
+            if (conpty_output) {
+              CloseHandle(conpty_output);
+              conpty_output = null;
+            }
+            if (killed || cfg.hold == HOLD_NEVER)
+              exit_imintty();
+            term_hide_cursor();
+          }
+          else if (bytes_read > 0) {
+            if (ReadFile(conpty_output, buf, sizeof buf, &bytes_read, null)) {
+              if (bytes_read > 0) {
+                term_write(buf, (uint)bytes_read);
+                trace_line("twrt", (int)bytes_read, buf, (int)bytes_read);
+
+                // accelerate keyboard echo if (unechoed) keyboard input is pending
+                if (kb_input) {
+                  kb_input = false;
+                  if (cfg.display_speedup)
+                    // undocumented safeguard in case something goes wrong here
+                    win_update_now();
+                }
+                term_log(buf, (uint)bytes_read);
+              }
+            }
+          }
+        }
+      }
+      else if (pty_fd >= 0 && FD_ISSET(pty_fd, &fds)) {
         // Pty devices on old Cygwin versions (pre 1005) deliver only 4 bytes
         // at a time, and newer ones or MSYS2 deliver up to 256 at a time.
         // so call read() repeatedly until we have a worthwhile haul.
@@ -911,6 +1153,20 @@ child_proc(void)
 void
 child_kill(bool point_blank)
 {
+  if (use_conpty) {
+    // ConPTY: terminate Windows process
+    if (pid) {
+      HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, (DWORD)pid);
+      if (hProcess) {
+        TerminateProcess(hProcess, point_blank ? 1 : 0);
+        CloseHandle(hProcess);
+      }
+    }
+    if (point_blank || !pid)
+      exit_imintty();
+    killed = true;
+    return;
+  }
   if (!pid ||
       kill(-pid, point_blank ? SIGKILL : SIGHUP) < 0 ||
       point_blank)
@@ -1092,7 +1348,14 @@ grandchild_process_list(void)
 void
 child_write(const char *buf, uint len)
 {
-  if (pty_fd >= 0) {
+  if (use_conpty) {
+    if (conpty_input) {
+      DWORD written = 0;
+      WriteFile(conpty_input, buf, (DWORD)len, &written, null);
+      trace_line("cwrt", (int)written, buf, (int)len);
+    }
+  }
+  else if (pty_fd >= 0) {
 #ifdef debug_pty
     int n =
 #endif
@@ -1168,7 +1431,14 @@ child_sendw(const wchar *ws, uint wlen)
 void
 child_resize(struct winsize *winp)
 {
-  if (pty_fd >= 0 && memcmp(&prev_winsize, winp, sizeof(struct winsize)) != 0) {
+  if (use_conpty) {
+    if (memcmp(&prev_winsize, winp, sizeof(struct winsize)) != 0) {
+      prev_winsize = *winp;
+      if (conpty_handle)
+        conpty_resize(conpty_handle, winp->ws_col, winp->ws_row);
+    }
+  }
+  else if (pty_fd >= 0 && memcmp(&prev_winsize, winp, sizeof(struct winsize)) != 0) {
     prev_winsize = *winp;
     ioctl(pty_fd, TIOCSWINSZ, winp);
   }
@@ -1178,6 +1448,8 @@ static int
 foreground_pid()
 {
   int fg_pid = (pty_fd >= 0) ? tcgetpgrp(pty_fd) : 0;
+  if (fg_pid <= 0 && use_conpty)
+    fg_pid = pid;
   if (fg_pid <= 0)
     // fallback to child process
     fg_pid = pid;

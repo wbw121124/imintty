@@ -110,8 +110,19 @@ name_ver := $(NAME)-$(srcversion)
 
 c_srcs := $(wildcard *.c)
 rc_srcs := $(wildcard *.rc)
-objs := $(c_srcs:.c=.o) $(rc_srcs:.rc=.o)
-bins := $(patsubst %.o,$(BINDIR)/%.o,$(objs))
+# Lua 5.5 static embed: explicit rules compile lua .c into $(BINDIR)/l*.o
+# ConPTY infrastructure (P2): conpty.c detected at runtime via GetProcAddress
+lua_bins := $(BINDIR)/lapi.o $(BINDIR)/lauxlib.o $(BINDIR)/lbaselib.o \
+  $(BINDIR)/lcode.o $(BINDIR)/lcorolib.o $(BINDIR)/lctype.o \
+  $(BINDIR)/ldblib.o $(BINDIR)/ldebug.o $(BINDIR)/ldo.o $(BINDIR)/ldump.o \
+  $(BINDIR)/lfunc.o $(BINDIR)/lgc.o $(BINDIR)/linit.o $(BINDIR)/liolib.o \
+  $(BINDIR)/llex.o $(BINDIR)/lmathlib.o $(BINDIR)/lmem.o $(BINDIR)/loadlib.o \
+  $(BINDIR)/lobject.o $(BINDIR)/lopcodes.o $(BINDIR)/loslib.o $(BINDIR)/lparser.o \
+  $(BINDIR)/lstate.o $(BINDIR)/lstring.o $(BINDIR)/lstrlib.o $(BINDIR)/ltable.o \
+  $(BINDIR)/ltablib.o $(BINDIR)/ltm.o $(BINDIR)/lundump.o $(BINDIR)/lutf8lib.o \
+  $(BINDIR)/lvm.o $(BINDIR)/lzio.o
+objs := $(patsubst %.c,$(BINDIR)/%.o,$(c_srcs)) $(patsubst %.rc,$(BINDIR)/%.o,$(rc_srcs)) $(lua_bins)
+bins := $(objs)
 
 ifneq ($(platform), msys)
   # ensure avoidance of trampolines (a gcc mechanism to implement 
@@ -136,7 +147,7 @@ ifneq ($(platform), msys)
   scriptlib += -lDWrite
   d2dlib = -ld2d1
 endif
-lualib=-llua
+lualib=
 extralibs=$(scriptlib) $(downldlib) $(emojilib) $(d2dlib) $(lualib) -lshlwapi
 LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
 LDLIBS := -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid -lmpr
@@ -184,6 +195,72 @@ $(BINDIR)/appinfo.o: appinfo.c appinfo.h appinfo.t
 
 $(BINDIR)/%.o: %.c
 	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -fstack-check $< -o $(BINDIR)/$*.o
+
+# Lua 5.5 static embed: compile with LUA_CORE/LUA_LIB and third_party include path
+$(BINDIR)/lapi.o: third_party/lua55/lapi.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lapi.o
+$(BINDIR)/lauxlib.o: third_party/lua55/lauxlib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lauxlib.o
+$(BINDIR)/lbaselib.o: third_party/lua55/lbaselib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lbaselib.o
+$(BINDIR)/lcode.o: third_party/lua55/lcode.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lcode.o
+$(BINDIR)/lcorolib.o: third_party/lua55/lcorolib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lcorolib.o
+$(BINDIR)/lctype.o: third_party/lua55/lctype.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lctype.o
+$(BINDIR)/ldblib.o: third_party/lua55/ldblib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/ldblib.o
+$(BINDIR)/ldebug.o: third_party/lua55/ldebug.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/ldebug.o
+$(BINDIR)/ldo.o: third_party/lua55/ldo.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/ldo.o
+$(BINDIR)/ldump.o: third_party/lua55/ldump.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/ldump.o
+$(BINDIR)/lfunc.o: third_party/lua55/lfunc.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lfunc.o
+$(BINDIR)/lgc.o: third_party/lua55/lgc.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lgc.o
+$(BINDIR)/linit.o: third_party/lua55/linit.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/linit.o
+$(BINDIR)/liolib.o: third_party/lua55/liolib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/liolib.o
+$(BINDIR)/llex.o: third_party/lua55/llex.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/llex.o
+$(BINDIR)/lmathlib.o: third_party/lua55/lmathlib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lmathlib.o
+$(BINDIR)/lmem.o: third_party/lua55/lmem.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lmem.o
+$(BINDIR)/loadlib.o: third_party/lua55/loadlib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/loadlib.o
+$(BINDIR)/lobject.o: third_party/lua55/lobject.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lobject.o
+$(BINDIR)/lopcodes.o: third_party/lua55/lopcodes.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lopcodes.o
+$(BINDIR)/loslib.o: third_party/lua55/loslib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/loslib.o
+$(BINDIR)/lparser.o: third_party/lua55/lparser.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lparser.o
+$(BINDIR)/lstate.o: third_party/lua55/lstate.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lstate.o
+$(BINDIR)/lstring.o: third_party/lua55/lstring.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lstring.o
+$(BINDIR)/lstrlib.o: third_party/lua55/lstrlib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lstrlib.o
+$(BINDIR)/ltable.o: third_party/lua55/ltable.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/ltable.o
+$(BINDIR)/ltablib.o: third_party/lua55/ltablib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/ltablib.o
+$(BINDIR)/ltm.o: third_party/lua55/ltm.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/ltm.o
+$(BINDIR)/lundump.o: third_party/lua55/lundump.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lundump.o
+$(BINDIR)/lutf8lib.o: third_party/lua55/lutf8lib.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lutf8lib.o
+$(BINDIR)/lvm.o: third_party/lua55/lvm.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lvm.o
+$(BINDIR)/lzio.o: third_party/lua55/lzio.c
+	$(CC) -c $(DEPOPT) $(CCFLAGS) $(CPPFLAGS) -Ithird_party/lua55 -fstack-check $< -o $(BINDIR)/lzio.o
 
 $(BINDIR)/%.o: %.rc %.h %.mft
 	#$(RC) -c 65001 --preprocessor '$(CC) -E -xc -DRC_INVOKED $(DEPOPT) $(CPPFLAGS)' $< $(BINDIR)/$*.o

@@ -1379,12 +1379,14 @@ draw_cursor_overlay_to_dc(void)
    bool own_body = scroll_layer || term.curs_animate
                    || (cfg.cursor_smear && term.curs_smear.moving)
                    || expand_mode
-                   /* During blink fade (alpha < 255), cell path suppresses
-                      ACTCURS; overlay must own body to draw the fading cursor.
-                      Must use < 255 (not > 0 && < 255) to avoid race when
-                      cblink_alpha hits exactly 0 between fade ticks. */
-                   || (term_cursor_blinks() && term.has_focus
-                       && term.cblink_alpha < 255);
+                    /* During blink fade (0 < alpha < 255), cell path suppresses
+                       ACTCURS; overlay must own body to draw the fading cursor.
+                       Must use > 0 guard so that when alpha reaches exactly 0,
+                       ownership returns to the cell path (which sets ACTCURS
+                       when alpha > 0) instead of the overlay drawing an
+                       invisible cursor at alpha=0. */
+                    || (term_cursor_blinks() && term.has_focus
+                        && term.cblink_alpha > 0 && term.cblink_alpha < 255);
    bool have_fx = term.curs_particle_n > 0
                   || (term.curs_trail_len > 0 && term.curs_animate);
 #ifdef dont_debug_cursor
@@ -2389,7 +2391,7 @@ layers_present(HDC screen_dc, const RECT *crc, const RECT *dirty)
   if (!tek_mode && term_scroll_anim_active()) {
     int total = term.scroll_anim_lines * cell_height;
     int remaining = term_scroll_anim_offset();
-    win_scroll_overlay(present_dc, remaining - total,
+    win_scroll_overlay(present_dc, total - remaining,
                        term.scroll_anim_top, term.scroll_anim_bot);
   }
   /* Cursor layer onto present (async path may call this alone). */
@@ -4129,7 +4131,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   if (term_scroll_anim_active() && ty >= term.scroll_anim_top
       && ty < term.scroll_anim_bot)
   {
-    y += term_scroll_anim_offset();
+    y -= term_scroll_anim_offset();
     int by0 = OFFSET + PADDING + term.scroll_anim_top * cell_height;
     int by1 = OFFSET + PADDING + term.scroll_anim_bot * cell_height;
     band_clip = SaveDC(dc);
@@ -5720,9 +5722,11 @@ skip_drawing:;
     int uy = y + (cell_height - drawn_h) / 2;
     int by = uy + drawn_h;
     /* Overlay owns the active body in expand mode; invert only swaps cell
-       colours for CUR_BLOCK, so other shapes must still draw here. */
+       colours for CUR_BLOCK, so non-block cursors must still draw here
+       with cursor_colour (which is already foreground-only). */
     bool skip_active = expand_mode
-                       || (cfg.cursor_invert && term_cursor_type() == CUR_BLOCK);
+                       || (cfg.cursor_invert && term_cursor_type() == CUR_BLOCK
+                           && attr.attr & TATTR_ACTCURS);
     HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, _cc));
     switch (term_cursor_type()) {
       when CUR_BLOCK:  // solid block cursor

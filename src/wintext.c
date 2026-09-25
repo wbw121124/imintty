@@ -1234,6 +1234,28 @@ static HBITMAP cursor_canvas_oldbm = 0;
 static int cursor_canvas_w = 0, cursor_canvas_h = 0;
 static BOOL (WINAPI *pAlphaBlend)(HDC, int, int, int, int, HDC, int, int, int, int, BLENDFUNCTION);
 
+/* GDI object cache pool to reduce Create/Delete overhead */
+#define GDI_CACHE_SIZE 64
+static HBRUSH brush_cache[GDI_CACHE_SIZE];
+static int brush_cache_len = 0;
+
+static void
+cache_release_brushes(void)
+{
+  for (int i = 0; i < brush_cache_len; i++)
+    DeleteObject(brush_cache[i]);
+  brush_cache_len = 0;
+}
+
+static HBRUSH
+cache_create_brush(colour c)
+{
+  HBRUSH b = CreateSolidBrush(c);
+  if (b && brush_cache_len < GDI_CACHE_SIZE)
+    brush_cache[brush_cache_len++] = b;
+  return b;
+}
+
 bool
 win_scroll_capture(int top, int bot)
 {
@@ -1613,7 +1635,7 @@ draw_cursor_overlay_to_dc(void)
         }
         else if (ctype == CUR_LINE) {
           int caret_width = max(2, w / 8);
-          HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+          HBRUSH oldbrush = SelectObject(dc, cache_create_brush(cc));
           Rectangle(dc, x, uy, x + caret_width, by);
           DeleteObject(SelectObject(dc, oldbrush));
         }
@@ -1625,7 +1647,7 @@ draw_cursor_overlay_to_dc(void)
           int ut = y + h - dy - th;
           int bt = y + h - dy;
           if (th > 0) {
-            HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+            HBRUSH oldbrush = SelectObject(dc, cache_create_brush(cc));
             Rectangle(dc, x, ut, x + w, bt);
             DeleteObject(SelectObject(dc, oldbrush));
           }
@@ -1649,7 +1671,7 @@ draw_cursor_overlay_to_dc(void)
     }
     else {
       HPEN sp = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
-      HBRUSH sb = SelectObject(dc, CreateSolidBrush(cc));
+      HBRUSH sb = SelectObject(dc, cache_create_brush(cc));
       Polygon(dc, pts, 4);
       DeleteObject(SelectObject(dc, sb));
       DeleteObject(SelectObject(dc, sp));
@@ -1660,7 +1682,7 @@ draw_cursor_overlay_to_dc(void)
   HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
   switch (term_cursor_type()) {
     when CUR_BLOCK: {
-      HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+      HBRUSH oldbrush = SelectObject(dc, cache_create_brush(cc));
       Rectangle(dc, x, uy, x + w, by);
       DeleteObject(SelectObject(dc, oldbrush));
     }
@@ -1671,7 +1693,7 @@ draw_cursor_overlay_to_dc(void)
     }
     when CUR_LINE: {
       int caret_width = max(2, w / 8);
-      HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+      HBRUSH oldbrush = SelectObject(dc, cache_create_brush(cc));
       Rectangle(dc, x, uy, x + caret_width, by);
       DeleteObject(SelectObject(dc, oldbrush));
     }
@@ -1683,7 +1705,7 @@ draw_cursor_overlay_to_dc(void)
       int ut = y + h - dy - th;
       int bt = y + h - dy;
       if (th > 0) {
-        HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+        HBRUSH oldbrush = SelectObject(dc, cache_create_brush(cc));
         Rectangle(dc, x, ut, x + w, bt);
         DeleteObject(SelectObject(dc, oldbrush));
       }
@@ -1707,7 +1729,7 @@ draw_cursor_overlay_to_dc(void)
       HPEN tp = SelectObject(dc, CreatePen(PS_SOLID, 0, g));
       switch (term_cursor_type()) {
         when CUR_BLOCK: {
-          HBRUSH tb = SelectObject(dc, CreateSolidBrush(g));
+          HBRUSH tb = SelectObject(dc, cache_create_brush(g));
           Rectangle(dc, gx, gy, gx + w, gy + h);
           DeleteObject(SelectObject(dc, tb));
         }
@@ -1718,13 +1740,13 @@ draw_cursor_overlay_to_dc(void)
         }
         when CUR_LINE: {
           int tw = max(2, w / 8);
-          HBRUSH tb = SelectObject(dc, CreateSolidBrush(g));
+          HBRUSH tb = SelectObject(dc, cache_create_brush(g));
           Rectangle(dc, gx, gy, gx + tw, gy + h);
           DeleteObject(SelectObject(dc, tb));
         }
         when CUR_UNDERSCORE: {
           int th = max(2, h / 8);
-          HBRUSH tb = SelectObject(dc, CreateSolidBrush(g));
+          HBRUSH tb = SelectObject(dc, cache_create_brush(g));
           Rectangle(dc, gx, gy + h - th, gx + w, gy + h);
           DeleteObject(SelectObject(dc, tb));
         }
@@ -1752,7 +1774,7 @@ draw_cursor_overlay_to_dc(void)
           d2d_fill_rect(px, py, s, s, pcc, pa);
         else {
           colour g = blend_colour(bg, pcc, pa);
-          HBRUSH pb = SelectObject(dc, CreateSolidBrush(g));
+          HBRUSH pb = SelectObject(dc, cache_create_brush(g));
           Rectangle(dc, (int)px, (int)py, (int)(px + s), (int)(py + s));
           DeleteObject(SelectObject(dc, pb));
         }
@@ -1765,7 +1787,7 @@ draw_cursor_overlay_to_dc(void)
         }
         else {
           colour g = blend_colour(bg, pcc, pa);
-          HBRUSH pb = SelectObject(dc, CreateSolidBrush(g));
+          HBRUSH pb = SelectObject(dc, cache_create_brush(g));
           int ir = (int)r;
           Ellipse(dc, (int)px - ir / 2, (int)py - ir / 2,
                   (int)px + ir / 2, (int)py + ir / 2);
@@ -1859,7 +1881,7 @@ draw_cursor_to_canvas(HDC screen_dc)
     }
     else {
       // Fallback: GDI fill black (alpha still 0 from DIB create on first use).
-      HBRUSH clr = CreateSolidBrush(RGB(0, 0, 0));
+      HBRUSH clr = cache_create_brush(RGB(0, 0, 0));
       HBRUSH old_brush = SelectObject(cursor_canvas_dc, clr);
       PatBlt(cursor_canvas_dc, 0, 0, w, h, BLACKNESS);
       SelectObject(cursor_canvas_dc, old_brush);
@@ -2311,7 +2333,7 @@ layers_begin(HDC ref, RECT *crc)
       return false;
     content_valid = false;
     colour bg = colours[term.rvideo ? FG_COLOUR_I : BG_COLOUR_I];
-    HBRUSH br = CreateSolidBrush(bg);
+    HBRUSH br = cache_create_brush(bg);
     RECT all = {0, 0, mw, mh};
     FillRect(content_dc, &all, br);
     DeleteObject(br);
@@ -2351,6 +2373,7 @@ void
 win_layers_release(void)
 {
   layers_release();
+  cache_release_brushes();
 }
 
 /* Compose content + cursor layer into present, blit once to screen.
@@ -2809,7 +2832,7 @@ alpha_blend_bg(int alpha, HDC dc, HBITMAP hbm, int bw, int bh, colour bg)
   HBITMAP hbm1 = CreateCompatibleBitmap(dc0, bw, bh);
   HBITMAP oldhbm1 = SelectObject(dc1, hbm1);
 
-  HBRUSH bgb = CreateSolidBrush(bg);
+  HBRUSH bgb = cache_create_brush(bg);
   FillRect(dc1, &(RECT){0, 0, bw, bh}, bgb);
   DeleteObject(bgb);
 
@@ -3099,11 +3122,11 @@ load_background_image_brush(HDC dc, wstring fn)
       else {
 #ifdef fill_bg_with_rectangle
 #warning missing border HPEN
-        HBRUSH oldbrush = SelectObject(dc1, CreateSolidBrush(win_get_colour(BG_COLOUR_I)));
+        HBRUSH oldbrush = SelectObject(dc1, cache_create_brush(win_get_colour(BG_COLOUR_I)));
         Rectangle(dc1, 0, 0, w, h);
         DeleteObject(SelectObject(dc1, oldbrush));
 #else
-        HBRUSH br = CreateSolidBrush(win_get_colour(BG_COLOUR_I));
+        HBRUSH br = cache_create_brush(win_get_colour(BG_COLOUR_I));
         FillRect(dc1, &(RECT){0, 0, w, h}, br);
         DeleteObject(br);
 #endif
@@ -4589,7 +4612,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   void clear_run() {
     if (!underlaid) {
       // clear background of current output chunk
-      HBRUSH bgb = CreateSolidBrush(bg);
+      HBRUSH bgb = cache_create_brush(bg);
       FillRect(dc, &box, bgb);
       DeleteObject(bgb);
 
@@ -5185,7 +5208,7 @@ skip_drawing:;
       int _y3 = char_height * y3 / 8;
 
       HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, fg));
-      HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(fg));
+      HBRUSH oldbrush = SelectObject(dc, cache_create_brush(fg));
       if (chord) {
         if (lefthalf)
           // Powerline left half circle U+E0B6: trichord(8, 0, 0, 4, 8, 8);
@@ -5257,7 +5280,7 @@ skip_drawing:;
       }
       //printf("25XX >%d%%%d %d%%%d %d%%%d %d%%%d\n", cl, dl, ct, dt, cr, dr, cb, db);
       //printf("Rect %d %d %d %d\n", xi + cl_, y0 + ct_, xi + cr_, y0 + cb_);
-      HBRUSH br = CreateSolidBrush(c);
+      HBRUSH br = cache_create_brush(c);
       FillRect(dc, &(RECT){xi + cl_, y0 + ct_, xi + cr_, y0 + cb_}, br);
       DeleteObject(br);
       if (dl)
@@ -5296,7 +5319,7 @@ skip_drawing:;
       style |= PS_ENDCAP_SQUARE;  // skipped for DEC Technical sum segments
     HPEN pen = ExtCreatePen(style, penwidth, &brush, 0, 0);
     HPEN heavypen = ExtCreatePen(style, heavypenwidth, &brush, 0, 0);
-    HBRUSH br = CreateSolidBrush(fg);
+    HBRUSH br = cache_create_brush(fg);
     // save pen and preload default pen for some performance
     HPEN oldpen = SelectObject(dc, pen);
     HPEN curpen = pen;
@@ -5760,11 +5783,11 @@ skip_drawing:;
           xx += char_width - caret_width;
         if (attr.attr & TATTR_ACTCURS && !skip_active) {
 #ifdef cursor_painted_with_rectangle
-          HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
+          HBRUSH oldbrush = SelectObject(dc, cache_create_brush(_cc));
           Rectangle(dc, xx, uy, xx + caret_width, by);
           DeleteObject(SelectObject(dc, oldbrush));
 #else
-          HBRUSH br = CreateSolidBrush(_cc);
+          HBRUSH br = cache_create_brush(_cc);
 #ifdef simple_inverted_cursor_approach
           InvertRect(dc, &(RECT){xx, uy, xx + caret_width, by});
 #else
@@ -5791,7 +5814,7 @@ skip_drawing:;
           int up = cursor_size(cell_height);
           if (up) {
             int yct = max(yy - up, yt);
-            HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(_cc));
+            HBRUSH oldbrush = SelectObject(dc, cache_create_brush(_cc));
             Rectangle(dc, x, yct, x + char_width, yy + 2);
             DeleteObject(SelectObject(dc, oldbrush));
           }

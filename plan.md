@@ -11,6 +11,8 @@
 | 主题 | 四项全做（ANSI-16 GUI、Lua 即时刷新、JSON 格式+管理器、动态/分标签主题） |
 | LuaConfig GUI | 两者都做（脚本管理面板 + 全量选项 GUI 补全） |
 | 顺序 | 基座先行（P0→P9），每步可编译可跑、独立 commit |
+| 旧系统兼容 | **< Win10 1809（10.0.17763 之前）必须可正常运行**：ConPTY 三个 API（`CreatePseudoConsole`/`ResizePseudoConsole`/`ClosePseudoConsole`）一律 `GetProcAddress` 动态解析、不进导入表；解析失败即回退 `PtyBackend=msys`（forkpty）；构建侧只用能产出旧版可运行产物的 WinSDK 头/导入库，不新增仅新 SDK 才有的符号 |
+| OpenConsole 依赖 | **winconpty 集成不依赖 WIL**：不引 `wil/*.h`，去 `wil::unique_handle`/`RETURN_IF_FAILED` 等宏——自写 WIL-free C 实现 `src/conpty.c`，或 patch vendored `winconpty.cpp` 后再编（二选一，P2a 内定） |
 
 ## 必修动画缺陷（优先于/穿插于 P0–P3）
 
@@ -18,7 +20,8 @@
 
 ### D1 block cursor 在 smooth 闪烁时吞字
 - 现象：块光标 + `SmoothBlinkCursor=smooth` 时，光标覆盖的字符被吃掉（闪烁周期内字符消失）。
-- 方向：cell path 在 `expand!=255`/动画中间态不应走实心覆盖；对照 `CursorInvert` 与 `own_body`/overlay 合成顺序（`wintext.c` overlay ~1444、cell path ~5655）。
+- 根因：cell path 对 fg/bg **同时**线性淡化（`wintext.c` invert 分支与 normal 分支），两条色线在 α≈中点相遇（invert 分支严格 fg==bg）→ 字形与底色同色而消失。
+- 修法：新 helper `cursor_fade_fg()`——先取平滑淡化，若与淡化中的 bg 色距 < `mindist` 则退回 `{cell_fg, cursor_text}` 中距当前 bg 色距更大的端点，保证全程可读。
 - 验收：块光标 smooth 闪烁全程被覆盖字符始终可见（仅 fg/bg 或叠加变化，不丢字）；expand/trail/smear 各模式交叉无回归。
 
 ### D2 平滑滚动动画方向反了
@@ -47,6 +50,8 @@
 
 ### P2 ConPTY 后端 + spawn 解耦（1–2 周，核心基座）
 - **P2a 子模块**：浅克隆 `microsoft/terminal` 固定 commit → MSBuild 构 `conpty.dll` + `OpenConsole.exe` → app-local 放 `bin/`（winconpty `_ConsoleHostPath` 找同目录 `OpenConsole.exe`，找不到回退 inbox conhost）。
+  - **不依赖 WIL**：接线代码自写 `src/conpty.c`（Handle RAII 用 goto/`CloseHandle` 手写）或 patch vendored winconpty.cpp 去 WIL，编译期 `-I` 不含 wil 路径。
+  - **旧系统兼容**：ConPTY 三 API 动态 `GetProcAddress`（kernel32 缺失即回退 msys 后端），`objdump -p` 校验导入表无这三个符号；SDK/头文件按 <10.0.17763 可用性选。
 - **P2b child.c 双后端**：新选项 `PtyBackend=conpty|msys`（先默认 msys，验证后切）。
   - conpty 路径：动态加载 app-local `conpty.dll`（`ConptyCreatePseudoConsole`，失败回退 kernel32）→ pipes ×2 → `STARTUPINFOEXW` + `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE` → `CreateProcessW(shell)`。
   - I/O 泵重构：select(pty_fd, win_fd) 对 HANDLE pipe 失效 → **reader 线程 + 自定义消息**并入现有消息泵；`winsize` → `ResizePseudoConsole`；环境块构造（继承 + `IMINTTY_*`）；shell 路径 POSIX→Windows 解析。
@@ -111,7 +116,7 @@ D1–D3 随 P0 起步，P3 前闭环
 ```
 
 ## 贯穿规范
-每子步 `make -j4` 零警告 → 冒烟 → commit（排除 `README.md`）；shell 走 msys bash（PATH 前置）；e2e 按 PID 取窗、禁 `clean.ps1`；sub-agent 只分析；截图不提交；`plan.md` 随勾选同步；microsoft/terminal 固定 commit + `LICENSE.bundled` 记录；不上游 PR。
+每子步 `make -j4` 零警告 → 冒烟 → commit（排除 `README.md`）；shell 走 msys bash（PATH 前置）；e2e 按 PID 取窗、禁 `clean.ps1`；sub-agent 只分析；截图不提交；`plan.md` 随勾选同步；microsoft/terminal 固定 commit + `LICENSE.bundled` 记录；不上游 PR；兼容下限 < Win10 1809；OpenConsole/winconpty 零 WIL 依赖。
 
 ## 三个需先验证的风险点（建议最先做）
 1. **P5 spike**：跨进程 SetParent 的键盘/DPI/焦点路由可行性——决定容器方案成败。

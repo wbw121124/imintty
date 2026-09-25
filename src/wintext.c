@@ -267,6 +267,24 @@ blend_colour(colour from, colour to, int alpha)
          );
 }
 
+/*
+ * Foreground of a blinking block cursor while its colours cross-fade.
+ * Fading fg and bg independently makes them converge half way through the
+ * fade (exactly meeting for an inverted pair), which erases the glyph; so
+ * keep the smooth blend only as long as it stays legible against the
+ * fading background and otherwise fall back to the better end colour.
+ */
+static colour
+cursor_fade_fg(colour from_fg, colour to_fg, colour from_bg, colour to_bg,
+               int alpha, uint min_dist)
+{
+  colour bg = blend_colour(from_bg, to_bg, alpha);
+  colour fg = blend_colour(from_fg, to_fg, alpha);
+  if (colour_dist(fg, bg) >= min_dist)
+    return fg;
+  return colour_dist(from_fg, bg) >= colour_dist(to_fg, bg) ? from_fg : to_fg;
+}
+
 static uint
 get_font_quality(void)
 {
@@ -4188,8 +4206,10 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
         bg = cell_fg;
         default_bg = false;
         if (term_cursor_blinks() && term.has_focus && term.cblink_alpha < 255) {
-          fg = blend_colour(cell_fg, fg, term.cblink_alpha);
-          bg = blend_colour(cell_bg, bg, term.cblink_alpha);
+          colour to_bg = bg;
+          fg = cursor_fade_fg(cell_fg, fg, cell_bg, to_bg,
+                              term.cblink_alpha, mindist);
+          bg = blend_colour(cell_bg, to_bg, term.cblink_alpha);
         }
       }
       else if (cfg.smooth_blink_cursor == ANIM_EXPAND
@@ -4213,7 +4233,9 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
         bg = cursor_colour;
         if (term_cursor_blinks() && term.has_focus && term.cblink_alpha < 255)
         {
-          fg = blend_colour(cell_fg, fg, term.cblink_alpha);
+          colour to_fg = fg;
+          fg = cursor_fade_fg(cell_fg, to_fg, cell_bg, bg,
+                              term.cblink_alpha, mindist);
           bg = blend_colour(cell_bg, bg, term.cblink_alpha);
         }
       }

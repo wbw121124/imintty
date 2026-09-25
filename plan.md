@@ -66,10 +66,12 @@
   - ~~**不依赖 WIL**：接线代码自写 `src/conpty.c`（Handle RAII 用 goto/`CloseHandle` 手写）或 patch vendored winconpty.cpp 去 WIL，编译期 `-I` 不含 wil 路径。~~
   - ~~**旧系统兼容**：ConPTY 三 API 动态 `GetProcAddress`（kernel32 缺失即回退 msys 后端），`objdump -p` 校验导入表无这三个符号；SDK/头文件按 <10.0.17763 可用性选。~~
   - **实测结论**：`conpty.c/h` 已实现 `conpty_available()` / `conpty_create()` / `conpty_resize()` / `conpty_close()`，动态加载 API ✓。
-- **P2b child.c 双后端**：新选项 `PtyBackend=conpty|msys`（先默认 msys，验证后切）。
-  - conpty 路径：动态加载 app-local `conpty.dll`（`ConptyCreatePseudoConsole`，失败回退 kernel32）→ pipes ×2 → `STARTUPINFOEXW` + `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE` → `CreateProcessW(shell)`。
-  - I/O 泵重构：select(pty_fd, win_fd) 对 HANDLE pipe 失效 → **reader 线程 + 自定义消息**并入现有消息泵；`winsize` → `ResizePseudoConsole`；环境块构造（继承 + `IMINTTY_*`）；shell 路径 POSIX→Windows 解析。
-  - termios/forkpty 在 conpty 路径整体跳过。
+- **P2b child.c 双后端** ~~已完成~~：新选项 `PtyBackend=conpty|msys`（默认 msys，验证后切）。
+  - ~~conpty 路径：动态加载 app-local `conpty.dll`（`ConptyCreatePseudoConsole`，失败回退 kernel32）→ pipes ×2 → `STARTUPINFOEXW` + `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE` → `CreateProcessW(shell)`。~~
+  - ~~I/O 泵重构：select(pty_fd, win_fd) 对 HANDLE pipe 失效 → **reader 线程 + 自定义消息**并入现有消息泵；`winsize` → `ResizePseudoConsole`；环境块构造（继承 + `IMINTTY_*`）；shell 路径 POSIX→Windows 解析。~~
+  - ~~termios/forkpty 在 conpty 路径整体跳过。~~
+  - **实测结论**：`PtyBackend=conpty` 选项已添加，conpty 路径实现完整（create/read/write/resize/close），msys 路径保持不变 ✓。
+  - Commit: `22a3b34 feat: P2b ConPTY双后端 + 日志级别宏 + 帧时间测量`
 - **P2c 标签 spawn 改 CreateProcess**：新标签不再 `fork()` 自身（`do_child_fork` 主路径退役；仅剩 beep/keyclick/help 等零星 fork 留给 P8）。
 - 验证：bash 交互、vim/clear、Ctrl+C、resize、多行输出吞吐对比、`PtyBackend=msys` 回退回归。
 

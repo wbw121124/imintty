@@ -2609,6 +2609,42 @@ do_update(void)
   else if (update_state == UPDATE_PENDING || term_scroll_anim_active()) {
     win_set_timer(do_update, update_timer);
   }
+
+#ifdef USE_FRAME_TIMER
+  /* Update titlebar with FPS counter if configured */
+  if (cfg.perf_monitor && frame_time_count >= 30) {
+    int sum = 0, max_t = 0, min_t = 99999;
+    for (int i = 0; i < 30; i++) {
+      int t = frame_times[i];
+      sum += t;
+      if (t > max_t) max_t = t;
+      if (t < min_t) min_t = t;
+    }
+    int fps = 1000 / (sum / 30);
+    char fps_str[64];
+    snprintf(fps_str, sizeof(fps_str), " [FPS:%d avg=%dms max=%dms min=%dms]",
+             fps, sum / 30, max_t, min_t);
+
+    if (cfg.perf_display_mode == 1) {
+      /* Append to titlebar */
+      wchar wtitle[256];
+      GetWindowTextW(wnd, wtitle, 256);
+      wchar wfps[64];
+      mbstowcs(wfps, fps_str, 64);
+      wcsncat(wtitle, wfps, 255);
+      SetWindowTextW(wnd, wtitle);
+    }
+    else if (cfg.perf_display_mode >= 2 && cfg.perf_display_mode <= 10) {
+      /* Show on screen at position (mode-2): 2=TopLeft, 3=TopCenter, 4=TopRight,
+         5=MidLeft, 6=MidCenter, 7=MidRight, 8=BotLeft, 9=BotCenter, 10=BotRight */
+      int col = (cfg.perf_display_mode - 2) % 3;
+      int row = (cfg.perf_display_mode - 2) / 3;
+      int x = col * (term.cols * 3 / 2);
+      int y = row * 3;
+      DBGx(LOG_INFO, "PERF:x=%d y=%d %s\n", x, y, fps_str);
+    }
+  }
+#endif
 }
 
 #include <math.h>

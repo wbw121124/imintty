@@ -310,13 +310,16 @@ typedef struct {
   wstring options_font;
   int options_fontsize;
   string old_options;
-  bool dim_margins;
-  bool old_xbuttons;
-  int wslbridge;
-  // Legacy
-  bool use_system_colours;
-  bool old_bold;
-} config;
+   bool dim_margins;
+   bool old_xbuttons;
+   int wslbridge;
+   // Performance monitoring
+   bool perf_monitor;          /* Enable frame timing measurement */
+   int perf_display_mode;      /* 0=off, 1=titlebar, 2=stdout, 3-10=screen positions */
+   // Legacy
+   bool use_system_colours;
+   bool old_bold;
+ } config;
 
 
 typedef void (* str_fn)(wchar *);

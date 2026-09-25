@@ -307,6 +307,8 @@ const config default_cfg = {
   .progress_scan = 1,
   .dim_margins = false,
   .old_bold = false,
+  .perf_monitor = false,
+  .perf_display_mode = 0,
   .ime_cursor_colour = DEFAULT_COLOUR,
   .ansi_colours = {
 #ifdef old_imintty_colour_scheme  // theme "imintty"
@@ -687,6 +689,8 @@ options[] = {
   {"ReGISGrid", OPT_INT, offcfg(regis_grid)},
   {"ReGISTension", OPT_STRING, offcfg(regis_tension)},
   {"OldBold", OPT_BOOL, offcfg(old_bold)},
+  {"PerfMonitor", OPT_BOOL, offcfg(perf_monitor)},
+  {"PerfDisplayMode", OPT_INT, offcfg(perf_display_mode)},
   {"ShortLongOpts", OPT_BOOL, offcfg(short_long_opts)},
   {"BoldAsRainbowSparkles", OPT_BOOL, offcfg(bold_as_special)},
   {"HoverTitle", OPT_BOOL, offcfg(hover_title)},

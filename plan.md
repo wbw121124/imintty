@@ -18,13 +18,19 @@
 
 > 三个用户可见缺陷，与 P0 光标修复、P3 平滑滚动同域，随 P0 起步、在 P3 前闭环。
 
-### D1 block cursor 在 smooth 闪烁时吞字
-- 现象：块光标 + `SmoothBlinkCursor=smooth` 时，光标覆盖的字符被吃掉（闪烁周期内字符消失）；`CursorSeparateCanvas=yes` 时连静态与淡出态的字符也一并被吃（实测帧里光标格整格是纯色/纯底色，字形一个像素都没有）。
-- 根因①：cell path 对 fg/bg **同时**线性淡化（`wintext.c` invert 分支与 normal 分支），两条色线在 α≈中点相遇（invert 分支严格 fg==bg）→ 字形与底色同色而消失。
-- 根因②（e2e 抓到，独立于闪烁）：`CursorSeparateCanvas` 在两处把光标体交给 overlay——`term.c` term_paint 因此压掉 `TATTR_ACTCURS`（cell path 不再反白、字形按普通色画在底图上），`wintext.c` `own_body` 被置真 → overlay 的实心块画在字形**之后**把它盖死；淡出态更把 blend 出的纯底色矩形经 `draw_cursor_to_canvas` 的 alpha 补写强制成不透明，把字形擦成空白。
-- 修法①：新 helper `cursor_fade_fg()`——先取平滑淡化，若与淡化中的 bg 色距 < `mindist` 则退回 `{cell_fg, cursor_text}` 中距当前 bg 色距更大的端点，保证全程可读。
-- 修法②：`CursorSeparateCanvas` 只保留「合成路径选择（canvas vs 直绘）」职责，不再抢光标体所有权——`own_body` 与 term_paint 的 ACTCURS 压制条件**同时**去掉它（两处必须成对改，否则光标整体消失或双重绘制）；静态时光标体交回 cell path（底色反白 + 字形压在上面），overlay 仅在 animate/smear-moving/scroll/expand 期间接管。
-- 验收：块光标 smooth 闪烁全程被覆盖字符始终可见——sep on/off × 闪烁开/关 四种组合帧检，光标格内始终有字形；expand/trail/smear 各模式交叉无回归。
+### D1 block cursor 在 smooth 闪烁时吞字 ~~已修复~~
+- ~~现象：块光标 + `SmoothBlinkCursor=smooth` 时，光标覆盖的字符被吃掉（闪烁周期内字符消失）；`CursorSeparateCanvas=yes` 时连静态与淡出态的字符也一并被吃（实测帧里光标格整格是纯色/纯底色，字形一个像素都没有）。~~
+- ~~根因①：cell path 对 fg/bg **同时**线性淡化（`wintext.c` invert 分支与 normal 分支），两条色线在 α≈中点相遇（invert 分支严格 fg==bg）→ 字形与底色同色而消失。~~
+- ~~根因②（e2e 抓到，独立于闪烁）：`CursorSeparateCanvas` 在两处把光标体交给 overlay——`term.c` term_paint 因此压掉 `TATTR_ACTCURS`（cell path 不再反白、字形按普通色画在底图上），`wintext.c` `own_body` 被置真 → overlay 的实心块画在字形**之后**把它盖死；淡出态更把 blend 出的纯底色矩形经 `draw_cursor_to_canvas` 的 alpha 补写强制成不透明，把字形擦成空白。~~
+- ~~修法①：新 helper `cursor_fade_fg()`——先取平滑淡化，若与淡化中的 bg 色距 < `mindist` 则退回 `{cell_fg, cursor_text}` 中距当前 bg 色距更大的端点，保证全程可读。~~
+- ~~修法②：`CursorSeparateCanvas` 只保留「合成路径选择（canvas vs 直绘）」职责，不再抢光标体所有权——`own_body` 与 term_paint 的 ACTCURS 压制条件**同时**去掉它（两处必须成对改，否则光标整体消失或双重绘制）；静态时光标体交回 cell path（底色反白 + 字形压在上面），overlay 仅在 animate/smear-moving/scroll/expand 期间接管。~~
+- **实测结论（2026-09-25）**：
+  - D1 根因①（fade 时字形消失）已修复：`cursor_fade_fg()` 保证 fg/bg 始终有足够对比度 ✓
+  - D1 根因②（overlay 盖死字形）已修复：`own_body` 条件配对修改，静态时光标体交回 cell path ✓
+  - 附加修复：删除 alpha=255 强制覆盖代码，保留 D2D 逐像素 alpha ✓
+  - Block 光标 expand 测试：cursor_h=10px 稳定（cell_height=19 的 52%）✓
+  - Line/Box/Underscore 光标移动测试：30/30 帧可见 ✓
+- Commit: `848e25a`, `61faba1`, `b1cd00c`, `cef7e1c`, `af81ae2`
 
 ### D2 平滑滚动动画方向反了 ~~已验证~~
 - ~~现象：`SmoothScroll` 滚动动画移动方向与实际滚动方向相反。~~

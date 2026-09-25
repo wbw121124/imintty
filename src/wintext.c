@@ -1372,18 +1372,14 @@ draw_cursor_overlay_to_dc(void)
   bool expand_mode = cfg.smooth_blink_cursor == ANIM_EXPAND
                      && term_cursor_blinks() && term.has_focus
                      && !cfg.cursor_invert;
-  /* Cell path owns the static body unless animate/separate/smear-moving/scroll pin
-     it here; otherwise term_paint + overlay double-draw and blink flickers. */
-  bool own_body = scroll_layer || term.curs_animate || cfg.cursor_separate_canvas
+  /* Cell path owns the static body unless animate/smear-moving/scroll/expand
+     pin it here; otherwise term_paint + overlay double-draw and blink flickers.
+     CursorSeparateCanvas only selects the composite path (canvas vs direct);
+     it must not take body ownership away from the cell path, or the solid
+     overlay body covers the glyph it sits on (#D1 吞字). */
+  bool own_body = scroll_layer || term.curs_animate
                   || (cfg.cursor_smear && term.curs_smear.moving)
                   || expand_mode;
-  /* Invert: cell path reverse-video'd the covered block; no solid body there.
-     Only applies to CUR_BLOCK — other shapes keep their overlay body. */
-  if (cfg.cursor_invert && term_cursor_type() == CUR_BLOCK
-      && !scroll_layer && !term.curs_animate
-      && !cfg.cursor_separate_canvas
-      && !(cfg.cursor_smear && term.curs_smear.moving))
-    own_body = false;
   bool have_fx = term.curs_particle_n > 0
                  || (term.curs_trail_len > 0 && term.curs_animate);
   if (!own_body && !have_fx)

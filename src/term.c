@@ -5114,7 +5114,7 @@ term_paint(void)
       newchars[curs_x].attr.attr |=
         (scroll_band_cursor ? 0 :
          !term.has_focus ? TATTR_PASCURS :
-         term.curs_animate || cfg.cursor_separate_canvas
+         term.curs_animate
          || (cfg.cursor_smear && term.curs_smear.moving) ? 0 :
          term.cblink_alpha > 0 || !term_cursor_blinks() ? TATTR_ACTCURS : 0) |
         (term.curs.wrapnext ? TATTR_RIGHTCURS : 0);

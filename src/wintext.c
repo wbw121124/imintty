@@ -1379,10 +1379,10 @@ draw_cursor_overlay_to_dc(void)
    bool own_body = scroll_layer || term.curs_animate
                    || (cfg.cursor_smear && term.curs_smear.moving)
                    || expand_mode
-                   /* During blink fade, cell path suppresses ACTCURS;
-                      overlay must own body to draw the fading cursor. */
+                   /* During blink fade (0 < alpha < 255), cell path suppresses
+                      ACTCURS; overlay must own body to draw the fading cursor. */
                    || (term_cursor_blinks() && term.has_focus
-                       && term.cblink_alpha < 255);
+                       && term.cblink_alpha > 0 && term.cblink_alpha < 255);
   bool have_fx = term.curs_particle_n > 0
                  || (term.curs_trail_len > 0 && term.curs_animate);
   if (!own_body && !have_fx)
@@ -1483,10 +1483,11 @@ draw_cursor_overlay_to_dc(void)
   /* RenderBackend=d2d: D2D shapes with true alpha (no blend_colour). */
   if (d2d_begin(dc)) {
     char ctype = term_cursor_type();
-    if (!own_body) {
-      /* effects only; cell path already painted the body.
-         Block cursor is fully handled by cell-path reversal;
-         line/box/underscore need the overlay to render their shape. */
+  if (!own_body) {
+    /* effects only; body already painted by term_paint.
+       Block cursor handled by cell-path inversion; skip shape for line/box/underscore
+       when fully opaque (cell path already drew it). Only draw during fade (alpha<255). */
+    if (blink_a < 255) {
       char ctype = term_cursor_type();
       if (ctype != CUR_BLOCK) {
         if (ctype == CUR_BOX)
@@ -1507,6 +1508,7 @@ draw_cursor_overlay_to_dc(void)
         }
       }
     }
+  }
     else if (use_smear) {
       if (ctype == CUR_BOX)
         d2d_stroke_polygon(smear, 4, cc, blink_a, 1.0f);
@@ -1584,36 +1586,38 @@ draw_cursor_overlay_to_dc(void)
 
   if (!own_body) {
     /* effects only; body already painted by term_paint.
-       Block cursor is fully handled by cell-path reversal;
-       line/box/underscore need the overlay to render their shape. */
-    char ctype = term_cursor_type();
-    if (ctype != CUR_BLOCK) {
-      HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
-      if (ctype == CUR_BOX) {
-        HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
-        Rectangle(dc, x, uy, x + w, by);
-        SelectObject(dc, oldbrush);
-      }
-      else if (ctype == CUR_LINE) {
-        int caret_width = max(2, w / 8);
-        HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
-        Rectangle(dc, x, uy, x + caret_width, by);
-        DeleteObject(SelectObject(dc, oldbrush));
-      }
-      else {  // CUR_UNDERSCORE
-        int th_full = max(2, h / 8);
-        int th = th_full * expand / 255;
-        if (expand > 0 && th < 1)
-          th = 1;
-        int ut = y + h - dy - th;
-        int bt = y + h - dy;
-        if (th > 0) {
+       Block cursor handled by cell-path inversion; skip shape when opaque.
+       Only draw line/box/underscore during fade (alpha<255). */
+    if (blink_a < 255) {
+      char ctype = term_cursor_type();
+      if (ctype != CUR_BLOCK) {
+        HPEN oldpen = SelectObject(dc, CreatePen(PS_SOLID, 0, cc));
+        if (ctype == CUR_BOX) {
+          HBRUSH oldbrush = SelectObject(dc, GetStockObject(NULL_BRUSH));
+          Rectangle(dc, x, uy, x + w, by);
+          SelectObject(dc, oldbrush);
+        }
+        else if (ctype == CUR_LINE) {
+          int caret_width = max(2, w / 8);
           HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
-          Rectangle(dc, x, ut, x + w, bt);
+          Rectangle(dc, x, uy, x + caret_width, by);
           DeleteObject(SelectObject(dc, oldbrush));
         }
+        else {  // CUR_UNDERSCORE
+          int th_full = max(2, h / 8);
+          int th = th_full * expand / 255;
+          if (expand > 0 && th < 1)
+            th = 1;
+          int ut = y + h - dy - th;
+          int bt = y + h - dy;
+          if (th > 0) {
+            HBRUSH oldbrush = SelectObject(dc, CreateSolidBrush(cc));
+            Rectangle(dc, x, ut, x + w, bt);
+            DeleteObject(SelectObject(dc, oldbrush));
+          }
+        }
+        DeleteObject(SelectObject(dc, oldpen));
       }
-      DeleteObject(SelectObject(dc, oldpen));
     }
   }
   else if (use_smear) {
@@ -1870,44 +1874,8 @@ draw_cursor_to_canvas(HDC screen_dc)
   if (!drew)
     return;
 
-  /* GDI draws leave alpha=0; force opaque only within the cursor bbox
-     (full-window scan every 16ms was a smear hot path). */
-  {
-    BITMAP bm;
-    if (GetObject(cursor_canvas_bm, sizeof bm, &bm) && bm.bmBits) {
-      int y0 = term.curs.y * cell_height + OFFSET + PADDING - cell_height * 2;
-      int y1 = y0 + cell_height * (cfg.cursor_trail_size > 0
-                                   ? cfg.cursor_trail_size + 4 : 6);
-      int x0 = PADDING - cell_width * 2;
-      int x1 = PADDING + term.cols * cell_width + cell_width * 2;
-      float smear[8];
-      bool has_smear = cfg.cursor_smear && term_curs_smear_pts(smear);
-      if (has_smear) {
-        for (int i = 0; i < 4; i++) {
-          int sx = (int)smear[i * 2];
-          int sy = (int)smear[i * 2 + 1];
-          if (sx - cell_width * 2 < x0) x0 = sx - cell_width * 2;
-          if (sx + cell_width * 3 > x1) x1 = sx + cell_width * 3;
-          if (sy - cell_height * 2 < y0) y0 = sy - cell_height * 2;
-          if (sy + cell_height * 3 > y1) y1 = sy + cell_height * 3;
-        }
-      }
-      if (y0 < 0) y0 = 0;
-      if (x0 < 0) x0 = 0;
-      if (y1 > h) y1 = h;
-      if (x1 > w) x1 = w;
-      unsigned char * p = bm.bmBits;
-      int stride = bm.bmWidthBytes;
-      for (int yy = y0; yy < y1; yy++) {
-        unsigned char * row = p + (size_t)yy * stride;
-        for (int xx = x0; xx < x1; xx++) {
-          unsigned char * px = row + xx * 4;
-          if (px[0] | px[1] | px[2])
-            px[3] = 255;
-        }
-      }
-    }
-  }
+  /* D2D draws encode per-pixel alpha; preserve it so fade-out cursor
+     does not overwrite underlying text. No opaque alpha fill needed. */
 
   BLENDFUNCTION bf = {
     .BlendOp = AC_SRC_OVER,

@@ -75,11 +75,16 @@
 - **P2c 标签 spawn 改 CreateProcess**：新标签不再 `fork()` 自身（`do_child_fork` 主路径退役；仅剩 beep/keyclick/help 等零星 fork 留给 P8）。
 - 验证：bash 交互、vim/clear、Ctrl+C、resize、多行输出吞吐对比、`PtyBackend=msys` 回退回归。
 
-### P3 平滑滚动视觉+性能 = GPU S1（3–5 天）
-- 性能：content 缓冲 GDI DDB → **32bpp DIBSection**；滚动由「整带重绘」改 **BitBlt 平移 + 仅重绘暴露行**；双快照省重绘；`GetTickCount` → **QPC 帧时钟**；可选 `DwmFlush` 对齐 vsync。
-- 视觉：缓动曲线（`SmoothScrollEase=easeout|quart|linear`）、连续滚轮输入聚合成单次动画、长距离滚动降级策略。
-- **D2/D3 在此阶段闭环**（若未在 P0 期修复）。
-- 验证：`measure_smooth.py` 帧时间/掉帧对比 + 录屏目测。
+### P3 平滑滚动视觉+性能 = GPU S1（3–5 天）~~部分完成~~
+- ~~性能：content 缓冲 GDI DDB → **32bpp DIBSection**；滚动由「整带重绘」改 **BitBlt 平移 + 仅重绘暴露行**；双快照省重绘；`GetTickCount` → **QPC 帧时钟**；可选 `DwmFlush` 对齐 vsync。~~
+- ~~视觉：缓动曲线（`SmoothScrollEase=easeout|quart|linear`）、连续滚轮输入聚合成单次动画、长距离滚动降级策略。~~
+- ~~**D2/D3 在此阶段闭环**（若未在 P0 期修复）。~~
+- **实测结论（2026-09-25）**：滚动方向已修复（`total - remaining`，cell offset `-=`），光标钉格正确 ✓。
+- **性能优化**：
+  - GDI brush 缓存池（`cache_create_brush()`，减少 `CreateSolidBrush` 调用）✓
+  - 自适应定时器（idle 时 100ms，active 时 16ms）✓
+  - 帧时间测量工具（`USE_FRAME_TIMER`，可选显示在标题栏或屏幕位置）✓
+- **验证**：`measure_smooth.py` 帧时间/掉帧对比 + 录屏目测。
 
 ### P4 GPU S2 — ID2D1HwndRenderTarget（1–2 周）
 - `wind2d.c`：DCRenderTarget(逐帧 BindDC) → **HwndRenderTarget**（绑主窗口），`RenderBackend=d2d|gdi` 语义不变，GDI 仍可回退。

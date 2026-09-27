@@ -33,6 +33,11 @@ BINDIR = $(BINFOLDER)/$(platform)
 ifdef TARGET
   CC := $(TARGET)-gcc
   RC := $(TARGET)-windres
+else ifdef MINGW
+  # P8: MinGW-w64 build target (check before uname)
+  CC := gcc
+  RC := windres
+  TARGET := x86_64-w64-mingw32
 else
   CC := gcc
   RC := windres
@@ -78,6 +83,18 @@ else ifeq ($(TARGET), x86_64-pc-msys)
 else ifeq ($(TARGET), Msys-x86_64)
   platform := msys64
   zip_files := ../docs/readme-msys.html
+else ifdef MINGW
+  # P8: MinGW-w64 build target (check before uname)
+  platform := mingw64
+  CC := gcc
+  RC := windres
+  TARGET := x86_64-w64-mingw32
+  zip_files := ../docs/readme-mingw.html
+  # No pty.h, no /proc; use Windows-native APIs
+  CPPFLAGS += -DMINGW_NATIVE
+  # embedded Lua headers for winlua.c; mingw CRT deprecation noise
+  CPPFLAGS += -Ithird_party/lua55
+  CFLAGS += -Wno-deprecated-declarations
 else
   # just warning to support cross-generation of data files
 warn=[30;48;5;11m
@@ -85,7 +102,8 @@ norm=[m
   $(warning $(warn) Target '$(TARGET)' not supported $(norm))
 endif
 
-CPPFLAGS := -DTARGET=$(TARGET)
+# preserve flags added above (e.g. -DMINGW_NATIVE)
+CPPFLAGS := $(CPPFLAGS) -DTARGET=$(TARGET)
 ifdef VERSION_SUFFIX
 CPPFLAGS += -DVERSION_SUFFIX="$(VERSION_SUFFIX)"
 endif
@@ -147,9 +165,14 @@ ifneq ($(platform), msys)
   scriptlib += -lDWrite
   d2dlib = -ld2d1
 endif
+# P8: MinGW — no libpty, no msys-2.0 dependency
+ifeq ($(platform), mingw64)
+  downldlib += -lws2_32 -lpsapi
+  mingw_ldflags := -L$(CC)../lib -static-libstdc++
+endif
 lualib=
 extralibs=$(scriptlib) $(downldlib) $(emojilib) $(d2dlib) $(lualib) -lshlwapi
-LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc
+LDFLAGS := -L$(shell $(CC) -print-file-name=w32api) -static-libgcc $(mingw_ldflags)
 LDLIBS := -mwindows $(extralibs) -lcomctl32 -limm32 -lwinmm -lwinspool -lole32 -luuid -lmpr
 
 ifdef DEBUG
@@ -281,6 +304,10 @@ exe: $(exe)
 $(exe): $(objs)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) $(LDOPT) -o $@
 	#-du -b $@
+
+# P8: MinGW build target
+mingw:
+	MINGW=1 $(MAKE) exe
 
 bin := $(BINDIR)/$(NAME).exe
 bin: stamp $(BINDIR) $(bin)

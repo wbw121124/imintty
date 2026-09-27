@@ -7,8 +7,13 @@
 #include "charset.h"
 #endif
 
+#ifdef MINGW_NATIVE
+#include <commctrl.h>
+#include <windowsx.h>
+#else
 #include <w32api/commctrl.h>
 #include <w32api/windowsx.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 

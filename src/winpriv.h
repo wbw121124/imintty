@@ -3,6 +3,7 @@
 
 #include "win.h"
 #include "winids.h"
+#include "container.h"
 
 #include <winbase.h>
 #include <wingdi.h>
@@ -49,6 +50,7 @@ enum {
 #ifdef sanitize_min_restore_via_hide
   WIN_HIDE = 8,
 #endif
+  WIN_NEW_TAB = 10,
 };
 // support tabbar
 extern void win_to_top(HWND top_wnd);

@@ -1,6 +1,8 @@
 // wind2d.c (part of imintty)
 // Direct2D path for RenderBackend=d2d (B2): cursor/overlay shapes first.
-// Uses ID2D1DCRenderTarget bound to the paint HDC so GDI text still shows.
+// P4: HwndRenderTarget migration — binds to main window once, reused across
+// frames for single-frame D2D composition (text + cursor + particles in one
+// BeginDraw/EndDraw). DCRenderTarget kept as fallback when HwndRT unavailable.
 // Licensed under the terms of the GNU General Public License v3 or later.
 
 #define COBJMACROS
@@ -14,7 +16,9 @@
 
 static ID2D1Factory * d2d_factory;
 static ID2D1DCRenderTarget * d2d_rt;
+static ID2D1HwndRenderTarget * d2d_hwnd_rt;
 static bool d2d_drawing;
+static bool d2d_hwnd_active;
 
 static D2D1_COLOR_F
 d2d_colour(colour c, int alpha)
@@ -67,6 +71,45 @@ d2d_ensure(void)
   return true;
 }
 
+static void
+d2d_release_hwnd_rt(void)
+{
+  if (d2d_hwnd_rt) {
+    ID2D1HwndRenderTarget_Release(d2d_hwnd_rt);
+    d2d_hwnd_rt = 0;
+    d2d_hwnd_active = false;
+  }
+}
+
+static bool
+d2d_create_hwnd_rt(HWND hwnd, UINT w, UINT h)
+{
+  if (!d2d_ensure())
+    return false;
+  d2d_release_hwnd_rt();
+  D2D1_RENDER_TARGET_PROPERTIES rtp;
+  D2D1_HWND_RENDER_TARGET_PROPERTIES hrtp;
+  D2D1_SIZE_U size;
+  memset(&rtp, 0, sizeof rtp);
+  memset(&hrtp, 0, sizeof hrtp);
+  memset(&size, 0, sizeof size);
+  rtp.type = D2D1_RENDER_TARGET_TYPE_HARDWARE;
+  rtp.pixelFormat.format = DXGI_FORMAT_B8G8R8A8_UNORM;
+  rtp.pixelFormat.alphaMode = D2D1_ALPHA_MODE_PREMULTIPLIED;
+  hrtp.hwnd = hwnd;
+  size.width = w;
+  size.height = h;
+  hrtp.pixelSize = size;
+  hrtp.presentOptions = D2D1_PRESENT_OPTIONS_NONE;
+  HRESULT hr = ID2D1Factory_CreateHwndRenderTarget(
+                 d2d_factory, &rtp, &hrtp, &d2d_hwnd_rt);
+  if (FAILED(hr) || !d2d_hwnd_rt) {
+    d2d_hwnd_rt = 0;
+    return false;
+  }
+  return true;
+}
+
 bool
 d2d_available(void)
 {
@@ -91,6 +134,7 @@ d2d_begin(HDC hdc)
     return false;
   ID2D1DCRenderTarget_BeginDraw(d2d_rt);
   d2d_drawing = true;
+  d2d_hwnd_active = false;
   return true;
 }
 
@@ -100,11 +144,20 @@ d2d_end(void)
   if (!d2d_drawing)
     return;
   d2d_drawing = false;
-  D2D1_TAG tag1 = 0, tag2 = 0;
-  HRESULT hr = ID2D1DCRenderTarget_EndDraw(d2d_rt, &tag1, &tag2);
-  if (hr == D2DERR_RECREATE_TARGET) {
-    ID2D1DCRenderTarget_Release(d2d_rt);
-    d2d_rt = 0;
+  if (d2d_hwnd_active) {
+    d2d_hwnd_active = false;
+    D2D1_TAG tag1 = 0, tag2 = 0;
+    HRESULT hr = ID2D1HwndRenderTarget_EndDraw(d2d_hwnd_rt, &tag1, &tag2);
+    if (hr == D2DERR_RECREATE_TARGET)
+      d2d_release_hwnd_rt();
+  }
+  else {
+    D2D1_TAG tag1 = 0, tag2 = 0;
+    HRESULT hr = ID2D1DCRenderTarget_EndDraw(d2d_rt, &tag1, &tag2);
+    if (hr == D2DERR_RECREATE_TARGET) {
+      ID2D1DCRenderTarget_Release(d2d_rt);
+      d2d_rt = 0;
+    }
   }
 }
 
@@ -115,13 +168,17 @@ d2d_brush(colour c, int alpha)
     return 0;
   D2D1_COLOR_F col = d2d_colour(c, alpha);
   D2D1_BRUSH_PROPERTIES bp = {.opacity = 1.0f};
-  // identity matrix via nested union braces
   bp.transform.m[0][0] = 1.0f; bp.transform.m[0][1] = 0.0f;
   bp.transform.m[1][0] = 0.0f; bp.transform.m[1][1] = 1.0f;
   bp.transform.m[2][0] = 0.0f; bp.transform.m[2][1] = 0.0f;
   ID2D1SolidColorBrush * brush = 0;
-  HRESULT hr = ID2D1DCRenderTarget_CreateSolidColorBrush(
-                 d2d_rt, &col, &bp, &brush);
+  HRESULT hr;
+  if (d2d_hwnd_active)
+    hr = ID2D1HwndRenderTarget_CreateSolidColorBrush(
+           d2d_hwnd_rt, &col, &bp, &brush);
+  else
+    hr = ID2D1DCRenderTarget_CreateSolidColorBrush(
+           d2d_rt, &col, &bp, &brush);
   if (FAILED(hr))
     return 0;
   return brush;
@@ -136,7 +193,10 @@ d2d_fill_rect(float x, float y, float w, float h, colour c, int alpha)
   if (!brush)
     return;
   D2D1_RECT_F rect = {.left = x, .top = y, .right = x + w, .bottom = y + h};
-  ID2D1DCRenderTarget_FillRectangle(d2d_rt, &rect, (ID2D1Brush *)brush);
+  if (d2d_hwnd_active)
+    ID2D1HwndRenderTarget_FillRectangle(d2d_hwnd_rt, &rect, (ID2D1Brush *)brush);
+  else
+    ID2D1DCRenderTarget_FillRectangle(d2d_rt, &rect, (ID2D1Brush *)brush);
   ID2D1SolidColorBrush_Release(brush);
 }
 
@@ -152,8 +212,12 @@ d2d_stroke_rect(float x, float y, float w, float h, colour c,
   if (!brush)
     return;
   D2D1_RECT_F rect = {.left = x, .top = y, .right = x + w, .bottom = y + h};
-  ID2D1DCRenderTarget_DrawRectangle(d2d_rt, &rect, (ID2D1Brush *)brush,
-                                    stroke, 0);
+  if (d2d_hwnd_active)
+    ID2D1HwndRenderTarget_DrawRectangle(d2d_hwnd_rt, &rect, (ID2D1Brush *)brush,
+                                        stroke, 0);
+  else
+    ID2D1DCRenderTarget_DrawRectangle(d2d_rt, &rect, (ID2D1Brush *)brush,
+                                      stroke, 0);
   ID2D1SolidColorBrush_Release(brush);
 }
 
@@ -200,8 +264,12 @@ d2d_fill_polygon(const float *xy, int n, colour c, int alpha)
   ID2D1GeometrySink_Release(sink);
   ID2D1SolidColorBrush * brush = d2d_brush(c, alpha);
   if (brush) {
-    ID2D1DCRenderTarget_FillGeometry(d2d_rt, (ID2D1Geometry *)path,
-                                     (ID2D1Brush *)brush, 0);
+    if (d2d_hwnd_active)
+      ID2D1HwndRenderTarget_FillGeometry(d2d_hwnd_rt, (ID2D1Geometry *)path,
+                                         (ID2D1Brush *)brush, 0);
+    else
+      ID2D1DCRenderTarget_FillGeometry(d2d_rt, (ID2D1Geometry *)path,
+                                       (ID2D1Brush *)brush, 0);
     ID2D1SolidColorBrush_Release(brush);
   }
   ID2D1PathGeometry_Release(path);
@@ -220,8 +288,12 @@ d2d_stroke_polygon(const float *xy, int n, colour c, int alpha, float stroke)
   ID2D1GeometrySink_Release(sink);
   ID2D1SolidColorBrush * brush = d2d_brush(c, alpha);
   if (brush) {
-    ID2D1DCRenderTarget_DrawGeometry(d2d_rt, (ID2D1Geometry *)path,
-                                     (ID2D1Brush *)brush, stroke, 0);
+    if (d2d_hwnd_active)
+      ID2D1HwndRenderTarget_DrawGeometry(d2d_hwnd_rt, (ID2D1Geometry *)path,
+                                         (ID2D1Brush *)brush, stroke, 0);
+    else
+      ID2D1DCRenderTarget_DrawGeometry(d2d_rt, (ID2D1Geometry *)path,
+                                       (ID2D1Brush *)brush, stroke, 0);
     ID2D1SolidColorBrush_Release(brush);
   }
   ID2D1PathGeometry_Release(path);
@@ -236,10 +308,10 @@ d2d_draw_glyph_run(HDC hdc, void *font_face,
 {
   if (!font_face || !glyphs || !advances || count == 0 || em_size <= 0)
     return false;
-  if (!d2d_begin(hdc))
+  if (!d2d_drawing)
     return false;
 
-  if ((eto & ETO_OPAQUE) && clip) {
+  if ((eto & ETO_OPAQUE) && clip && !d2d_hwnd_active) {
     colour bg = GetBkColor(hdc);
     d2d_fill_rect((float)clip->left, (float)clip->top,
                   (float)(clip->right - clip->left),
@@ -251,8 +323,12 @@ d2d_draw_glyph_run(HDC hdc, void *font_face,
       .left = (float)clip->left, .top = (float)clip->top,
       .right = (float)clip->right, .bottom = (float)clip->bottom
     };
-    ID2D1DCRenderTarget_PushAxisAlignedClip(
-      d2d_rt, &cr, D2D1_ANTIALIAS_MODE_ALIASED);
+    if (d2d_hwnd_active)
+      ID2D1HwndRenderTarget_PushAxisAlignedClip(d2d_hwnd_rt, &cr,
+                                                D2D1_ANTIALIAS_MODE_ALIASED);
+    else
+      ID2D1DCRenderTarget_PushAxisAlignedClip(d2d_rt, &cr,
+                                              D2D1_ANTIALIAS_MODE_ALIASED);
   }
 
   ID2D1SolidColorBrush * brush = d2d_brush(fg, 255);
@@ -277,25 +353,75 @@ d2d_draw_glyph_run(HDC hdc, void *font_face,
         .bidiLevel = 0
       };
       D2D1_POINT_2F origin = {.x = x, .y = baseline};
-      ID2D1DCRenderTarget_DrawGlyphRun(
-        d2d_rt, origin, &run, (ID2D1Brush *)brush,
-        DWRITE_MEASURING_MODE_NATURAL);
+      if (d2d_hwnd_active)
+        ID2D1HwndRenderTarget_DrawGlyphRun(d2d_hwnd_rt, origin, &run,
+                                           (ID2D1Brush *)brush,
+                                           DWRITE_MEASURING_MODE_NATURAL);
+      else
+        ID2D1DCRenderTarget_DrawGlyphRun(d2d_rt, origin, &run,
+                                         (ID2D1Brush *)brush,
+                                         DWRITE_MEASURING_MODE_NATURAL);
       ok = true;
       free(adv);
     }
     ID2D1SolidColorBrush_Release(brush);
   }
 
-  if ((eto & ETO_CLIPPED) && clip)
-    ID2D1DCRenderTarget_PopAxisAlignedClip(d2d_rt);
-  d2d_end();
+  if ((eto & ETO_CLIPPED) && clip) {
+    if (d2d_hwnd_active)
+      ID2D1HwndRenderTarget_PopAxisAlignedClip(d2d_hwnd_rt);
+    else
+      ID2D1DCRenderTarget_PopAxisAlignedClip(d2d_rt);
+  }
   return ok;
+}
+
+/* P4: Begin a single-frame D2D composition on the HwndRenderTarget.
+   Call d2d_end() after all drawing is complete. */
+bool
+d2d_begin_hwnd(void)
+{
+  if (d2d_drawing || cfg.render_backend == RB_GDI)
+    return false;
+  if (!d2d_ensure())
+    return false;
+  if (!d2d_hwnd_rt) {
+    RECT rc;
+    GetClientRect(wnd, &rc);
+    UINT w = max(1u, (UINT)rc.right), h = max(1u, (UINT)rc.bottom);
+    if (!d2d_create_hwnd_rt(wnd, w, h))
+      return false;
+  }
+  ID2D1HwndRenderTarget_BeginDraw(d2d_hwnd_rt);
+  d2d_drawing = true;
+  d2d_hwnd_active = true;
+  return true;
+}
+
+/* P4: Bind or rebind the HwndRenderTarget to a new window/size.
+   Called on window creation, resize, and DPI change. */
+void
+d2d_set_hwnd(HWND hwnd)
+{
+  d2d_release_hwnd_rt();
+  if (!hwnd)
+    return;
+  RECT rc;
+  GetClientRect(hwnd, &rc);
+  UINT w = max(1u, (UINT)rc.right), h = max(1u, (UINT)rc.bottom);
+  if (w > 0 && h > 0 && d2d_create_hwnd_rt(hwnd, w, h))
+    return;
+  /* HwndRT failed — fall back to DCRenderTarget (existing behaviour). */
+  if (d2d_ensure())
+    d2d_hwnd_rt = 0;
 }
 
 void
 d2d_shutdown(void)
 {
   d2d_drawing = false;
+  d2d_hwnd_active = false;
+  d2d_release_hwnd_rt();
   if (d2d_rt) {
     ID2D1DCRenderTarget_Release(d2d_rt);
     d2d_rt = 0;

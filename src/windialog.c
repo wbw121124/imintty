@@ -381,29 +381,8 @@ update_available_version(bool ok)
 }
 
 static void
-deliver_available_version()
+do_version_retrieve()
 {
-  if (version_retrieving || !cfg.check_version_update)
-    return;
-  getvfn();
-
-#if CYGWIN_VERSION_API_MINOR >= 74
-  static time_t version_retrieved = 0;
-  struct timespec ts;
-  clock_gettime(CLOCK_MONOTONIC, &ts);
-  if (version_retrieved && ts.tv_sec - version_retrieved < cfg.check_version_update)
-    return;
-  version_retrieved = ts.tv_sec;
-#endif
-
-  version_retrieving = true;
-
-  if (fork())
-    return;  // do nothing in parent (or on failure)
-  //setsid();  // failed attempt to avoid busy hourglass
-  // proceed asynchronously, in child process
-
-  // determine available version
   char * wfn = path_posix_to_win_a(vfn);
   bool ok = true;
 #ifdef debug_version_check
@@ -441,7 +420,50 @@ deliver_available_version()
 #ifdef debug_version_check
   printf("deliver_available_version notified %d\n", ok);
 #endif
+}
+
+#ifdef MINGW_NATIVE
+// no fork in the native MinGW build: run the download in a helper thread,
+// which returns instead of exit()
+static DWORD WINAPI
+version_retrieve_thread(LPVOID arg)
+{
+  (void)arg;
+  do_version_retrieve();
+  return 0;
+}
+#endif
+
+static void
+deliver_available_version()
+{
+  if (version_retrieving || !cfg.check_version_update)
+    return;
+  getvfn();
+
+#if CYGWIN_VERSION_API_MINOR >= 74
+  static time_t version_retrieved = 0;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  if (version_retrieved && ts.tv_sec - version_retrieved < cfg.check_version_update)
+    return;
+  version_retrieved = ts.tv_sec;
+#endif
+
+  version_retrieving = true;
+
+#ifdef MINGW_NATIVE
+  if (CreateThread(0, 0, version_retrieve_thread, 0, 0, 0))
+    return;
+  version_retrieving = false;
+#else
+  if (fork())
+    return;  // do nothing in parent (or on failure)
+  //setsid();  // failed attempt to avoid busy hourglass
+  // proceed asynchronously, in child process
+  do_version_retrieve();
   exit(0);
+#endif
 }
 
 

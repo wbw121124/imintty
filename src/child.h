@@ -1,7 +1,11 @@
 #ifndef CHILD_H
 #define CHILD_H
 
+#ifdef MINGW_NATIVE
+// struct winsize provided by mingwcompat.h (via std.h)
+#else
 #include <termios.h>
+#endif
 
 extern string child_dir;
 
@@ -28,7 +32,7 @@ extern uchar * child_termios_chars(void);
 extern char * foreground_prog(void);  // to be free()d
 extern void user_command(wstring commands, int n);
 extern wstring child_conv_path(wstring, bool adjust_dir);
-extern void child_fork(int argc, char * argv[], int moni, bool config_size, bool in_cwd, bool in_tabs);
+extern void child_fork(int argc, char * argv[], int moni, bool config_size, bool in_cwd, bool in_tabs, HWND embed_wnd);
 extern void child_set_fork_dir(char *);
 extern void setenvi(char * env, int val);
 extern void child_launch(int n, int argc, char * argv[], int moni);

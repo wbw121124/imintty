@@ -4,12 +4,28 @@
 #ifdef __CYGWIN__
 #include <cygwin/version.h>
 #else
+#ifdef MINGW_NATIVE
+#define CYGWIN_VERSION_DLL_MAJOR 0
+#define CYGWIN_VERSION_API_MINOR 0
+#else
 #define CYGWIN_VERSION_DLL_MAJOR 1007
 #define CYGWIN_VERSION_API_MINOR 201
 #endif
+#endif
+
+// P8: MinGW-w64 native Windows build — no POSIX layer
+#ifdef MINGW_NATIVE
+#undef _GNU_SOURCE
+#define _GNU_SOURCE  // keep for some definitions but strip unistd.h
+// must be set before any CRT include to avoid redefinition
+#define WINVER 0x0A00
+#define _WIN32_WINNT 0x0A00
+#endif
 
 //unhide some definitions
+#ifndef MINGW_NATIVE
 #define _GNU_SOURCE
+#endif
 
 #include <assert.h>
 #include <limits.h>
@@ -18,7 +34,14 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#ifdef MINGW_NATIVE
+#include <io.h>   // access, W_OK
+// environment API replacements (no unistd.h)
+extern int setenv(const char * name, const char * value, int overwrite);
+extern int unsetenv(const char * name);
+#else
 #include <unistd.h>
+#endif
 #include <ctype.h>
 #include <wchar.h>
 #include <errno.h>
@@ -50,7 +73,7 @@ extern void argz_stringify (char *argz, size_t argz_len, int sep);
 #endif
 
 
-#if CYGWIN_VERSION_API_MINOR >= 74
+#if CYGWIN_VERSION_API_MINOR >= 74 || defined(MINGW_NATIVE)
 #include <wctype.h>
 #else
 extern int iswalnum(wint_t);
@@ -64,7 +87,7 @@ extern int iswspace(wint_t);
 #endif
 
 
-#if CYGWIN_VERSION_API_MINOR < 70
+#if CYGWIN_VERSION_API_MINOR < 70 && !defined(MINGW_NATIVE)
 extern int asprintf(char **, const char *, ...);
 extern int vasprintf(char **, const char *, va_list);
 #endif
@@ -76,12 +99,16 @@ extern char *asform(const char *fmt, ...);
 //#define WINVER 0x0501	// Windows XP
 //#define WINVER 0x0601	// Windows 7
 //#define WINVER 0x0A00	// Windows 10
+#ifdef MINGW_NATIVE
+/* WINVER/_WIN32_WINNT already defined before CRT includes above */
+#else
 #if CYGWIN_VERSION_API_MINOR >= 74
 #define WINVER 0x0A00
 #else
 #define WINVER 0x0501
 #endif
 #define _WIN32_WINNT WINVER
+#endif
 
 #include <windef.h>
 
@@ -142,6 +169,10 @@ extern wchar * wloctext(string msg);
 #define endof(array) (&(array)[lengthof(array)])
 
 
+#ifdef MINGW_NATIVE
+// rename to avoid clash with mingw string.h char *strset(char *, int)
+#define strset strset_
+#endif
 extern void strset(string *sp, string s);
 extern void wstrset(wstring *sp, wstring s);
 
@@ -162,5 +193,9 @@ extern void wstrset(wstring *sp, wstring s);
 
 #define sgn(x) ({ typeof(x) x_ = (x); (x_ > 0) - (x_ < 0); })
 #define sqr(x) ({ typeof(x) x_ = (x); x_ * x_; })
+
+#ifdef MINGW_NATIVE
+#include "mingwcompat.h"
+#endif
 
 #endif

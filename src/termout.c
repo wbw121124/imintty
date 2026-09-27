@@ -17,7 +17,9 @@
 #include "base64.h"
 #include "unicodever.t"
 
+#ifndef MINGW_NATIVE
 #include <termios.h>
+#endif
 #include <sys/time.h>
 #if CYGWIN_VERSION_API_MINOR >= 66
 #include <langinfo.h>  // nl_langinfo, CODESET
@@ -5034,7 +5036,11 @@ do_cmd(void)
 #define HOST_NAME_MAX 255
 #endif
         char hostname[HOST_NAME_MAX + 1];
+#ifdef MINGW_NATIVE
+        if (0 == mingw_gethostname(hostname, HOST_NAME_MAX)) {
+#else
         if (0 == gethostname(hostname, HOST_NAME_MAX)) {
+#endif
           int hlen = strlen(hostname);
           // check s for leading //$HOSTNAME/
           if (!strncmp(s + 2, hostname, hlen) && s[2 + hlen] == '/')

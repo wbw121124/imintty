@@ -75,7 +75,9 @@ typedef struct {
   wstring theme_file;
   wstring dark_theme;
   wstring background;
-  wstring lua_config;
+   wstring lua_config;
+   bool auto_reload_lua;    // P7: auto-reload Lua script on mtime change
+   string lua_error_log;    // P7: recent Lua execution errors
   string colour_scheme;
   char transparency;
   bool blurred;
@@ -347,5 +349,17 @@ extern char * save_filename(char * suf);
 extern char * matchconf(char * conf, char * item);
 extern wchar * config_log;
 extern void * keyclick;
+
+/* P6/P7: theme and Lua management handlers */
+typedef struct control control;
+extern void theme_manager_handler(control *ctrl, int event);
+extern void theme_apply_handler(control *ctrl, int event);
+extern void theme_import_handler(control *ctrl, int event);
+extern void lua_test_handler(control *ctrl, int event);
+extern void lua_status_handler(control *ctrl, int event);
+
+/* P7: options array for Lua introspection */
+struct opt_entry { string name; uchar type; ushort offset; };
+extern const struct opt_entry options[];
 
 #endif

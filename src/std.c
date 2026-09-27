@@ -40,7 +40,7 @@ tmpdir()
 }
 
 
-#if CYGWIN_VERSION_API_MINOR < 70
+#if CYGWIN_VERSION_API_MINOR < 70 && !defined(MINGW_NATIVE)
 
 int
 vasprintf(char **buf, const char *fmt, va_list va)
@@ -83,7 +83,7 @@ asform(const char *fmt, ...)
 }
 
 
-#if CYGWIN_VERSION_API_MINOR < 74
+#if CYGWIN_VERSION_API_MINOR < 74 && !defined(MINGW_NATIVE)
 int iswalnum(wint_t wc) { return wc < 0x100 && isalnum(wc); }
 int iswalpha(wint_t wc) { return wc < 0x100 && isalpha(wc); }
 int iswspace(wint_t wc) { return wc < 0x100 && isspace(wc); }
@@ -147,7 +147,185 @@ argz_stringify(char *argz, size_t argz_len, int sep)
 #endif
 
 
-#if CYGWIN_VERSION_API_MINOR < 93 || defined (debug_forkpty)
+#ifdef MINGW_NATIVE
+#include <windows.h>  // SetEnvironmentVariableA et al
+
+int
+setenv(const char * name, const char * value, int overwrite)
+{
+  if (!overwrite && GetEnvironmentVariableA(name, 0, 0))
+    return 0;
+  return SetEnvironmentVariableA(name, value) ? 0 : -1;
+}
+
+int
+unsetenv(const char * name)
+{
+  return SetEnvironmentVariableA(name, 0) ? 0 : -1;
+}
+
+void
+mingw_usleep(unsigned usec)
+{
+  Sleep(usec <= 1000 ? 1 : (usec + 999) / 1000);
+}
+
+int
+kill(int pid, int sig)
+{
+  if (pid <= 0)
+    return -1;
+  HANDLE h = OpenProcess(PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION,
+                         FALSE, (DWORD)pid);
+  if (!h)
+    return -1;
+  int res;
+  if (sig == 0) {
+    // probe only
+    res = 0;
+  }
+  else if (pid == (int)GetCurrentProcessId()) {
+    res = 0;
+    TerminateProcess(h, (UINT)(sig & 0xFF));
+  }
+  else
+    res = TerminateProcess(h, (UINT)(sig & 0xFF)) ? 0 : -1;
+  CloseHandle(h);
+  return res;
+}
+
+char *
+strsignal(int sig)
+{
+  switch (sig) {
+    case SIGHUP: return "Hangup";
+    case SIGINT: return "Interrupt";
+    case SIGQUIT: return "Quit";
+    case SIGKILL: return "Killed";
+    case SIGTERM: return "Terminated";
+    case SIGSEGV: return "Segmentation fault";
+    case SIGPIPE: return "Broken pipe";
+    case SIGILL: return "Illegal instruction";
+    case SIGABRT: return "Aborted";
+    default: return "Unknown signal";
+  }
+}
+
+int
+mingw_gethostname(char * name, int len)
+{
+  if (!name || len <= 0)
+    return -1;
+  DWORD n = (DWORD)len;
+  return GetComputerNameA(name, &n) ? 0 : -1;
+}
+
+int
+tcgetattr(int fd, struct termios * t)
+{
+  (void)fd;
+  memset(t, 0, sizeof *t);
+  t->c_iflag = BRKINT | IXANY | IMAXBEL;
+  t->c_lflag = ECHO | ICANON | ECHOE | ECHOK | ECHOCTL | ECHOKE;
+  t->c_cc[VEOF] = CTRL('D');
+  t->c_cc[VINTR] = CTRL('C');
+  t->c_cc[VQUIT] = CTRL('\\');
+  t->c_cc[VSUSP] = CTRL('Z');
+  t->c_cc[VERASE] = CDEL;
+  t->c_cc[VKILL] = CTRL('U');
+  return 0;
+}
+
+int
+tcsetattr(int fd, int optional_actions, const struct termios * t)
+{
+  (void)fd;
+  (void)optional_actions;
+  (void)t;
+  return 0;
+}
+
+int
+tcgetpgrp(int fd)
+{
+  (void)fd;
+  return -1;
+}
+
+int
+ioctl(int fd, unsigned long request, ...)
+{
+  (void)fd;
+  (void)request;
+  return 0;
+}
+
+int
+waitpid(int pid, int * status, int options)
+{
+  if (pid <= 0)
+    return -1;
+  HANDLE h = OpenProcess(SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
+                         FALSE, (DWORD)pid);
+  if (!h) {
+    if (status)
+      *status = 0;
+    return -1;
+  }
+  DWORD wait = WaitForSingleObject(h, (options & WNOHANG) ? 0 : INFINITE);
+  if (wait == WAIT_OBJECT_0) {
+    DWORD code = 0;
+    GetExitCodeProcess(h, &code);
+    if (status)
+      *status = (int)(code << 8);
+    CloseHandle(h);
+    return pid;
+  }
+  CloseHandle(h);
+  return 0;
+}
+
+static struct passwd pw;
+
+static struct passwd *
+fill_passwd(void)
+{
+  static char name[256];
+  static char dir[MAX_PATH];
+  static char shell[MAX_PATH];
+
+  if (!GetEnvironmentVariableA("USERNAME", name, sizeof name))
+    strcpy(name, "user");
+  if (!GetEnvironmentVariableA("USERPROFILE", dir, sizeof dir))
+    strcpy(dir, ".");
+  if (!GetEnvironmentVariableA("COMSPEC", shell, sizeof shell))
+    strcpy(shell, "cmd.exe");
+
+  pw.pw_name = name;
+  pw.pw_passwd = "";
+  pw.pw_dir = dir;
+  pw.pw_gecos = name;
+  pw.pw_shell = shell;
+  return &pw;
+}
+
+struct passwd *
+getpwuid(int uid)
+{
+  (void)uid;
+  return fill_passwd();
+}
+
+struct passwd *
+getpwnam(const char * name)
+{
+  (void)name;
+  return fill_passwd();
+}
+#endif
+
+
+#if CYGWIN_VERSION_API_MINOR < 93 && !defined(MINGW_NATIVE)
 
 /*-
  * Copyright (c) 1990, 1993

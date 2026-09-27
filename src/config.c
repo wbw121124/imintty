@@ -14,18 +14,279 @@
 #include "print.h"
 #include "charset.h"
 #include "win.h"
+#ifndef MINGW_NATIVE
 #include <fcntl.h>  // open+flags, mkdir
+#endif
 
 #include <windows.h>  // registry handling
 #include "winpriv.h"  // support_wsl, load_library_func
 #include "winlua.h"   // winlua_reload
 
+#ifndef MINGW_NATIVE
 #include <termios.h>
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>  // cygwin_internal
 #endif
+#endif
 
 #define wcsispath(s)	(wcschr(s, W('/')) || wcschr(s, W('\\')))
+
+
+/* P6: ANSI-16 palette swatch data */
+static const struct {
+  colour fg;
+  string name;
+} ansi16_palette[] = {
+  { RGB(0x00,0x00,0x00),   "Black" },
+  { RGB(0xBF,0x00,0x00),   "Red" },
+  { RGB(0x00,0xBF,0x00),   "Green" },
+  { RGB(0xBF,0xBF,0x00),   "Yellow" },
+  { RGB(0x00,0x00,0xBF),   "Blue" },
+  { RGB(0xBF,0x00,0xBF),   "Magenta" },
+  { RGB(0x00,0xBF,0xBF),   "Cyan" },
+  { RGB(0xBF,0xBF,0xBF),   "White" },
+  { RGB(0x40,0x40,0x40),   "BoldBlack" },
+  { RGB(0xFF,0x40,0x40),   "BoldRed" },
+  { RGB(0x40,0xFF,0x40),   "BoldGreen" },
+  { RGB(0xFF,0xFF,0x40),   "BoldYellow" },
+  { RGB(0x60,0x60,0xFF),   "BoldBlue" },
+  { RGB(0xFF,0x40,0xFF),   "BoldMagenta" },
+  { RGB(0x40,0xFF,0xFF),   "BoldCyan" },
+  { RGB(0xFF,0xFF,0xFF),   "BoldWhite" },
+};
+#define ANSI16_N (sizeof(ansi16_palette)/sizeof(ansi16_palette[0]))
+
+/* P6: JSON theme schema */
+typedef struct {
+  wstring name;
+  wstring author;
+  wstring version;
+  wstring thumbnail;  /* path to thumbnail image */
+  char is_dark;       /* 0=unknown, 1=dark, -1=light */
+  colour_pair colours[16];
+} theme_meta;
+
+/* Minimal JSON string extraction (no full parser needed) */
+static char *
+json_str_value(char * json, char * key)
+{
+  char pat[64];
+  snprintf(pat, sizeof pat, "\"%s\"", key);
+  char * p = strstr(json, pat);
+  if (!p) return 0;
+  p += strlen(pat);
+  while (*p == ' ' || *p == ':') p++;
+  if (*p != '"') return 0;
+  p++;
+  char * end = strchr(p, '"');
+  if (!end) return 0;
+  int len = end - p;
+  char * val = newn(char, len + 1);
+  memcpy(val, p, len);
+  val[len] = 0;
+  return val;
+}
+
+/* P6: Import JSON theme (vscode/wt/iterm2 compatible) */
+static bool
+import_json_theme(char * json_path)
+{
+  FILE * f = fopen(json_path, "r");
+  if (!f) return false;
+  fseek(f, 0, SEEK_END);
+  long sz = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  char * buf = newn(char, sz + 1);
+  size_t n = fread(buf, 1, sz, f);
+  buf[n] = 0;
+  fclose(f);
+
+  /* Find colors object */
+  char * colors = strstr(buf, "\"colors\"");
+  char * colors_end = 0;
+  if (colors) {
+    colors += 8;
+    while (*colors && *colors != '{') colors++;
+    if (*colors == '{') {
+      int depth = 0;
+      colors_end = colors;
+      while (*colors_end) {
+        if (*colors_end == '{') depth++;
+        else if (*colors_end == '}') {
+          if (--depth == 0) { colors_end++; break; }
+        }
+        colors_end++;
+      }
+    }
+  }
+  char * colors_obj = colors_end ? strndup(colors, colors_end - colors) : 0;
+
+  static const char * const color_names[] = {
+    "foreground","background","cursor","black","red","green","yellow",
+    "blue","magenta","cyan","white","brightBlack","brightRed","brightGreen",
+    "brightYellow","brightBlue","brightMagenta","brightCyan","brightWhite",
+    null
+  };
+  static const int color_indices[] = {
+    -1,-1,-1, BLACK_I, RED_I, GREEN_I, YELLOW_I, BLUE_I, MAGENTA_I, CYAN_I, WHITE_I,
+    BOLD_BLACK_I, BOLD_RED_I, BOLD_GREEN_I, BOLD_YELLOW_I, BOLD_BLUE_I, BOLD_MAGENTA_I, BOLD_CYAN_I, BOLD_WHITE_I
+  };
+
+  int parsed = 0;
+  if (colors_obj) {
+    char * p = colors_obj;
+    while (*p) {
+      while (*p && *p != '"') p++;
+      if (!*p) break;
+      p++;
+      char * key_end = strchr(p, '"');
+      if (!key_end) break;
+      int klen = key_end - p;
+      char key[64];
+      if (klen >= (int)sizeof(key)) klen = sizeof(key) - 1;
+      memcpy(key, p, klen);
+      key[klen] = 0;
+      p = key_end + 1;
+      while (*p && *p != ':') p++;
+      if (!*p) break;
+      p++;
+      while (*p == ' ' || *p == ',') p++;
+
+      char valbuf[64];
+      int vi = 0;
+      while (*p && *p != ',' && *p != '}' && vi < 63) {
+        if (*p == '"') p++;
+        else if (*p == '"') { p++; break; }
+        else valbuf[vi++] = *p++;
+      }
+      valbuf[vi] = 0;
+
+      for (int i = 0; color_names[i]; i++) {
+        if (strcasecmp(key, color_names[i]) == 0 && color_indices[i] >= 0) {
+          colour c;
+          if (parse_colour(valbuf, &c)) {
+            cfg.ansi_colours[color_indices[i]].fg = c;
+            parsed++;
+          }
+          goto next_color;
+        }
+      }
+      next_color:;
+    }
+  }
+  free(colors_obj);
+
+  char * fg = json_str_value(buf, "foreground");
+  if (fg) { colour c; if (parse_colour(fg, &c)) cfg.fg_colour = c; free(fg); parsed++; }
+  char * bg = json_str_value(buf, "background");
+  if (bg) { colour c; if (parse_colour(bg, &c)) cfg.bg_colour = c; free(bg); parsed++; }
+  char * cursor = json_str_value(buf, "cursor");
+  if (cursor) { colour c; if (parse_colour(cursor, &c)) cfg.cursor_colour = c; free(cursor); parsed++; }
+  free(buf);
+  return parsed > 0;
+}
+
+/* P6: Theme search keyword */
+static wstring theme_search_keyword __attribute__((unused)) = 0;
+
+/* Forward declarations — non-static to match config.h extern */
+void theme_manager_handler(control *ctrl, int event);
+void theme_apply_handler(control *ctrl, int event);
+void theme_import_handler(control *ctrl, int event);
+void lua_test_handler(control *ctrl, int event);
+void lua_status_handler(control *ctrl, int event);
+
+/* Forward declaration for add_file_resources */
+static void add_file_resources(control *ctrl, wstring pattern, bool list_dirs);
+
+/* P6: ANSI-16 swatch click handler */
+static void
+ansi16_swatch_handler(control *ctrl, int event)
+{
+  colour *cp = (colour *)ctrl->context;
+  int col = ctrl->column;
+  if (event == EVENT_ACTION && col >= 0 && col < 16) {
+    *cp = ansi16_palette[col].fg;
+    win_reset_colours();
+    term_invalidate(0, 0, 9999, 9999);
+  }
+}
+
+/* P6: Theme manager list handler */
+void
+theme_manager_handler(control *ctrl, int event)
+{
+  if (event == EVENT_REFRESH) {
+    dlg_listbox_clear(ctrl);
+    add_file_resources(ctrl, W("themes/*"), false);
+    add_file_resources(ctrl, W("themes/*.json"), false);
+  }
+}
+
+/* P6: Apply theme from list selection */
+void
+theme_apply_handler(control *ctrl, int event)
+{
+  if (event == EVENT_ACTION) {
+    wchar *theme_name = newn(wchar, 1);
+    dlg_editbox_get_w(ctrl, (wstring *)&theme_name);
+    if (*theme_name) {
+      wstrset(&new_cfg.theme_file, (wstring)theme_name);
+      apply_config(false);
+    }
+    free(theme_name);
+  }
+}
+
+/* P6: Import theme button handler */
+void
+theme_import_handler(control *ctrl, int event)
+{
+  (void)ctrl;
+  if (event == EVENT_DROP) {
+    wstring path = dragndrop;
+    if (wcsstr(path, W(".json")) || wcsstr(path, W(".iminttyrc"))) {
+      char * p = cs__wcstoutf(path);
+      if (p) {
+        if (strstr(p, ".json")) {
+          import_json_theme(p);
+        } else {
+          load_config(p, false);
+        }
+        free(p);
+        win_reset_colours();
+        term_invalidate(0, 0, 9999, 9999);
+      }
+    }
+  }
+}
+
+/* P7: Lua test script handler */
+void
+lua_test_handler(control *ctrl, int event)
+{
+  (void)ctrl;
+  if (event == EVENT_ACTION) {
+    winlua_load_config();
+    if (winlua_active()) {
+      lua_status_handler(ctrl, EVENT_REFRESH);
+    }
+  }
+}
+
+/* P7: Lua status listbox handler */
+void
+lua_status_handler(control *ctrl, int event)
+{
+  if (event == EVENT_REFRESH) {
+    dlg_listbox_clear(ctrl);
+    if (winlua_active()) {
+      dlg_listbox_add(ctrl, _("Lua engine active"));
+    } else {
+      dlg_listbox_add(ctrl, _("Lua engine not loaded"));
+    }
+  }
+}
 
 
 #define dont_support_blurred
@@ -70,7 +331,9 @@ const config default_cfg = {
   .theme_file = W(""),
   .dark_theme = W(""),
   .background = W(""),
-  .lua_config = W(""),
+   .lua_config = W(""),
+   .auto_reload_lua = false,    // P7: default off
+   .lua_error_log = "",          // P7: empty by default
   .colour_scheme = "",
   .transparency = 0,
   .blurred = false,
@@ -376,12 +639,7 @@ typedef enum {
 
 #define offcfg(option) offsetof(config, option)
 
-static const struct {
-  string name;
-  uchar type;
-  ushort offset;
-}
-options[] = {
+const struct opt_entry options[] = {
   // Colour base options;
   // check_legacy_options() assumes these are the first three here:
   {"ForegroundColour", OPT_COLOUR, offcfg(fg_colour)},
@@ -706,9 +964,12 @@ options[] = {
   {"OptionsFont", OPT_WSTRING, offcfg(options_font)},
   {"OptionsFontSize", OPT_INT | OPT_LEGACY, offcfg(options_fontsize)},
   {"OptionsFontHeight", OPT_INT, offcfg(options_fontsize)},
-  {"OldOptions", OPT_STRING, offcfg(old_options)},
+   {"OldOptions", OPT_STRING, offcfg(old_options)},
+   // P7: Lua script management
+   {"AutoReloadLua", OPT_BOOL, offcfg(auto_reload_lua)},
+   {"LuaErrorLog", OPT_STRING, offcfg(lua_error_log)},
 
-  // ANSI colours
+   // ANSI colours
   {"Black", OPT_COLOUR_PAIR, offcfg(ansi_colours[BLACK_I])},
   {"Red", OPT_COLOUR_PAIR, offcfg(ansi_colours[RED_I])},
   {"Green", OPT_COLOUR_PAIR, offcfg(ansi_colours[GREEN_I])},
@@ -959,10 +1220,9 @@ save_filename(char * suf)
   free(wpat);
   //printf("save_filename pat %ls -> %s\n", cfg.save_filename, pat);
 
-  struct timeval now;
-  gettimeofday(& now, 0);
+  time_t now = time(0);
   char * fn = newn(char, MAX_PATH + 1 + strlen(suf));
-  strftime(fn, MAX_PATH, pat, localtime(& now.tv_sec));
+  strftime(fn, MAX_PATH, pat, localtime(& now));
   //printf("save_filename [%s] (%s) -> %s%s\n", pat, suf, fn, suf);
   free(pat);
   strcat(fn, suf);
@@ -972,7 +1232,11 @@ save_filename(char * suf)
   if (basesep) {
     *basesep = 0;
     if (access(fn, X_OK | W_OK) != 0) {
+#ifdef MINGW_NATIVE
+      _mkdir(fn);
+#else
       mkdir(fn, 0755);
+#endif
     }
     *basesep = '/';
   }
@@ -3699,6 +3963,7 @@ configure_darkmode_handler(control *ctrl, int event)
   //printf("configure_darkmode %d\n", configure_darkmode);
 }
 
+
 #define dont_debug_dragndrop
 
 static void
@@ -4491,19 +4756,42 @@ setup_config_box(controlbox * b)
                       _("Looks in Terminal"), 
   //__ Options - Looks: section title
                       _("Colours"));
-  ctrl_columns(s, 3, 33, 33, 33);
-  ctrl_pushbutton(
-    //__ Options - Looks:
-    s, _("&Foreground..."), dlg_stdcolour_handler, &new_cfg.fg_colour
-  )->column = 0;
-  ctrl_pushbutton(
-    //__ Options - Looks:
-    s, _("&Background..."), dlg_stdcolour_handler, &new_cfg.bg_colour
-  )->column = 1;
-  ctrl_pushbutton(
-    //__ Options - Looks:
-    s, _("&Cursor..."), dlg_stdcolour_handler, &new_cfg.cursor_colour
-  )->column = 2;
+   ctrl_columns(s, 3, 33, 33, 33);
+   ctrl_pushbutton(
+     //__ Options - Looks:
+     s, _("&Foreground..."), dlg_stdcolour_handler, &new_cfg.fg_colour
+   )->column = 0;
+   ctrl_pushbutton(
+     //__ Options - Looks:
+     s, _("&Background..."), dlg_stdcolour_handler, &new_cfg.bg_colour
+   )->column = 1;
+   ctrl_pushbutton(
+     //__ Options - Looks:
+     s, _("&Cursor..."), dlg_stdcolour_handler, &new_cfg.cursor_colour
+   )->column = 2;
+
+   /* P6: ANSI-16 palette swatch grid */
+   s = ctrl_new_set(b, _("Looks"), null,
+   //__ Options - Looks: section title
+                       _("ANSI 16-colour palette"));
+   ctrl_columns(s, 4, 25, 25, 25, 25);
+   for (int row = 0; row < 4; row++) {
+     for (int col = 0; col < 4; col++) {
+       int idx = row * 4 + col;
+       /* Normal colours: Black, Red, Green, Yellow, Blue, Magenta, Cyan, White */
+       /* Row 0: 0-3, Row 1: 4-7, Row 2: 8-11, Row 3: 12-15 */
+       colour *cp = &cfg.ansi_colours[idx].fg;
+       ctrl_pushbutton(
+         s, NULL, ansi16_swatch_handler, (void *)cp
+       )->column = col;
+     }
+   }
+   ctrl_columns(s, 1, 100);
+   /* Highlight row labels */
+   ctrl_columns(s, 2, 20, 80);
+   ctrl_label(s, _("Normal"))->column = 0;
+   ctrl_label(s, _("0-7  Bold"))->column = 0;
+   ctrl_columns(s, 1, 100);
 
   if (cfg.config_themes == 1) {
     // initialise configuration selector for dual/switchable theme box
@@ -4754,9 +5042,48 @@ setup_config_box(controlbox * b)
   );
   ctrl_columns(s, 1, 100);
 
- /*
-  * The Text panel.
-  */
+  /*
+   * The Theme Manager panel (P6).
+   */
+  s = ctrl_new_set(b, _("Theme"),
+  //__ Options - Theme: panel title
+                       _("Theme Management"),
+  //__ Options - Theme: section title
+                       _("Theme Library"));
+  ctrl_columns(s, 2, 65, 35);
+  ctrl_listbox(
+    s, _("Available themes"), 6, 65, theme_manager_handler, 0
+  )->column = 0;
+  ctrl_pushbutton(
+    s, _("Apply"), theme_apply_handler, 0
+  )->column = 1;
+  ctrl_columns(s, 1, 100);
+  ctrl_pushbutton(
+    s, _("Import Theme"), theme_import_handler, 0
+  );
+  ctrl_columns(s, 1, 100);
+
+  s = ctrl_new_set(b, _("Theme"), null,
+  //__ Options - Theme: dark mode section title
+                       _("Dark/Light Mode"));
+  ctrl_columns(s, 2, 70, 30);
+  if (cfg.config_themes == 2) {
+    ctrl_combobox(
+      s, _("Dark mode theme"), 100, theme_handler, &new_cfg.dark_theme
+    )->column = 0;
+    ctrl_pushbutton(
+      s, _("Store"), scheme_saver, "d"
+    )->column = 1;
+  }
+  ctrl_columns(s, 1, 100);
+  ctrl_checkbox(
+    s, _("Configure dark mode"),
+    configure_darkmode_handler, &configure_darkmode
+  );
+
+  /*
+   * The Text panel.
+   */
   //__ Options - Text: treeview label
   s = ctrl_new_set(b, _("Text"), 
   //__ Options - Text: panel title
@@ -5582,9 +5909,9 @@ setup_config_box(controlbox * b)
     s, _("&Popup"), dlg_stdcheckbox_handler, &new_cfg.bell_popup
   )->column = 2;
 
-  s = ctrl_new_set(b, _("Terminal"), null, 
+  s = ctrl_new_set(b, _("Terminal"), null,
   //__ Options - Terminal: section title
-                      _("Lua config"));
+                       _("Lua config"));
   ctrl_columns(s, 2, 70, 30);
   ctrl_editbox(
     //__ Options - Terminal: path to Lua config script
@@ -5596,7 +5923,32 @@ setup_config_box(controlbox * b)
   )->column = 1;
   ctrl_columns(s, 1, 100);
 
-  s = ctrl_new_set(b, _("Terminal"), null, 
+  /* P7: Script management panel */
+  s = ctrl_new_set(b, _("Terminal"), null,
+  //__ Options - Terminal: Lua script management section
+                       _("Lua Script Management"));
+  ctrl_columns(s, 2, 55, 45);
+  ctrl_checkbox(
+    s, _("Auto-reload on file change"),
+    dlg_stdcheckbox_handler, &new_cfg.auto_reload_lua
+  );
+  ctrl_pushbutton(
+    s, _("Test Script"), lua_test_handler, 0
+  )->column = 1;
+  ctrl_columns(s, 1, 100);
+  ctrl_listbox(
+    s, _("Registered commands/events"), 5, 100, lua_status_handler, 0
+  );
+  ctrl_columns(s, 1, 100);
+  ctrl_label(
+    s, _("Recent errors:")
+  );
+  ctrl_editbox(
+    s, NULL, 100, dlg_stdstringbox_handler, &new_cfg.lua_error_log
+  );
+  ctrl_columns(s, 1, 100);
+
+  s = ctrl_new_set(b, _("Terminal"), null,
   //__ Options - Terminal: section title
                       _("Printer"));
 #ifdef use_multi_listbox_for_printers

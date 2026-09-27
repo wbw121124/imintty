@@ -580,7 +580,7 @@ regis_text(HDC dc, float scale, struct write_controls * controls, wchar * s)
   }
 
   if (!dc) {  // PV Spacing
-    int pv = (long int)s;
+    int pv = (int)(intptr_t)s;
     static bool halfhori = 0;  // balance odd half widths
     static bool halfvert = 0;  // balance odd half heights
     switch (pv) {

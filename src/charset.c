@@ -14,7 +14,9 @@
 #include <langinfo.h>
 #endif
 
+#ifndef MINGW_NATIVE
 #include <sys/utsname.h>
+#endif
 
 #include <winbase.h>
 #include <winnls.h>
@@ -1103,7 +1105,7 @@ wcscmp(const wchar * s1, const wchar * s2)
 
 #endif
 
-#if CYGWIN_VERSION_API_MINOR < 74 || defined(__midipix__) || defined(debug_wcs)
+#if !defined(MINGW_NATIVE) && (CYGWIN_VERSION_API_MINOR < 74 || defined(__midipix__) || defined(debug_wcs))
 // needed for MinGW MSYS
 
 unsigned int
@@ -1173,7 +1175,7 @@ wcsncat(wchar * s1, const wchar * s2, int len)
 
 #endif
 
-#if CYGWIN_VERSION_API_MINOR < 207 || defined(__midipix__) || defined(debug_wcs)
+#if !defined(MINGW_NATIVE) && (CYGWIN_VERSION_API_MINOR < 207 || defined(__midipix__) || defined(debug_wcs))
 
 wchar *
 wcsdup(const wchar * s)
@@ -1296,6 +1298,28 @@ path_posix_to_win_a(const char * p)
 }
 
 # endif
+#elif defined(MINGW_NATIVE)
+// native Windows build: no POSIX path mapping; treat as plain encoding conversion
+
+char *
+path_win_w_to_posix(const wchar * wp)
+{
+  return cs__wcstombs(wp);
+}
+
+wchar *
+path_posix_to_win_w(const char * p)
+{
+  return cs__mbstowcs(p);
+}
+
+char *
+path_posix_to_win_a(const char * p)
+{
+  char * ap = newn(char, strlen(p) + 1);
+  return strcpy(ap, p);
+}
+
 #else
 
 #warning port to midipix...

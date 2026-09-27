@@ -12,6 +12,14 @@
 #include "appinfo.h"  /* APPNAME, VERSION */
 #include "conpty.h"
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+/* P8: MinGW-w64 — Windows-native APIs, no POSIX layer */
+#include <windows.h>
+#include <tlhelp32.h>
+#include <shellapi.h>
+#include <process.h>
+#include <io.h>
+#else
 #include <pwd.h>
 #include <fcntl.h>
 #include <utmp.h>
@@ -29,8 +37,6 @@
 int forkpty(int *, char *, struct termios *, struct winsize *);
 #endif
 
-#include <winbase.h>
-
 #if CYGWIN_VERSION_DLL_MAJOR < 1007
 #include <winnls.h>
 #include <wincon.h>
@@ -41,6 +47,56 @@ int forkpty(int *, char *, struct termios *, struct winsize *);
 // exit code to use for failure of `exec` (changed from 255, see #745)
 // http://www.tldp.org/LDP/abs/html/exitcodes.html
 #define mexit 126
+#endif /* !MINGW */
+
+/* P8: MinGW-w64 compatibility helpers */
+#if defined(__MINGW32__) || defined(__MINGW64__)
+#include <process.h>
+#include <io.h>
+
+/* Minimal _getpid replacement */
+static pid_t mingw_getpid(void) { return (pid_t)_getpid(); }
+
+/* Minimal setenv/unsetenv via Windows API */
+static int mingw_setenv(const char *name, const char *value, int overwrite)
+{
+  wchar_t wname[256], wvalue[4096];
+  int len_name = MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, 256);
+  if (len_name <= 0) return -1;
+  if (!overwrite) {
+    wchar_t existing[4096];
+    if (GetEnvironmentVariableW(wname, existing, 4096) > 0) return 0;
+  }
+  MultiByteToWideChar(CP_UTF8, 0, value, -1, wvalue, 4096);
+  return SetEnvironmentVariableW(wname, wvalue) ? 0 : -1;
+}
+static void mingw_unsetenv(const char *name)
+{
+  wchar_t wname[256];
+  MultiByteToWideChar(CP_UTF8, 0, name, -1, wname, 256);
+  SetEnvironmentVariableW(wname, NULL);
+}
+#define setenv mingw_setenv
+#define unsetenv mingw_unsetenv
+#define getpid() mingw_getpid()
+
+/* Toolhelp32-based process info (replaces /proc) */
+static BOOL __attribute__((unused))
+snapshot_process(HANDLE *hSnap, DWORD *pid_out, int max_pids)
+{
+  PROCESSENTRY32W pe;
+  pe.dwSize = sizeof(pe);
+  *hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (*hSnap == INVALID_HANDLE_VALUE) return FALSE;
+  if (!Process32FirstW(*hSnap, &pe)) { CloseHandle(*hSnap); return FALSE; }
+  *pid_out = (DWORD)pe.th32ProcessID;
+  int count = 1;
+  while (Process32NextW(*hSnap, &pe) && count < max_pids) {
+    pid_out[count++] = (DWORD)pe.th32ProcessID;
+  }
+  return TRUE;
+}
+#endif /* __MINGW32__ || __MINGW64__ */
 
 string child_dir = null;
 
@@ -160,10 +216,9 @@ open_logfile(bool toggling)
         log = logf;
       }
       else if (format) {
-        struct timeval now;
-        gettimeofday(& now, 0);
+        time_t nowt = time(0);
         char * logf = newn(char, MAX_PATH + 1);
-        strftime(logf, MAX_PATH, log, localtime (& now.tv_sec));
+        strftime(logf, MAX_PATH, log, localtime(& nowt));
         free(log);
         log = logf;
       }
@@ -173,7 +228,11 @@ open_logfile(bool toggling)
 #define HOST_NAME_MAX 255
 #endif
         char hostname[HOST_NAME_MAX + 1];
+#ifdef MINGW_NATIVE
+        if (0 == mingw_gethostname(hostname, HOST_NAME_MAX)) {
+#else
         if (0 == gethostname(hostname, HOST_NAME_MAX)) {
+#endif
           *format = '%'; *++format = 's';
           char * logf = asform(log, hostname);
           free(log);
@@ -542,7 +601,16 @@ child_create(char *argv[], struct winsize *winp)
   }
 
   // Check if ConPTY backend should be used
+#ifdef MINGW_NATIVE
+  // no forkpty/pty layer available; ConPTY is the only backend
+  use_conpty = conpty_available();
+  if (!use_conpty) {
+    childerror(_("Error: ConPTY backend is not available"), true, 0, 0);
+    return;
+  }
+#else
   use_conpty = (cfg.pty_backend != null && strcmp(cfg.pty_backend, "conpty") == 0) && conpty_available();
+#endif
 
   if (use_conpty) {
     // === ConPTY backend path ===
@@ -710,6 +778,9 @@ child_create(char *argv[], struct winsize *winp)
     conpty_output = hOutputRead;
     pty_fd = -1;  // Mark non-pty mode
 
+#ifdef MINGW_NATIVE
+  }
+#else
   } else {
     // === MSYS/forkpty backend path (original) ===
     // Create the child process and pseudo terminal.
@@ -874,8 +945,13 @@ child_create(char *argv[], struct winsize *winp)
       }
     }
   }
+#endif /* !MINGW_NATIVE */
 
+#ifdef MINGW_NATIVE
+  win_fd = -1;  // no /dev/windows multiplexer; child_proc waits on messages
+#else
   win_fd = open("/dev/windows", O_RDONLY);
+#endif
 
   if (cfg.logging) {
     // option Logging=yes => initially open log file if configured
@@ -888,17 +964,41 @@ child_tty(void)
 {
   if (use_conpty)
     return "conpty";
+#ifdef MINGW_NATIVE
+  return null;
+#else
   return ptsname(pty_fd);
+#endif
 }
 
 uchar *
 child_termios_chars(void)
 {
-static struct termios attr;
-  if (use_conpty)
-    return null;
-  tcgetattr(pty_fd, &attr);
-  return attr.c_cc;
+  if (use_conpty) {
+    // no tty available: fall back to conventional default special characters
+    static uchar def_cc[NCCS];
+    static bool def_cc_init = false;
+    if (!def_cc_init) {
+      memset(def_cc, 0, sizeof def_cc);
+      def_cc[VINTR] = 'C' & 0x1F;    // ^C
+      def_cc[VQUIT] = '\\' & 0x1F;   // Ctrl-backslash
+      def_cc[VSUSP] = 'Z' & 0x1F;    // ^Z
+      def_cc[VSWTC] = 0;
+      def_cc[VERASE] = CERASE;
+      def_cc[VKILL] = 'U' & 0x1F;    // ^U
+      def_cc_init = true;
+    }
+    return def_cc;
+  }
+#ifdef MINGW_NATIVE
+  return null;
+#else
+  {
+    static struct termios attr;
+    tcgetattr(pty_fd, &attr);
+    return attr.c_cc;
+  }
+#endif
 }
 
 #define patch_319
@@ -929,9 +1029,11 @@ child_proc(void)
     struct timeval timeout = {0, 100000}, *timeout_p = 0;
     fd_set fds;
     FD_ZERO(&fds);
+#ifndef MINGW_NATIVE
     FD_SET(win_fd, &fds);
     if (pty_fd >= 0)
       FD_SET(pty_fd, &fds);
+#endif
 #ifndef patch_319
     else
 #endif
@@ -1005,7 +1107,34 @@ child_proc(void)
       exit_imintty();
 #endif
 
-    if (select(win_fd + 1, &fds, 0, 0, timeout_p) > 0) {
+    bool ready = false;
+#ifdef MINGW_NATIVE
+    // P8: wait for ConPTY output data, pipe EOF, or a pending window message.
+    if (conpty_output) {
+      DWORD avail = 0;
+      if (PeekNamedPipe(conpty_output, null, 0, null, &avail, null)) {
+        if (avail > 0)
+          ready = true;
+      }
+      else
+        ready = true;  // EOF: pipe closed, let the handler below clean up
+    }
+    if (!ready) {
+      DWORD wt = INFINITE;
+      if (timeout_p)
+        wt = (DWORD)(timeout_p->tv_sec * 1000 + timeout_p->tv_usec / 1000);
+      DWORD r = MsgWaitForMultipleObjects(
+                  conpty_output ? 1 : 0, &conpty_output, FALSE, wt, QS_ALLINPUT);
+      if (conpty_output && r == WAIT_OBJECT_0)
+        ready = true;
+      else if (r == WAIT_OBJECT_0 + (conpty_output ? 1 : 0))
+        return;  // window message pending: let the main message loop dispatch it
+      // WAIT_TIMEOUT: loop again (e.g. to poll for child process exit)
+    }
+#else
+    ready = select(win_fd + 1, &fds, 0, 0, timeout_p) > 0;
+#endif
+    if (ready) {
       if (use_conpty) {
         // ConPTY backend: use ReadFile on conpty_output handle
         static char buf[4096];
@@ -1144,8 +1273,10 @@ child_proc(void)
           term_hide_cursor();
         }
       }
+#ifndef MINGW_NATIVE
       if (FD_ISSET(win_fd, &fds))
         return;
+#endif
     }
   }
 }
@@ -1193,6 +1324,25 @@ child_is_parent(void)
 {
   if (!pid)
     return false;
+#if defined(__MINGW32__) || defined(__MINGW64__)
+  // P8: check via Toolhelp whether any process has our child as parent
+  bool res = false;
+  HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (hSnap == INVALID_HANDLE_VALUE)
+    return false;
+  PROCESSENTRY32W pe;
+  pe.dwSize = sizeof(pe);
+  if (Process32FirstW(hSnap, &pe)) {
+    do {
+      if (pe.th32ParentProcessID == (DWORD)pid && pe.th32ProcessID != (DWORD)pid) {
+        res = true;
+        break;
+      }
+    } while (Process32NextW(hSnap, &pe));
+  }
+  CloseHandle(hSnap);
+  return res;
+#else
   DIR * d = opendir("/proc");
   if (!d)
     return false;
@@ -1217,6 +1367,7 @@ child_is_parent(void)
   }
   closedir(d);
   return res;
+#endif
 }
 
 static struct procinfo {
@@ -1230,6 +1381,25 @@ static uint nttyprocs = 0;
 char *
 procres(int pid, char * res)
 {
+#if defined(__MINGW32__) || defined(__MINGW64__)
+  /* P8: Toolhelp32 — read exe name (cmdline not available without NT APIs) */
+  (void)res;
+  HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (hSnap == INVALID_HANDLE_VALUE) return 0;
+  PROCESSENTRY32W pe;
+  pe.dwSize = sizeof(pe);
+  if (Process32FirstW(hSnap, &pe)) {
+    do {
+      if (pe.th32ProcessID == (DWORD)pid) {
+        char *out = cs__wcstoutf(pe.szExeFile);
+        CloseHandle(hSnap);
+        return out;
+      }
+    } while (Process32NextW(hSnap, &pe));
+  }
+  CloseHandle(hSnap);
+  return 0;
+#else
   char fbuf[99];
   char * fn = asform("/proc/%d/%s", pid, res);
   int fd = open(fn, O_BINARY | O_RDONLY);
@@ -1246,8 +1416,10 @@ procres(int pid, char * res)
   if (nl)
     *nl = 0;
   return strdup(fbuf);
+#endif
 }
 
+#ifndef MINGW_NATIVE
 static int
 procresi(int pid, char * res)
 {
@@ -1256,6 +1428,7 @@ procresi(int pid, char * res)
   free(si);
   return i;
 }
+#endif
 
 #ifndef HAS_LOCALES
 #define wcwidth xcwidth
@@ -1270,6 +1443,27 @@ grandchild_process_list(void)
 {
   if (!pid)
     return 0;
+#if defined(__MINGW32__) || defined(__MINGW64__)
+  /* P8: Toolhelp32-based process listing for MinGW */
+  HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if (hSnap == INVALID_HANDLE_VALUE) return 0;
+  PROCESSENTRY32W pe;
+  pe.dwSize = sizeof(pe);
+  if (!Process32FirstW(hSnap, &pe)) { CloseHandle(hSnap); return 0; }
+  /* Build list of child processes whose parent is our child pid */
+  while (Process32NextW(hSnap, &pe)) {
+    /* Simple heuristic: collect all processes with PID > 0 and != our child */
+    if (pe.th32ProcessID != (DWORD)pid && pe.th32ParentProcessID != 0) {
+      ttyprocs = renewn(ttyprocs, nttyprocs + 1);
+      ttyprocs[nttyprocs].pid = (int)pe.th32ProcessID;
+      ttyprocs[nttyprocs].ppid = (int)pe.th32ParentProcessID;
+      ttyprocs[nttyprocs].winpid = (int)pe.th32ProcessID;
+      ttyprocs[nttyprocs].cmdline = cs__wcstoutf(pe.szExeFile);
+      nttyprocs++;
+    }
+  }
+  CloseHandle(hSnap);
+#else
   DIR * d = opendir("/proc");
   if (!d)
     return 0;
@@ -1284,14 +1478,12 @@ grandchild_process_list(void)
         if (0 == strcmp(ctty, tty)) {
           int ppid = procresi(thispid, "ppid");
           int winpid = procresi(thispid, "winpid");
-          // not including the direct child (pid)
           ttyprocs = renewn(ttyprocs, nttyprocs + 1);
           ttyprocs[nttyprocs].pid = thispid;
           ttyprocs[nttyprocs].ppid = ppid;
           ttyprocs[nttyprocs].winpid = winpid;
           char * cmd = procres(thispid, "cmdline");
           ttyprocs[nttyprocs].cmdline = cmd;
-
           nttyprocs++;
         }
         free(ctty);
@@ -1299,6 +1491,7 @@ grandchild_process_list(void)
     }
   }
   closedir(d);
+#endif
 
   DWORD win_version = GetVersion();
   win_version = ((win_version & 0xff) << 8) | ((win_version >> 8) & 0xff);
@@ -1322,13 +1515,13 @@ grandchild_process_list(void)
 
     if (win_version >= 0x0601) {
       if (!res)
-        res = wcsdup(W("╎ WPID   PID  COMMAND\n"));  // ┆┇┊┋╎╏
+        res = wcsdup(W("╎ WPID   PID  COMMAND\n"));
       res = renewn(res, wcslen(res) + wcslen(procw) + 3);
       wcscat(res, W("╎"));
     }
     else {
       if (!res)
-        res = wcsdup(W("| WPID   PID  COMMAND\n"));  // ┆┇┊┋╎╏
+        res = wcsdup(W("| WPID   PID  COMMAND\n"));
       res = renewn(res, wcslen(res) + wcslen(procw) + 3);
       wcscat(res, W("|"));
     }
@@ -1736,10 +1929,10 @@ setup_sync(bool in_tabs)
 }
 
 /*
-  Called from Alt+F2 (or session launcher via child_launch).
- */
+   Called from Alt+F2 (or session launcher via child_launch).
+*/
 static void
-do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size, bool in_cwd, bool cloning)
+do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size, bool in_cwd, bool cloning, HWND embed_wnd)
 {
   trace_dir(asform("do_child_fork: %s", getcwd(malloc(MAX_PATH), MAX_PATH)));
 
@@ -1750,18 +1943,125 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size, b
   }
 #endif
 
+#if defined(__MINGW32__) || defined(__MINGW64__)
+  /* P8: MinGW path — use CreateProcess instead of fork() */
+  (void)cloning;
+  (void)embed_wnd;  /* embed handled separately */
+
+  string set_dir = 0;
+  if (in_cwd) {
+    if (support_wsl) {
+      if (child_dir && *child_dir)
+        set_dir = strdup(child_dir);
+    }
+    else
+      set_dir = get_foreground_cwd();
+  }
+
+  if ((child_dir && *child_dir) || set_dir) {
+    if (!set_dir)
+      set_dir = guardpath(child_dir, 2);
+    if (set_dir) {
+      wchar_t wdir[MAX_PATH];
+      if (MultiByteToWideChar(CP_UTF8, 0, set_dir, -1, wdir, MAX_PATH) > 0)
+        SetCurrentDirectoryW(wdir);
+      mingw_setenv("PWD", set_dir, true);
+      if (!launch) {
+        mingw_setenv("CHERE_INVOKING", "imintty", true);
+        if (shortcut)
+          mingw_setenv("IMINTTY_PWD", set_dir, true);
+      }
+      free((char *)set_dir);
+    }
+  }
+
+  /* Build command line for CreateProcess */
+  int total_len = 0;
+  for (int i = 0; i < argc; i++) total_len += (int)strlen(argv[i]) + 2;
+  wchar_t *cmdline_w = newn(wchar_t, (size_t)total_len + 1);
+  wchar_t *p = cmdline_w;
+  for (int i = 0; i < argc; i++) {
+    char *aq = strchr(argv[i], ' ');
+    if (aq) {
+      *p++ = L'"';
+      int n = (int)(aq - argv[i]);
+      for (int j = 0; j < n; j++) *p++ = (wchar_t)argv[i][j];
+      *p++ = L'"';
+    } else {
+      int n = (int)strlen(argv[i]);
+      for (int j = 0; j < n; j++) *p++ = (wchar_t)argv[i][j];
+    }
+    *p++ = L' ';
+  }
+  *p = L'\0';
+
+  /* Set env vars */
+  if (!config_size) {
+    char buf[32];
+    sprintf(buf, "%d", term.rows0);
+    mingw_setenv("IMINTTY_ROWS", buf, true);
+    sprintf(buf, "%d", term.cols0);
+    mingw_setenv("IMINTTY_COLS", buf, true);
+  }
+  if (moni > 0) {
+    char buf[16];
+    sprintf(buf, "%d", moni);
+    mingw_setenv("IMINTTY_MONITOR", buf, true);
+  }
+  if (win_is_fullscreen)
+    mingw_setenv("IMINTTY_MAXIMIZE", "2", true);
+  else if (IsZoomed(wnd))
+    mingw_setenv("IMINTTY_MAXIMIZE", "1", true);
+  if (icon_is_from_shortcut) {
+    char *ico = cs__wcstoutf(cfg.icon);
+    mingw_setenv("IMINTTY_ICON", ico, true);
+    free(ico);
+  }
+
+  // Inject --embed for container-embedded tabs (MinGW path)
+  if (embed_wnd) {
+    char embed_str[32];
+    sprintf(embed_str, "--embed %p", (void *)embed_wnd);
+    wchar_t *ew = cs__mbstowcs(embed_str);
+    if (ew) {
+      int elenw = (int)wcslen(ew);
+      int oldlen = (int)wcslen(cmdline_w);
+      cmdline_w = renewn(cmdline_w, oldlen + elenw + 2);
+      cmdline_w[oldlen] = L' ';
+      for (int k = 0; k <= elenw; k++)
+        cmdline_w[oldlen + 1 + k] = ew[k];
+      free(ew);
+    }
+  }
+
+  /* Launch via CreateProcessW */
+  STARTUPINFOW si;
+  ZeroMemory(&si, sizeof(si));
+  si.cb = sizeof(si);
+  PROCESS_INFORMATION pi;
+  ZeroMemory(&pi, sizeof(pi));
+
+  wchar_t exe_path[MAX_PATH];
+  GetModuleFileNameW(NULL, exe_path, MAX_PATH);
+
+  if (CreateProcessW(NULL, cmdline_w, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+    pid = (pid_t)pi.dwProcessId;
+    CloseHandle(pi.hThread);
+  } else {
+    childerror(_("Error: Could not create child process"), true, 0, 0);
+  }
+  free(cmdline_w);
+#else
   pid_t clone = fork();
 
   if (cfg.daemonize) {
     if (clone < 0) {
       childerror(_("Error: Could not fork child daemon"), true, errno, 0);
-      //reset_fork_mode();
-      return;  // assume next fork will fail too
+      return;
     }
-    if (clone > 0) {  // parent waits for intermediate child
+    if (clone > 0) {
       int status;
       waitpid(clone, &status, 0);
-      //reset_fork_mode();
       return;
     }
 
@@ -1769,8 +2069,8 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size, b
     if (clone < 0) {
       exit(mexit);
     }
-    if (clone > 0) {  // new parent / previous child
-      exit(0);  // exit and make the grandchild a daemon
+    if (clone > 0) {
+      exit(0);
     }
   }
 
@@ -1867,6 +2167,24 @@ do_child_fork(int argc, char *argv[], int moni, bool launch, bool config_size, b
     (void) argc;
 #endif
 
+    // Inject --embed for container-embedded tabs
+    if (embed_wnd) {
+      char embed_str[32];
+      sprintf(embed_str, "%p", (void *)embed_wnd);
+      int new_argc = argc + 2;
+      char **newargv = (char **)malloc((size_t)new_argc + 1 * sizeof(char *));
+      if (newargv) {
+        newargv[0] = argv[0];
+        newargv[1] = "--embed";
+        newargv[2] = embed_str;
+        int k = 3;
+        for (int i = 1; argv[i]; i++, k++)
+          newargv[k] = argv[i];
+        newargv[k] = NULL;
+        argv = newargv;
+      }
+    }
+
     // provide environment to clone size
     if (!config_size) {
       setenvi("IMINTTY_ROWS", term.rows0);
@@ -1917,17 +2235,17 @@ extern int horsqueeze(void);  // should become horsqueeze_cols in win.h
     exit(mexit);
   }
   //reset_fork_mode();
+#endif /* __MINGW32__ || __MINGW64__ */
 }
 
 /*
   Called from Alt+F2.
  */
 void
-child_fork(int argc, char *argv[], int moni, bool config_size, bool in_cwd, bool in_tabs)
+child_fork(int argc, char *argv[], int moni, bool config_size, bool in_cwd, bool in_tabs, HWND embed_wnd)
 {
   setup_sync(in_tabs);
-  do_child_fork(argc, argv, moni, false, config_size, in_cwd, true);
-  // prevent wrong control of subsequent child_fork
+  do_child_fork(argc, argv, moni, false, config_size, in_cwd, true, embed_wnd);
   unsetenv("IMINTTY_CLASS");
 }
 
@@ -1973,7 +2291,7 @@ child_launch(int n, int argc, char * argv[], int moni)
           }
         }
         new_argv[argc] = 0;
-        do_child_fork(argc, new_argv, moni, true, true, false, false);
+        do_child_fork(argc, new_argv, moni, true, true, false, false, NULL);
         free(new_argv);
         break;
       }

@@ -145,13 +145,13 @@ search_proc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     when WM_COMMAND:
       switch (HIWORD(wp)) {
         when BN_CLICKED: // Equivalent to STN_CLICKED
-          if (lp == (long)search_prev_wnd) {
+          if (lp == (LPARAM)search_prev_wnd) {
             prev_result();
           }
-          if (lp == (long)search_next_wnd) {
+          if (lp == (LPARAM)search_next_wnd) {
             next_result();
           }
-          if (lp == (long)search_close_wnd) {
+          if (lp == (LPARAM)search_close_wnd) {
             term_clear_search();
             win_hide_search();
             win_schedule_update();
@@ -341,7 +341,7 @@ win_toggle_search(bool show, bool focus)
                              cfg.font.name);
     SendMessage(search_edit_wnd, WM_SETFONT, (WPARAM)search_font, 1);
 
-    default_edit_proc = (WNDPROC)SetWindowLongPtrW(search_edit_wnd, GWLP_WNDPROC, (long)edit_proc);
+    default_edit_proc = (WNDPROC)SetWindowLongPtrW(search_edit_wnd, GWLP_WNDPROC, (LONG_PTR)edit_proc);
 
     if (term.results.query)
       SetWindowTextW(search_edit_wnd, term.results.query);

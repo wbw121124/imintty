@@ -106,7 +106,7 @@ extern int wcscmp(const wchar * s1, const wchar * s2);
 
 #endif
 
-#if CYGWIN_VERSION_API_MINOR < 74 || defined(__midipix__) || defined(debug_wcs)
+#if !defined(MINGW_NATIVE) && (CYGWIN_VERSION_API_MINOR < 74 || defined(__midipix__) || defined(debug_wcs))
 // needed for MinGW MSYS
 
 #define wcscpy(tgt, src) memcpy(tgt, src, (wcslen(src) + 1) * sizeof(wchar))
@@ -120,7 +120,7 @@ extern wchar * wcsncat(wchar * s1, const wchar * s2, int len);
 
 #endif
 
-#if CYGWIN_VERSION_API_MINOR < 207 || defined(__midipix__) || defined(debug_wcs)
+#if !defined(MINGW_NATIVE) && (CYGWIN_VERSION_API_MINOR < 207 || defined(__midipix__) || defined(debug_wcs))
 
 extern wchar * wcsdup(const wchar * s);
 

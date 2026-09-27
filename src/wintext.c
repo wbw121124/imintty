@@ -461,7 +461,7 @@ get_default_charset(void)
   CHARSETINFO csi;
 
   long int acp = GetACP();
-  int ok = TranslateCharsetInfo((DWORD *)acp, &csi, TCI_SRCCODEPAGE);
+  int ok = TranslateCharsetInfo((DWORD *)(uintptr_t)acp, &csi, TCI_SRCCODEPAGE);
   if (ok)
     return csi.ciCharset;
   else
@@ -1247,6 +1247,10 @@ static HBITMAP cursor_canvas_oldbm = 0;
 static int cursor_canvas_w = 0, cursor_canvas_h = 0;
 static BOOL (WINAPI *pAlphaBlend)(HDC, int, int, int, int, HDC, int, int, int, int, BLENDFUNCTION);
 
+/* P4: HwndRenderTarget batch mode — true when d2d_begin_hwnd() is active
+   during a paint cycle. Cursor drawing skips D2D begin/end in this mode. */
+static bool d2d_hwnd_path;
+
 /* GDI object cache pool to reduce Create/Delete overhead */
 #define GDI_CACHE_SIZE 64
 static HBRUSH brush_cache[GDI_CACHE_SIZE];
@@ -1523,8 +1527,9 @@ draw_cursor_overlay_to_dc(void)
       smear[i * 2 + 1] = cy + (smear[i * 2 + 1] - cy) * s;
   }
 
-  /* RenderBackend=d2d: D2D shapes with true alpha (no blend_colour). */
-  if (d2d_begin(dc)) {
+  /* RenderBackend=d2d: D2D shapes with true alpha (no blend_colour).
+     Skip D2D when HwndRT batch is active — cursor draws via GDI on top. */
+  if (!d2d_hwnd_path && d2d_begin(dc)) {
     char ctype = term_cursor_type();
   if (!own_body) {
     /* effects only; body already painted by term_paint.
@@ -1765,7 +1770,7 @@ draw_cursor_overlay_to_dc(void)
   /* Neovide-style particle trail (TrailMode railgun/torpedo/pixiedust). */
   if (term.curs_particle_n > 0 && !scroll_layer) {
     colour pcc = colours[ime_open_native ? IME_CURSOR_COLOUR_I : CURSOR_COLOUR_I];
-    bool d2d = d2d_begin(dc);
+    bool d2d = !d2d_hwnd_path && d2d_begin(dc);
     for (int i = 0; i < term.curs_particle_n; i++) {
       float life = term.curs_particles[i].life;
       if (life <= 0)
@@ -1889,7 +1894,7 @@ draw_cursor_to_canvas(HDC screen_dc)
     else {
       // Fallback: D2D fill transparent (alpha=0) so AlphaBlend preserves
       // underlying text; falls back to GDI if D2D unavailable.
-      if (d2d_begin(cursor_canvas_dc)) {
+      if (!d2d_hwnd_path && d2d_begin(cursor_canvas_dc)) {
         d2d_fill_rect(0.f, 0.f, (float)w, (float)h, RGB(0, 0, 0), 0);
         d2d_end();
       }
@@ -2336,7 +2341,9 @@ layer_create(HDC * dcp, HBITMAP * bmp, HBITMAP * old, int *w, int *h,
   return true;
 }
 
-/* Ensure content/present buffers. Never BitBlt from screen. */
+/* Ensure content/present buffers. Never BitBlt from screen.
+   P4: When HwndRT is available, begin a single-frame D2D composition
+   directly on screen_dc — skips GDI content buffer for WM_PAINT paths. */
 static bool
 layers_begin(HDC ref, RECT *crc)
 {
@@ -2344,6 +2351,18 @@ layers_begin(HDC ref, RECT *crc)
     return false;
   GetClientRect(wnd, crc);
   int mw = max(1, crc->right), mh = max(1, crc->bottom);
+
+  /* P4: Try HwndRT batch path — draws directly to ref (screen_dc). */
+  d2d_hwnd_path = false;
+  if (!d2d_available())
+    goto gdi_path;
+  if (d2d_begin_hwnd()) {
+    d2d_hwnd_path = true;
+    dc = ref;
+    return true;
+  }
+
+gdi_path:
   if (!content_dc || content_w != mw || content_h != mh) {
     if (!layer_create(&content_dc, &content_bm, &content_oldbm,
                       &content_w, &content_h, ref, mw, mh))
@@ -2401,15 +2420,29 @@ win_layers_release(void)
 }
 
 /* Compose content + cursor layer into present, blit once to screen.
+   P4: When HwndRT is active (d2d_hwnd_path), drawing already went to
+   screen_dc — skip BitBlt and just end the D2D frame.
    dirty: optional clip in client pixels; null = full client. */
 static void
 layers_present(HDC screen_dc, const RECT *crc, const RECT *dirty)
 {
-  if (!screen_dc || !content_dc)
+  if (!screen_dc)
     return;
   XFORM id = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
   int w = crc->right, h = crc->bottom;
   if (w <= 0 || h <= 0)
+    return;
+
+  /* P4: HwndRT path — D2D already drew directly to screen_dc. */
+  if (d2d_hwnd_path) {
+    d2d_end();
+    d2d_hwnd_path = false;
+    if (GetWindowLong(wnd, GWL_EXSTYLE) & WS_EX_LAYERED)
+      win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
+    return;
+  }
+
+  if (!content_dc)
     return;
 
   if (!present_dc) {
@@ -2758,8 +2791,6 @@ win_update(bool update_sel_tip)
 void
 win_schedule_update(void)
 {
-  //if (kb_trace) printf("[%ld] win_schedule_update state %d (idl/blk/pnd)\n", mtime(), update_state);
-
   if (update_state == UPDATE_IDLE)
     win_set_timer(do_update, update_timer);
   update_state = UPDATE_PENDING;

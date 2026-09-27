@@ -14,7 +14,9 @@
 #include <math.h>
 #include <windowsx.h>  // GET_X_LPARAM, GET_Y_LPARAM
 #include <winnls.h>
+#ifndef MINGW_NATIVE
 #include <termios.h>
+#endif
 
 
 static HMENU ctxmenu = NULL;

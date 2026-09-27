@@ -11,6 +11,12 @@
  *   imintty.key(keyspec, act) append KeyFunctions binding
  *   imintty.expand_path(p)    expand ~ / convert Windows path to POSIX
  *   imintty.home              home directory (POSIX)
+ *
+ * Introspection API (P7):
+ *   imintty.commands()        return table of registered command names
+ *   imintty.events()          return table of registered event names
+ *   imintty.options()         return table of all config option names
+ *   imintty.getoption(name)   get raw config option value (nil if absent)
  */
 
 #include <errno.h>
@@ -86,7 +92,29 @@ l_set(lua_State *L)
 {
   string key = luaL_checkstring(L, 1);
   string val = luaL_checkstring(L, 2);
-  lua_pushboolean(L, config_set_option(key, val));
+  bool ok = config_set_option(key, val);
+  lua_pushboolean(L, ok);
+  /* P6: trigger colour refresh when a colour-related option is set */
+  if (ok) {
+    static const char * const colour_opts[] = {
+      "ForegroundColour","BackgroundColour","CursorColour","BoldColour",
+      "BlinkColour","SelForegroundColour","SelBackgroundColour",
+      "SearchForegroundColour","SearchBackgroundColour","SearchCurrentColour",
+      "Black","Red","Green","Yellow","Blue","Magenta","Cyan","White",
+      "BoldBlack","BoldRed","BoldGreen","BoldYellow","BoldBlue",
+      "BoldMagenta","BoldCyan","BoldWhite","HoverColour","UnderlineColour",
+      "TabForegroundColour","TabBackgroundColour","IMECursorColour",
+      "ThemeFile","ThemeDark","ColourScheme",
+      null
+    };
+    for (const char * const *p = colour_opts; *p; p++) {
+      if (strcasecmp(key, *p) == 0) {
+        win_reset_colours();
+        term_invalidate(0, 0, 9999, 9999);
+        break;
+      }
+    }
+  }
   return 1;
 }
 
@@ -203,6 +231,86 @@ l_expand_path(lua_State *L)
   return 1;
 }
 
+/* P7: Introspection API */
+
+static int
+l_commands(lua_State *L)
+{
+  lua_getglobal(L, "__imintty_commands");
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 1);
+    lua_newtable(L);
+    lua_setglobal(L, "__imintty_commands");
+  }
+  /* return keys only */
+  lua_pushnil(L);
+  while (lua_next(L, -2) != 0) {
+    lua_pushvalue(L, -2);  /* key */
+    lua_remove(L, -3);     /* value, keep key */
+  }
+  /* stack: table, key1, key2, ... */
+  lua_remove(L, -5);       /* remove table */
+  /* Now we have only keys */
+  lua_createtable(L, lua_objlen(L, -1), 0);
+  int n = lua_objlen(L, -2);
+  for (int i = 1; i <= n; i++) {
+    lua_rawgeti(L, -2, i);
+    lua_rawseti(L, -2, i);
+  }
+  lua_remove(L, -2);
+  return 1;
+}
+
+static int
+l_events(lua_State *L)
+{
+  lua_getglobal(L, "__imintty_events");
+  if (!lua_istable(L, -1)) {
+    lua_pop(L, 1);
+    lua_newtable(L);
+    lua_setglobal(L, "__imintty_events");
+  }
+  lua_pushnil(L);
+  while (lua_next(L, -2) != 0) {
+    lua_pushvalue(L, -2);
+    lua_remove(L, -3);
+  }
+  lua_remove(L, -2);
+  return 1;
+}
+
+static int
+l_options(lua_State *L)
+{
+  /* Return option names via a simple iteration.
+   * We cannot use lengthof(options) here because options is external.
+   * Use a large enough bound — the real count is checked at runtime. */
+  lua_newtable(L);
+  /* Externally declared array from config.c; iterate until name is NULL.
+   * We expose only the name field. */
+  for (int i = 0; ; i++) {
+    extern const struct opt_entry options[];
+    if (!options[i].name) break;
+    lua_pushstring(L, options[i].name);
+    lua_rawseti(L, -2, i + 1);
+  }
+  return 1;
+}
+
+static int
+l_getoption(lua_State *L)
+{
+  string key = luaL_checkstring(L, 1);
+  char *val = config_get_option(key);
+  if (val) {
+    lua_pushstring(L, val);
+    free(val);
+  }
+  else
+    lua_pushnil(L);
+  return 1;
+}
+
 static const luaL_Reg imintty_funcs[] = {
   {"set", l_set},
   {"get", l_get},
@@ -211,6 +319,10 @@ static const luaL_Reg imintty_funcs[] = {
   {"command", l_command},
   {"key", l_key},
   {"expand_path", l_expand_path},
+  {"commands", l_commands},
+  {"events", l_events},
+  {"options", l_options},
+  {"getoption", l_getoption},
   {null, null}
 };
 

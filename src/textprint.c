@@ -2,7 +2,9 @@
 #include "charset.h"
 #include "winpriv.h"  // win_prefix_title, win_unprefix_title
 #include <fcntl.h>
+#ifndef MINGW_NATIVE
 #include <pwd.h>
+#endif
 
 
 static wstring printer = 0;

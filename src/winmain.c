@@ -33,9 +33,35 @@ char * imintty_debug;
 #define getopt_long_only getopt_long
 typedef UINT_PTR uintptr_t;
 #endif
+#ifndef MINGW_NATIVE
 #include <pwd.h>
+#endif
 
+#ifdef MINGW_NATIVE
+// minimal dlfcn.h shim for native MinGW (used for optional libao loading)
+#define RTLD_LAZY 0
+#define RTLD_GLOBAL 0x100
+static inline void * dlopen(const char * file, int mode)
+{
+  (void)mode;
+  return LoadLibraryA(file);
+}
+static inline void * dlsym(void * handle, const char * symbol)
+{
+  return (void *)GetProcAddress((HMODULE)handle, symbol);
+}
+static inline int dlclose(void * handle)
+{
+  FreeLibrary((HMODULE)handle);
+  return 0;
+}
+static inline const char * dlerror(void)
+{
+  return "";
+}
+#else
 #include <dlfcn.h>
+#endif
 #include <math.h>
 
 #include <mmsystem.h>  // PlaySound for MSys
@@ -54,7 +80,9 @@ typedef UINT_PTR uintptr_t;
 
 #include <sys/stat.h>
 #include <fcntl.h>  // open flags
+#ifndef MINGW_NATIVE
 #include <sys/utsname.h>
+#endif
 #include <dirent.h>
 #include <strings.h>  // strcasecmp
 
@@ -101,6 +129,7 @@ int ini_width, ini_height;
 // State
 bool win_is_fullscreen;
 static bool is_init = false;
+static bool tab_render_active = true;
 bool win_is_always_on_top = false;
 static bool go_fullscr_on_max;
 static bool resizing;
@@ -145,7 +174,7 @@ static bool prevent_pinning = false;
 bool support_wsl = false;
 wchar * wslname = 0;
 wstring wsl_basepath = W("");
-static uint wsl_ver = 0;
+static uint wsl_ver __attribute__((unused)) = 0;
 static char * wsl_guid = 0;
 static bool wsl_launch = false;
 static bool start_home = false;
@@ -3037,10 +3066,15 @@ static struct {
 void
 win_keyclick(void)
 {
+#ifdef MINGW_NATIVE
+  if (keyclick)
+    PlaySound(keyclick, inst, SND_MEMORY | SND_ASYNC);
+#else
   if (keyclick && 0 == fork()) {
     PlaySound(keyclick, inst, SND_MEMORY);
     exit(0);
   }
+#endif
 }
 
 /*
@@ -3065,7 +3099,7 @@ static void (* ao_shutdown) (void);
 static int (* ao_default_driver_id) (void);
 static int (* ao_driver_id) (char * name);
 static void * (* ao_open_live) (int driver_id, ao_sample_format * format, void * options);
-static int (* ao_play) (void * device, char * out, u_int32_t buf_size);
+static int (* ao_play) (void * device, char * out, uint buf_size);
 static int (* ao_close) (void * device);
 
 static int ao_driver;
@@ -3193,6 +3227,15 @@ win_beep(uint tone, float vol, float freq, uint ms)
     float freq;
   } params = {tone, ms, vol, freq};
 
+#ifdef MINGW_NATIVE
+  // no fork/pipe on native MinGW: play synchronously (DECPS beeps are rare)
+  if (params.tone && aolib_start()) {
+    aolib_beep(params.tone, params.vol, params.freq, params.ms);
+    (void)aolib_stop;  // keep libao loaded for the process lifetime
+  }
+  else
+    Beep((int)(params.freq + 0.5), params.ms);
+#else
 static int beep_pid = -1;
 static int fd[2];
   if (beep_pid <= 0) {
@@ -3246,6 +3289,7 @@ static FILE * bf = 0;
 #endif
 
   write(fd[1], &params, sizeof(params));
+#endif
 }
 
 /*
@@ -4520,6 +4564,10 @@ static struct {
     }
 
     when WM_CLOSE:
+      if (container_is_embed_mode() || container_is_embedded(wnd)) {
+        // In container mode: notify container and potentially close it
+        container_on_tab_close(wnd);
+      }
       win_close();
       return 0;
 
@@ -4593,6 +4641,15 @@ static struct {
           win_update_tabbar();
         }
       }
+      else if (!wp && lp == WIN_NEW_TAB) {
+        // Spawn a new tab in the container
+        if (container_get_wnd()) {
+          HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
+          int x, y;
+          int moni = search_monitors(&x, &y, mon, true, 0);
+          child_fork(main_argc, main_argv, moni, false, false, true, container_get_wnd());
+        }
+      }
       else if (sync_level()) {
 #ifdef debug_tabs
         printf("[%8p] switched %d,%d %d,%d\n", wnd, (INT16)LOWORD(lp), (INT16)HIWORD(lp), LOWORD(wp), HIWORD(wp));
@@ -4645,6 +4702,26 @@ static struct {
       printf("[%8p] WM_USER end\n", wnd);
 #endif
       wm_user = false;
+
+    when CM_EMBED_ACTIVATE: {
+      // Activated by container: restore rendering
+      tab_render_active = true;
+      win_update_now();
+      return 0;
+    }
+
+    when CM_EMBED_DEACTIVATE: {
+      // Deactivated by container: sleep rendering
+      tab_render_active = false;
+      return 0;
+    }
+
+    when CM_EMBED_RESIZE: {
+      RECT * r = (RECT *)lp;
+      if (r)
+        SetWindowPos(wnd, NULL, r->left, r->top, r->right - r->left, r->bottom - r->top, SWP_NOACTIVATE);
+      return 0;
+    }
 
     when WM_COMMAND or WM_SYSCOMMAND: {
 # if defined(debug_messages) || defined(debug_tabs)
@@ -4761,29 +4838,29 @@ static struct {
           HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
           int x, y;
           int moni = search_monitors(&x, &y, mon, true, 0);
-          child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, false, false);
+          child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, false, false, NULL);
         }
         when IDM_NEW_CWD: {
           HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
           int x, y;
           int moni = search_monitors(&x, &y, mon, true, 0);
-          child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, true, false);
+           child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, true, false, NULL);
         }
-        when IDM_TAB: {
-          HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
-          int x, y;
-          int moni = search_monitors(&x, &y, mon, true, 0);
-          child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, false, true);
-        }
-        when IDM_TAB_CWD: {
-          HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
-          int x, y;
-          int moni = search_monitors(&x, &y, mon, true, 0);
-          child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, true, true);
-        }
+         when IDM_TAB: {
+           HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
+           int x, y;
+           int moni = search_monitors(&x, &y, mon, true, 0);
+           child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, false, true, container_get_wnd());
+         }
+         when IDM_TAB_CWD: {
+           HMONITOR mon = MonitorFromWindow(wnd, MONITOR_DEFAULTTONEAREST);
+           int x, y;
+           int moni = search_monitors(&x, &y, mon, true, 0);
+           child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, true, true, container_get_wnd());
+         }
         when IDM_NEW_MONI: {
           int moni = lp;
-          child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, false, false);
+          child_fork(main_argc, main_argv, moni, get_mods() & MDK_SHIFT, false, false, NULL);
         }
         when IDM_COPYTITLE: win_copy_title();
         when IDM_KEY_DOWN_UP: {
@@ -5569,8 +5646,9 @@ static int olddelta;
                        && !ctrl
                        ;
         //printf("WM_SIZE scale_font %d zoom_token %d\n", scale_font, zoom_token);
-        int rows0 = term.rows0, cols0 = term.cols0;
-        win_adapt_term_size(false, scale_font);
+         int rows0 = term.rows0, cols0 = term.cols0;
+         win_adapt_term_size(false, scale_font);
+         d2d_set_hwnd(wnd);
         if (wp == SIZE_MAXIMIZED) {
           term.rows0 = rows0;
           term.cols0 = cols0;
@@ -5600,12 +5678,13 @@ static int olddelta;
       //printsb("WM_EXITSIZEMOVE");
 
       //printf("WM_EXITSIZEMOVE resizing %d shift %d\n", resizing, shift);
-      if (resizing) {
-        resizing = false;
-        win_destroy_tip();
-        trace_resize((" (win_proc (WM_EXITSIZEMOVE) -> win_adapt_term_size)\n"));
-        win_adapt_term_size(shift, false);
-      }
+       if (resizing) {
+         resizing = false;
+         win_destroy_tip();
+         trace_resize((" (win_proc (WM_EXITSIZEMOVE) -> win_adapt_term_size)\n"));
+         win_adapt_term_size(shift, false);
+         d2d_set_hwnd(wnd);
+       }
 
       win_synctabs(2);
     }
@@ -5748,8 +5827,9 @@ static int olddelta;
           win_set_chars_keep_fullscreen(y, x);
         }
 
-        is_in_dpi_change = false;
-        return 0;
+         is_in_dpi_change = false;
+         d2d_set_hwnd(wnd);
+         return 0;
       } else if (per_monitor_dpi_aware == DPI_AWAREV1) {
 #ifdef handle_dpi_on_dpichanged
         bool dpi_changed = true;
@@ -6188,6 +6268,10 @@ exit_imintty(void)
   if (sync_level())
     win_switch(true, false);
 #endif
+
+  // Notify container of tab close
+  if (container_is_embed_mode() || container_is_embedded(wnd))
+    container_on_tab_close(wnd);
 
   exit(0);
 }
@@ -6960,6 +7044,12 @@ DEFINE_PROPERTYKEY(PKEY_AppUserModel_StartPinOption, 0x9f4c2855,0x9f79,0x4B39,0x
 bool
 cygver_ge(uint v1, uint v2)
 {
+#ifdef MINGW_NATIVE
+  // no cygwin; behave like a current version
+  (void)v1;
+  (void)v2;
+  return true;
+#else
   static uint _v1 = 0, _v2 = 0;
 
   if (!_v1) {
@@ -6969,6 +7059,7 @@ cygver_ge(uint v1, uint v2)
   }
 
   return _v1 > v1 || (_v1 == v1 && _v2 >= v2);
+#endif
 }
 
 
@@ -6979,6 +7070,7 @@ static wchar *
 group_id(wstring id)
 {
   if (wcschr(id, '%')) {
+#ifndef MINGW_NATIVE
     wchar * pc = (wchar *)id;
     int pcn = 0;
     while (*pc)
@@ -7004,6 +7096,7 @@ group_id(wstring id)
       free(icon);
       free(fmt);
     }
+#endif
   }
   return (wchar *)id;
 }
@@ -7111,8 +7204,9 @@ opts[] = {
   {"geometry",   required_argument, 0, OPT_GEOMETRY},
   {"en",         required_argument, 0, OPT_EN},
   {"lf",         required_argument, 0, OPT_LF},
-  {"sl",         required_argument, 0, OPT_SL},
-  {0, 0, 0, 0}
+   {"sl",         required_argument, 0, OPT_SL},
+   {"embed",      required_argument, 0, 0x90},  // P5 container embed
+   {0, 0, 0, 0}
 };
 
 int
@@ -7151,7 +7245,11 @@ main(int argc, char *argv[])
 #if CYGWIN_VERSION_DLL_MAJOR >= 1005
     (pw && pw->pw_dir && *pw->pw_dir) ? strdup(pw->pw_dir) :
 #endif
+#ifdef MINGW_NATIVE
+    asform("/home/%s", getenv("USERNAME") ?: "user");
+#else
     asform("/home/%s", getlogin());
+#endif
 
   // Set size and position defaults.
   STARTUPINFOW sui;
@@ -7401,11 +7499,17 @@ main(int argc, char *argv[])
         }
         else
           horbar = 3;  // enable persistent horizontal scrollbar
-      when '':
+       when '':
         cfg.new_tabs = 2;
         // -newtabs implies -tabbar
         set_arg_option("TabBar", strdup("1"));
         set_arg_option("SessionGeomSync", optarg ?: strdup("2"));
+      when 0x90: {
+        // P5 container embed mode: reparent window into container
+        HWND parent = (HWND)(uintptr_t)strtoul(optarg, NULL, 0);
+        if (parent && IsWindow(parent))
+          container_set_embed_mode(parent);
+      }
       when 'B':
         set_arg_option("BorderStyle", strdup(optarg));
       when 'R':
@@ -7766,6 +7870,9 @@ static int dynfonts = 0;
   if (cfg.daemonize_always)
     daemonize = true;
   if (daemonize) {  // detach from parent process and terminal
+#ifdef MINGW_NATIVE
+    // no fork/setsid on native MinGW; nothing to detach
+#else
     pid_t pid = fork();
     if (pid < 0)
       print_error(_("Imintty could not detach from caller, starting anyway"));
@@ -7773,6 +7880,7 @@ static int dynfonts = 0;
       exit(0);  // exit parent process
 
     setsid();  // detach child process
+#endif
   }
 
   load_dwm_funcs();  // must be called after the fork() above!
@@ -8626,6 +8734,7 @@ static int dynfonts = 0;
   // Initialise various other stuff.
   win_init_cursors();
   win_init_menus();
+  d2d_set_hwnd(wnd);
   win_update_transparency(cfg.transparency, cfg.opaque_when_focused);
 
 #ifdef debug_display_monitors_mockup
@@ -8728,6 +8837,13 @@ static int dynfonts = 0;
 
   // Set up tabbar
   if (cfg.tabbar) {
+    if (container_get_wnd()) {
+      // Already in container mode
+      container_create_for_window(wnd, (wchar *)cfg.title);
+    } else {
+      // First tab: create container and reparent
+      container_create_for_window(wnd, (wchar *)cfg.title);
+    }
     win_open_tabbar();
   }
 
@@ -8769,7 +8885,7 @@ static int dynfonts = 0;
   }
   if (report_winid) {
     printf("%p\n", wnd);
-    printf("%08lX\n", (ulong)wnd);
+    printf("%08lX\n", (ulong)(uintptr_t)wnd);
     fflush(stdout);
   }
 

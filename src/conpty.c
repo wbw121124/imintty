@@ -55,14 +55,14 @@ conpty_available(void)
 }
 
 HPCON
-conpty_create(void)
+conpty_create(HANDLE hInput, HANDLE hOutput)
 {
   conpty_init();
   if (!pfn_create_pc)
     return null;
   HPCON hpc = null;
   COORD size = { .X = 80, .Y = 25 };
-  HRESULT hr = pfn_create_pc(size, null, null, 0, &hpc);
+  HRESULT hr = pfn_create_pc(size, hInput, hOutput, 0, &hpc);
   if (FAILED(hr))
     return null;
   return hpc;

@@ -12,6 +12,20 @@
 #include "appinfo.h"  /* APPNAME, VERSION */
 #include "conpty.h"
 
+#ifndef LOG_SILENT
+#define LOG_SILENT 0
+#define LOG_FAIL   1
+#define LOG_ERROR  2
+#define LOG_WARN   3
+#define LOG_INFO   4
+#define LOG_DEBUG  5
+#define LOG_FULL   6
+#endif
+#ifndef LOG_LEVEL
+#define LOG_LEVEL LOG_SILENT
+#endif
+#define DBGx(lvl, ...) do { if (LOG_LEVEL >= (lvl)) fprintf(stderr, __VA_ARGS__); } while(0)
+
 #if defined(__MINGW32__) || defined(__MINGW64__)
 /* P8: MinGW-w64 — Windows-native APIs, no POSIX layer */
 #include <windows.h>
@@ -571,6 +585,41 @@ ispathprefix(string pref, string path)
   return false;
 }
 
+// Append one argument to a command line, quoting it with rules compatible
+// with CommandLineToArgvW (backslashes before a quote or the closing quote
+// are doubled; quoting is triggered by embedded blanks or an empty string).
+static wchar_t *
+cmdline_append_arg(wchar_t *pos, const wchar_t *arg)
+{
+  bool quote = !*arg;
+  for (const wchar_t *p = arg; *p && !quote; p++)
+    quote = (*p == L' ' || *p == L'\t');
+  if (quote) *pos++ = L'"';
+  int bs = 0;
+  const wchar_t *p = arg;
+  while (*p) {
+    if (*p == L'"') {
+      while (bs > 0) { *pos++ = L'\\'; bs--; }
+      *pos++ = L'\\';
+      *pos++ = L'"';
+    } else if (*p == L'\\') {
+      bs++;
+    } else {
+      while (bs > 0) { *pos++ = L'\\'; bs--; }
+      *pos++ = *p;
+    }
+    p++;
+  }
+  while (bs > 0) {
+    *pos++ = L'\\';
+    if (quote) *pos++ = L'\\';
+    bs--;
+  }
+  if (quote) *pos++ = L'"';
+  *pos++ = L' ';
+  return pos;
+}
+
 void
 child_create(char *argv[], struct winsize *winp)
 {
@@ -615,8 +664,8 @@ child_create(char *argv[], struct winsize *winp)
   if (use_conpty) {
     // === ConPTY backend path ===
     HANDLE hInput[2], hOutput[2];
-    if (!CreatePipe(&hInput[0], &hOutput[0], null, 0) ||
-        !CreatePipe(&hInput[1], &hOutput[1], null, 0)) {
+    if (!CreatePipe(&hInput[0], &hInput[1], null, 0) ||
+        !CreatePipe(&hOutput[0], &hOutput[1], null, 0)) {
       childerror(_("Error: Could not create ConPTY pipes"), true, 0, 0);
       return;
     }
@@ -639,8 +688,9 @@ child_create(char *argv[], struct winsize *winp)
     CloseHandle(hOutput[0]);
     CloseHandle(hOutput[1]);
 
-    // Create pseudo console
-    conpty_handle = conpty_create();
+    // Create pseudo console (ConPTY reads keystrokes from hInputRead and
+    // writes terminal output to hOutputWrite — both pipe ends it owns).
+    conpty_handle = conpty_create(hInputRead, hOutputWrite);
     if (conpty_handle == null) {
       childerror(_("Error: Could not create pseudo console"), true, 0, 0);
       CloseHandle(hInputRead);
@@ -649,6 +699,10 @@ child_create(char *argv[], struct winsize *winp)
       CloseHandle(hOutputWrite);
       return;
     }
+    /* Console-side pipe ends belong to ConPTY; keep the child from
+       inheriting them (it receives its std handles via the pseudo console). */
+    SetHandleInformation(hInputRead, HANDLE_FLAG_INHERIT, 0);
+    SetHandleInformation(hOutputWrite, HANDLE_FLAG_INHERIT, 0);
 
     // Set process attributes for ConPTY
     SIZE_T size = 0;
@@ -687,41 +741,27 @@ child_create(char *argv[], struct winsize *winp)
       return;
     }
 
-    // Build startup info
+    // Build startup info.  Do NOT set STARTF_USESTDHANDLES: with
+    // PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE the child's std handles come from
+    // the pseudo console; supplying pipe handles here would bypass it.
     STARTUPINFOEXW si;
     ZeroMemory(&si, sizeof(si));
     si.StartupInfo.cb = sizeof(si);
-    si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-    si.StartupInfo.hStdInput = hInputRead;
-    si.StartupInfo.hStdOutput = hOutputRead;
-    si.StartupInfo.hStdError = hOutputRead;
     si.lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)attr_buf;
 
-    // Build command line
-    wchar_t *cmd_w = cs__utftowcs(cmd);
-    wchar_t *cmdline = (wchar_t *)malloc((wcslen(cmd_w) + 2) * sizeof(wchar_t));
-    if (cmdline == null) {
-      childerror(_("Error: Could not allocate command line"), true, 0, 0);
-      free(attr_buf);
-      conpty_close(conpty_handle);
-      CloseHandle(hInputRead);
-      CloseHandle(hInputWrite);
-      CloseHandle(hOutputRead);
-      CloseHandle(hOutputWrite);
-      free(cmd_w);
-      return;
-    }
-    wcscpy(cmdline, cmd_w);
-    free(cmd_w);
+    // Convert cmd and argv to wide.  Use the active charset (cs__mbstowcs),
+    // the same converter the window title uses for cmd: the Windows CRT
+    // provides argv in the ANSI code page, so the UTF-8 converter would
+    // truncate a localized path at its first non-ASCII byte.
+    wchar_t *cmd_w = cs__mbstowcs(cmd);
 
-    // Build arguments
     int argc = 0;
     while (argv[argc]) argc++;
     wchar_t **argv_w = (wchar_t **)malloc((argc + 1) * sizeof(wchar_t *));
     if (argv_w == null) {
       childerror(_("Error: Could not allocate argument array"), true, 0, 0);
       free(attr_buf);
-      free(cmdline);
+      free(cmd_w);
       conpty_close(conpty_handle);
       CloseHandle(hInputRead);
       CloseHandle(hInputWrite);
@@ -730,13 +770,13 @@ child_create(char *argv[], struct winsize *winp)
       return;
     }
     for (int i = 0; i < argc; i++) {
-      argv_w[i] = cs__utftowcs(argv[i]);
+      argv_w[i] = cs__mbstowcs(argv[i]);
       if (argv_w[i] == null) {
         childerror(_("Error: Could not convert argument"), true, 0, 0);
         for (int j = 0; j < i; j++) free(argv_w[j]);
         free(argv_w);
         free(attr_buf);
-        free(cmdline);
+        free(cmd_w);
         conpty_close(conpty_handle);
         CloseHandle(hInputRead);
         CloseHandle(hInputWrite);
@@ -747,10 +787,41 @@ child_create(char *argv[], struct winsize *winp)
     }
     argv_w[argc] = null;
 
-    // Create process
+    // Build the command line from all of argv with proper quoting; the
+    // program to execute goes to lpApplicationName below, so an argv[0]
+    // such as "-sh" for a login shell cannot break process creation.
+    size_t cl_chars = wcslen(cmd_w) + 2;
+    for (int i = 0; i < argc; i++)
+      cl_chars += wcslen(argv_w[i]) * 2 + 4;
+    wchar_t *cmdline = (wchar_t *)malloc(cl_chars * sizeof(wchar_t));
+    if (cmdline == null) {
+      childerror(_("Error: Could not allocate command line"), true, 0, 0);
+      for (int i = 0; i < argc; i++) free(argv_w[i]);
+      free(argv_w);
+      free(attr_buf);
+      free(cmd_w);
+      conpty_close(conpty_handle);
+      CloseHandle(hInputRead);
+      CloseHandle(hInputWrite);
+      CloseHandle(hOutputRead);
+      CloseHandle(hOutputWrite);
+      return;
+    }
+    wchar_t *pos = cmdline;
+    if (argc > 0) {
+      for (int i = 0; i < argc; i++)
+        pos = cmdline_append_arg(pos, argv_w[i]);
+    } else {
+      pos = cmdline_append_arg(pos, cmd_w);
+    }
+    *pos = '\0';
+
+    // Create process.  bInheritHandles is false: the child gets its std
+    // handles via the pseudo console attribute and must not inherit our
+    // pipe ends.
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
-    if (!CreateProcessW(null, cmdline, null, null, true,
+    if (!CreateProcessW(cmd_w, cmdline, null, null, false,
         EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
         null, null, (LPSTARTUPINFOW)&si, &pi)) {
       childerror(_("Error: Could not create ConPTY child process"), true, 0, 0);
@@ -758,6 +829,7 @@ child_create(char *argv[], struct winsize *winp)
       free(argv_w);
       free(attr_buf);
       free(cmdline);
+      free(cmd_w);
       conpty_close(conpty_handle);
       CloseHandle(hInputRead);
       CloseHandle(hInputWrite);
@@ -771,6 +843,7 @@ child_create(char *argv[], struct winsize *winp)
     for (int i = 0; i < argc; i++) free(argv_w[i]);
     free(argv_w);
     free(cmdline);
+    free(cmd_w);
 
     // Store state
     pid = pi.dwProcessId;
@@ -1165,6 +1238,8 @@ child_proc(void)
               if (bytes_read > 0) {
                 term_write(buf, (uint)bytes_read);
                 trace_line("twrt", (int)bytes_read, buf, (int)bytes_read);
+                DBGx(LOG_FULL, "[t%d] tty< %.*s\n", get_tick_count(),
+                     (int)(bytes_read < 96 ? bytes_read : 96), buf);
 
                 // accelerate keyboard echo if (unechoed) keyboard input is pending
                 if (kb_input) {

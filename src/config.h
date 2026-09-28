@@ -335,6 +335,12 @@ extern void load_config(string filename, int to_save);
 extern void load_theme(wstring theme);
 extern char * get_resource_file(wstring sub, wstring res, bool towrite);
 extern void handle_file_resources(wstring pattern, str_fn fnh);
+// POSIX environment roots (existence-verified, ACP narrow strings)
+extern char * posix_cyg_root;
+extern char * posix_msys_root;
+extern void detect_posix_roots(void);
+extern char * resolve_cmd_path(char * path);
+extern char * home_derived_shell(void);
 extern void load_scheme(string colour_scheme);
 extern void set_arg_option(string name, string val);
 extern void parse_arg_option(string);

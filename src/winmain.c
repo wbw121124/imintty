@@ -390,7 +390,7 @@ cmd_out_capture_start_process(char * cmd)
   PROCESS_INFORMATION pi;
   ZeroMemory(&pi, sizeof(pi));
 
-  wchar * wcmd = cs__mbstowcs(cmd);  // support non-ASCII paths
+  wchar * wcmd = cs__crctowcs(cmd);  // CRT narrow encoding (ANSI code page)
   bool res = CreateProcessW(NULL, wcmd,
                             NULL, NULL,
                             TRUE,  // inherit handles
@@ -4369,15 +4369,16 @@ static char *
 opterror_msg(string msg, bool utf8params, string p1, string p2)
 {
   // Note: msg is in UTF-8,
-  // parameters are in current encoding unless utf8params is true
+  // parameters are in the CRT's narrow encoding (ANSI code page on native
+  // Windows) unless utf8params is true
   if (!utf8params) {
     if (p1) {
-      wchar * w = cs__mbstowcs(p1);
+      wchar * w = cs__crctowcs(p1);
       p1 = cs__wcstoutf(w);
       free(w);
     }
     if (p2) {
-      wchar * w = cs__mbstowcs(p2);
+      wchar * w = cs__crctowcs(p2);
       p2 = cs__wcstoutf(w);
       free(w);
     }
@@ -4432,6 +4433,53 @@ option_error(char * msg, char * option, int err)
   if (err) {
     strappend(fullmsg, asform("[Error info %d]\n", err));
   }
+  strappend(fullmsg, _("Try '--help' for more information"));
+  show_message(fullmsg, MB_ICONWARNING);
+  exit(1);
+}
+
+// Report an explicit command that cannot be resolved to an executable and
+// exit; cmd is in the CRT's narrow encoding (ANSI code page).
+static void
+cmd_unresolved(char * cmd)
+{
+  finish_config();  // ensure localized message
+
+  wchar * wcmd = cs__crctowcs(cmd);
+  char * ucmd = cs__wcstoutf(wcmd);
+  free(wcmd);
+  char * fullmsg = asform(_("Cannot resolve command '%s'"), ucmd);
+  free(ucmd);
+
+  if (cmd[0] == '/') {  // POSIX path: report the roots we looked at
+    detect_posix_roots();
+    char * mr = 0, *cr = 0;
+    if (posix_msys_root) {
+      wchar * w = cs__crctowcs(posix_msys_root);
+      mr = cs__wcstoutf(w);
+      free(w);
+    }
+    if (posix_cyg_root) {
+      wchar * w = cs__crctowcs(posix_cyg_root);
+      cr = cs__wcstoutf(w);
+      free(w);
+    }
+    strappend(fullmsg, "\n");
+    if (mr || cr)
+      strappend(fullmsg, asform(_("Searched roots: %s%s%s"),
+                                mr ? mr : "", (mr && cr) ? ", " : "",
+                                cr ? cr : ""));
+    else
+      strappend(fullmsg,
+                _("No MSYS2/Cygwin installation found; set SHELL or use an absolute Windows path"));
+    free(mr);
+    free(cr);
+  }
+  else {
+    strappend(fullmsg, "\n");
+    strappend(fullmsg, _("File not found"));
+  }
+  strappend(fullmsg, "\n");
   strappend(fullmsg, _("Try '--help' for more information"));
   show_message(fullmsg, MB_ICONWARNING);
   exit(1);
@@ -8099,19 +8147,46 @@ static int dynfonts = 0;
     else
       unsetenv("HOME");
   }
-  else if (*argv && (argv[1] || strcmp(*argv, "-")))  // argv is a command
+  else if (*argv && (argv[1] || strcmp(*argv, "-"))) {  // argv is a command
     cmd = *argv;
+    // Resolve explicit commands: absolute Windows paths are existence-
+    // checked (with .exe completion), POSIX paths are resolved against
+    // detected MSYS2/Cygwin roots; report a clear error if that fails
+    // rather than silently substituting a shell.
+    char * resolved = resolve_cmd_path(cmd);
+    if (!resolved)
+      cmd_unresolved(cmd);
+    cmd = resolved;
+  }
   else {  // argv is empty or only "-"
     // Look up the user's shell.
+#ifdef MINGW_NATIVE
+    // Deterministic fallback chain: a valid SHELL; otherwise a shell
+    // derived from HOME (<root>\home\<user> -> <root>\usr\bin\bash.exe);
+    // otherwise %COMSPEC%.  A bare POSIX path such as /bin/sh cannot be
+    // executed by CreateProcessW.
+    char * shvar = getenv("SHELL");
+    char * shell = shvar && *shvar ? resolve_cmd_path(shvar) : 0;
+    if (!shell)
+      shell = home_derived_shell();
+    if (!shell)
+      shell = strdup(getenv("COMSPEC") ?: "cmd.exe");
+    cmd = shell;
+#else
     cmd = getenv("SHELL");
     cmd = cmd ? strdup(cmd) :
 #if CYGWIN_VERSION_DLL_MAJOR >= 1005
       (pw && pw->pw_shell && *pw->pw_shell) ? strdup(pw->pw_shell) :
 #endif
       "/bin/sh";
+#endif
 
-    // Determine the program name argument.
+    // Determine the program name argument (both separators are possible,
+    // e.g. E:\msys64\usr\bin\bash.exe from the msys environment).
     char *slash = strrchr(cmd, '/');
+    char *bslash = strrchr(cmd, '\\');
+    if (bslash && (!slash || bslash > slash))
+      slash = bslash;
     char *arg0 = slash ? slash + 1 : cmd;
 
     // Prepend '-' if a login shell was requested.
@@ -8252,13 +8327,10 @@ static int dynfonts = 0;
     argz_create(argv, &argz, &len);
     argz_stringify(argz, len, ' ');
     char * title = argz;
-    size_t size = cs_mbstowcs(0, title, 0) + 1;
-    if (size) {
-      wchar *buf = newn(wchar, size);
-      cs_mbstowcs(buf, title, size);
-      wtitle = buf;
-    }
-    else {
+    // argv bytes come from the CRT in the ANSI code page (or the locale
+    // charset on Cygwin); cs__crctowcs decodes accordingly
+    wtitle = cs__crctowcs(title);
+    if (!wtitle) {
       print_error(_("Using default title due to invalid characters in program name"));
       wtitle = W(APPNAME);
     }

@@ -1657,6 +1657,249 @@ static string * config_dirs = 0;
 static int last_config_dir = -1;
 static char * config_emojis = 0;
 
+/* POSIX environment roots (MSYS2 / Cygwin) for resolving POSIX paths on a
+   native Windows build.  Every candidate is existence-verified; there is
+   no heuristic guessing.  Strings are in the CRT's narrow encoding. */
+
+char * posix_cyg_root = 0;
+char * posix_msys_root = 0;
+
+static bool
+path_exists(char * path)
+{
+  return path && access(path, F_OK) == 0;
+}
+
+// case-insensitive ASCII substring search
+static char *
+ci_strstr(char * hay, const char * needle)
+{
+  size_t nl = strlen(needle);
+  if (!nl)
+    return hay;
+  for (char * p = hay; *p; p++) {
+    size_t i = 0;
+    while (i < nl) {
+      char a = p[i], b = needle[i];
+      if (a >= 'A' && a <= 'Z') a += 'a' - 'A';
+      if (b >= 'A' && b <= 'Z') b += 'a' - 'A';
+      if (!a || a != b)
+        break;
+      i++;
+    }
+    if (i == nl)
+      return p;
+  }
+  return 0;
+}
+
+// Whether the file name part of a path already has an extension
+static bool
+name_has_ext(char * path)
+{
+  char * base = path;
+  for (char * p = path; *p; p++)
+    if (*p == '\\' || *p == '/')
+      base = p + 1;
+  return !!strchr(base, '.');
+}
+
+// Check whether a directory is a Cygwin or MSYS2 installation root
+// (existence-verified markers only) and record it if not found yet.
+static void
+classify_root(char * root)
+{
+  if (!root || !*root)
+    return;
+  char * marker = asform("%s\\usr\\bin\\bash.exe", root);
+  bool is_msys = path_exists(marker);
+  free(marker);
+  if (is_msys) {
+    if (!posix_msys_root)
+      posix_msys_root = strdup(root);
+    return;
+  }
+  marker = asform("%s\\cygwin1.dll", root);
+  bool is_cyg = path_exists(marker);
+  free(marker);
+  if (!is_cyg) {
+    marker = asform("%s\\bin\\cygwin1.dll", root);
+    is_cyg = path_exists(marker);
+    free(marker);
+  }
+  if (is_cyg && !posix_cyg_root)
+    posix_cyg_root = strdup(root);
+}
+
+static char *
+parent_dir(char * path)
+{
+  char * slash = strrchr(path, '\\');
+  if (!slash)
+    slash = strrchr(path, '/');
+  if (!slash || slash == path)
+    return 0;
+  return asform("%.*s", (int)(slash - path), path);
+}
+
+void
+detect_posix_roots(void)
+{
+  static bool done;
+  if (done)
+    return;
+  done = true;
+#ifdef MINGW_NATIVE
+  // HOME: MSYS2/Cygwin user homes live in <root>\home\<user>
+  char * h = getenv("HOME");
+  if (h && *h) {
+    char * sep = ci_strstr(h, "\\home\\");
+    char * sep2 = ci_strstr(h, "/home/");
+    if (sep2 && (!sep || sep2 < sep))
+      sep = sep2;
+    if (sep && sep > h && (sep[-1] == ':' || sep[-1] == '\\' || sep[-1] == '/')) {
+      char * root = asform("%.*s", (int)(sep - h), h);
+      classify_root(root);
+      free(root);
+    }
+  }
+  // PATH entries and up to two parent levels
+  // (<root>\bin, <root>\usr\bin, <root>\mingw64\bin, ...)
+  char * pe = getenv("PATH");
+  if (pe) {
+    char * path = strdup(pe);
+    for (char * e = path; e && *e; ) {
+      char * semi = strchr(e, ';');
+      if (semi)
+        *semi = '\0';
+      char * next = semi ? semi + 1 : 0;
+      size_t len = strlen(e);
+      while (len && (e[len - 1] == '\\' || e[len - 1] == '/'))
+        e[--len] = '\0';
+      char * cur = *e ? strdup(e) : 0;
+      for (int level = 0; level < 3 && cur; level++) {
+        if (posix_msys_root && posix_cyg_root)
+          break;
+        classify_root(cur);
+        char * up = parent_dir(cur);
+        free(cur);
+        cur = up;
+      }
+      free(cur);
+      e = next;
+    }
+    free(path);
+  }
+#endif
+}
+
+// The default shell derived from HOME only (approved fallback chain step 2):
+// HOME = <root>\home\<user> and <root>\usr\bin\bash.exe exists.
+char *
+home_derived_shell(void)
+{
+#ifdef MINGW_NATIVE
+  char * h = getenv("HOME");
+  if (!h || !*h)
+    return 0;
+  char * sep = ci_strstr(h, "\\home\\");
+  char * sep2 = ci_strstr(h, "/home/");
+  if (sep2 && (!sep || sep2 < sep))
+    sep = sep2;
+  if (!sep || sep <= h || (sep[-1] != ':' && sep[-1] != '\\' && sep[-1] != '/'))
+    return 0;
+  char * root = asform("%.*s", (int)(sep - h), h);
+  char * bash = asform("%s\\usr\\bin\\bash.exe", root);
+  free(root);
+  if (path_exists(bash))
+    return bash;
+  free(bash);
+#endif
+  return 0;
+}
+
+// Resolve a command for CreateProcessW.
+// Returns a malloc'd path; 0 if an absolute path does not exist.
+// Bare and relative names are returned unchanged (CreateProcessW searches).
+char *
+resolve_cmd_path(char * path)
+{
+#ifndef MINGW_NATIVE
+  // Cygwin's CreateProcessW converts POSIX paths natively
+  return path && *path ? strdup(path) : 0;
+#else
+  if (!path || !*path)
+    return 0;
+
+  bool posix = path[0] == '/';
+  bool absolute = posix || (path[0] && path[1] == ':') || path[0] == '\\';
+  if (!absolute)
+    return strdup(path);
+
+  if (!posix) {
+    if (path_exists(path))
+      return strdup(path);
+    if (!name_has_ext(path)) {
+      char * cand = asform("%s.exe", path);
+      if (path_exists(cand))
+        return cand;
+      free(cand);
+    }
+    return 0;
+  }
+
+  // POSIX path: resolve against detected installation roots
+  // (MSYS2 first, as this is an MSYS2-oriented application)
+  detect_posix_roots();
+  char * rel = strdup(path + 1);
+  for (char * c = rel; *c; c++)
+    if (*c == '/')
+      *c = '\\';
+  char * roots[2] = { posix_msys_root, posix_cyg_root };
+  for (int i = 0; i < 2; i++) {
+    char * r = roots[i];
+    if (!r)
+      continue;
+    // Cygwin layout: /bin/bash -> <root>\bin\bash[.exe]
+    char * cand = asform("%s\\%s", r, rel);
+    if (path_exists(cand)) {
+      free(rel);
+      return cand;
+    }
+    if (!name_has_ext(cand)) {
+      char * cand2 = asform("%s.exe", cand);
+      free(cand);
+      cand = cand2;
+      if (path_exists(cand)) {
+        free(rel);
+        return cand;
+      }
+    }
+    free(cand);
+    // MSYS2 layout: /bin/bash -> <root>\usr\bin\bash[.exe]
+    if (i == 0) {
+      cand = asform("%s\\usr\\%s", r, rel);
+      if (path_exists(cand)) {
+        free(rel);
+        return cand;
+      }
+      if (!name_has_ext(cand)) {
+        char * cand2 = asform("%s.exe", cand);
+        free(cand);
+        cand = cand2;
+        if (path_exists(cand)) {
+          free(rel);
+          return cand;
+        }
+      }
+      free(cand);
+    }
+  }
+  free(rel);
+  return 0;
+#endif
+}
+
 static void
 init_config_dirs(void)
 {

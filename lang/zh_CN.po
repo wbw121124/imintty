@@ -1453,6 +1453,22 @@ msgstr "配置日志"
 msgid "Try '--help' for more information"
 msgstr "使用 --help 参数运行来了解如何使用"
 
+#: winmain.c:4438
+msgid "Cannot resolve command '%s'"
+msgstr "无法解析命令 '%s'"
+
+#: winmain.c:4457
+msgid "Searched roots: %s%s%s"
+msgstr "已搜索位置：%s%s%s"
+
+#: winmain.c:4467
+msgid "No MSYS2/Cygwin installation found; set SHELL or use an absolute Windows path"
+msgstr "未找到 MSYS2/Cygwin 安装；请设置 SHELL 或使用绝对 Windows 路径"
+
+#: winmain.c:4474
+msgid "File not found"
+msgstr "文件不存在"
+
 #: winmain.c:4384
 msgid "Could not load icon"
 msgstr "无法加载图标"

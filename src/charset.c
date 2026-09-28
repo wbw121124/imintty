@@ -21,7 +21,6 @@
 #include <winbase.h>
 #include <winnls.h>
 
-
 static cs_mode mode = CSM_DEFAULT;
 
 static string default_locale = 0;  // Used unless UTF-8 or ACP mode is on.
@@ -871,6 +870,37 @@ cs__mbstowcs(const char * s)
   wchar * ws = malloc(size1 * sizeof(wchar));  // includes terminating NUL
   MultiByteToWideChar(codepage, 0, s, -1, ws, size1);
   return ws;
+}
+
+wchar *
+cs__acptowcs(const char * s)
+{
+  int size1 = MultiByteToWideChar(CP_ACP, 0, s, -1, 0, 0);
+  wchar * ws = malloc(size1 * sizeof(wchar));  // includes terminating NUL
+  MultiByteToWideChar(CP_ACP, 0, s, -1, ws, size1);
+  return ws;
+}
+
+char *
+cs__wctoacp(const wchar * ws)
+{
+  int size1 = WideCharToMultiByte(CP_ACP, 0, ws, -1, 0, 0, 0, 0);
+  char * s = malloc(size1);  // includes terminating NUL
+  WideCharToMultiByte(CP_ACP, 0, ws, -1, s, size1, 0, 0);
+  return s;
+}
+
+// Decode a string produced by the C runtime's narrow APIs (argv, environment,
+// getopt results): the ANSI code page on a native Windows build, the locale
+// charset on Cygwin.
+wchar *
+cs__crctowcs(const char * s)
+{
+#ifdef MINGW_NATIVE
+  return cs__acptowcs(s);
+#else
+  return cs__mbstowcs(s);
+#endif
 }
 
 wchar *

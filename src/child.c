@@ -620,6 +620,17 @@ cmdline_append_arg(wchar_t *pos, const wchar_t *arg)
   return pos;
 }
 
+// Whether the file name part of a path already has an extension.
+static bool
+wchar_name_has_ext(const wchar_t *path)
+{
+  const wchar_t *base = path;
+  for (const wchar_t *p = path; *p; p++)
+    if (*p == L'\\' || *p == L'/')
+      base = p + 1;
+  return !!wcschr(base, L'.');
+}
+
 void
 child_create(char *argv[], struct winsize *winp)
 {
@@ -749,11 +760,10 @@ child_create(char *argv[], struct winsize *winp)
     si.StartupInfo.cb = sizeof(si);
     si.lpAttributeList = (LPPROC_THREAD_ATTRIBUTE_LIST)attr_buf;
 
-    // Convert cmd and argv to wide.  Use the active charset (cs__mbstowcs),
-    // the same converter the window title uses for cmd: the Windows CRT
-    // provides argv in the ANSI code page, so the UTF-8 converter would
-    // truncate a localized path at its first non-ASCII byte.
-    wchar_t *cmd_w = cs__mbstowcs(cmd);
+    // Convert cmd and argv to wide.  The Windows CRT provides argv and the
+    // derived command in the ANSI code page, independent of the terminal's
+    // active code page, so decode with CP_ACP (cs__crctowcs).
+    wchar_t *cmd_w = cs__crctowcs(cmd);
 
     int argc = 0;
     while (argv[argc]) argc++;
@@ -770,7 +780,7 @@ child_create(char *argv[], struct winsize *winp)
       return;
     }
     for (int i = 0; i < argc; i++) {
-      argv_w[i] = cs__mbstowcs(argv[i]);
+      argv_w[i] = cs__crctowcs(argv[i]);
       if (argv_w[i] == null) {
         childerror(_("Error: Could not convert argument"), true, 0, 0);
         for (int j = 0; j < i; j++) free(argv_w[j]);
@@ -821,9 +831,38 @@ child_create(char *argv[], struct winsize *winp)
     // pipe ends.
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
-    if (!CreateProcessW(cmd_w, cmdline, null, null, false,
+    DWORD werr = 0;
+    bool created = CreateProcessW(cmd_w, cmdline, null, null, false,
         EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
-        null, null, (LPSTARTUPINFOW)&si, &pi)) {
+        null, null, (LPSTARTUPINFOW)&si, &pi);
+    if (!created)
+      werr = GetLastError();
+    // CreateProcessW does not append ".exe" when lpApplicationName is given
+    // (MSYS2 argv conversion yields extension-less paths like /x/bash);
+    // retry with the extension if that file exists.
+    if (!created && (werr == ERROR_FILE_NOT_FOUND || werr == ERROR_PATH_NOT_FOUND)
+        && !wchar_name_has_ext(cmd_w)) {
+      size_t xl = wcslen(cmd_w);
+      wchar_t *cmd_x = (wchar_t *)malloc((xl + 5) * sizeof(wchar_t));
+      if (cmd_x) {
+        wcscpy(cmd_x, cmd_w);
+        wcscat(cmd_x, L".exe");
+        DWORD attr = GetFileAttributesW(cmd_x);
+        if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+          created = CreateProcessW(cmd_x, cmdline, null, null, false,
+              EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
+              null, null, (LPSTARTUPINFOW)&si, &pi);
+          if (!created)
+            werr = GetLastError();
+        }
+        free(cmd_x);
+      }
+    }
+    if (!created) {
+      char *cmd8 = cs__wcstoutf(cmd_w);
+      char *cl8 = cs__wcstoutf(cmdline);
+      free(cmd8);
+      free(cl8);
       childerror(_("Error: Could not create ConPTY child process"), true, 0, 0);
       for (int i = 0; i < argc; i++) free(argv_w[i]);
       free(argv_w);

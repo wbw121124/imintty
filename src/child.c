@@ -1558,25 +1558,74 @@ grandchild_process_list(void)
   if (!pid)
     return 0;
 #if defined(__MINGW32__) || defined(__MINGW64__)
-  /* P8: Toolhelp32-based process listing for MinGW */
+  /* P8: Toolhelp32-based process listing for MinGW.
+   * Build a single pid→ppid snapshot, then BFS from our child pid DOWN
+   * through a children-list to collect exactly its descendant subtree. */
   HANDLE hSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
   if (hSnap == INVALID_HANDLE_VALUE) return 0;
   PROCESSENTRY32W pe;
   pe.dwSize = sizeof(pe);
+  /* Process32First MUST be consumed (previous code skipped the first entry). */
   if (!Process32FirstW(hSnap, &pe)) { CloseHandle(hSnap); return 0; }
-  /* Build list of child processes whose parent is our child pid */
-  while (Process32NextW(hSnap, &pe)) {
-    /* Simple heuristic: collect all processes with PID > 0 and != our child */
-    if (pe.th32ProcessID != (DWORD)pid && pe.th32ParentProcessID != 0) {
-      ttyprocs = renewn(ttyprocs, nttyprocs + 1);
-      ttyprocs[nttyprocs].pid = (int)pe.th32ProcessID;
-      ttyprocs[nttyprocs].ppid = (int)pe.th32ParentProcessID;
-      ttyprocs[nttyprocs].winpid = (int)pe.th32ProcessID;
-      ttyprocs[nttyprocs].cmdline = cs__wcstoutf(pe.szExeFile);
-      nttyprocs++;
+  /* children list + exe name (max 65536 PIDs per Windows). */
+  #define PID_MAP_SIZE 65536
+  static int   child_count[PID_MAP_SIZE];
+  static DWORD children[PID_MAP_SIZE][128];  /* up to 128 children per proc */
+  static char *exe_name[PID_MAP_SIZE];       /* malloc'd, freed later */
+  static bool  map_ready = false;
+  if (!map_ready) {
+    for (int i = 0; i < PID_MAP_SIZE; i++) {
+      child_count[i] = 0;
+      exe_name[i] = 0;
+    }
+    map_ready = true;
+  }
+  do {
+    DWORD pid_val  = pe.th32ProcessID;
+    DWORD ppid_val = pe.th32ParentProcessID;
+    if (pid_val < PID_MAP_SIZE) {
+      /* Store exe name (wide→UTF-8 for later narrow display). */
+      exe_name[pid_val] = cs__wcstoutf(pe.szExeFile);
+      if (ppid_val < PID_MAP_SIZE) {
+        int *cnt = &child_count[ppid_val];
+        if (*cnt < 128)
+          children[ppid_val][(*cnt)++] = pid_val;
+      }
+    }
+  } while (Process32NextW(hSnap, &pe));
+  CloseHandle(hSnap);
+
+  /* BFS from `pid` — collect only true descendants, skip `pid` itself. */
+  int queue[8192];
+  int qhead = 0, qtail = 0;
+  bool visited[PID_MAP_SIZE];
+  for (int i = 0; i < PID_MAP_SIZE; i++) visited[i] = false;
+  queue[qtail++] = pid;
+  visited[pid] = true;
+  while (qhead < qtail) {
+    int cur = queue[qhead++];
+    /* Enumerate direct children of `cur` (true descendants). */
+    if (cur >= 0 && cur < PID_MAP_SIZE) {
+      int cc = child_count[cur];
+      for (int ci = 0; ci < cc; ci++) {
+        DWORD child = children[cur][ci];
+        if (child < PID_MAP_SIZE && !visited[(int)child]) {
+          visited[(int)child] = true;
+          queue[qtail++] = (int)child;
+          ttyprocs = renewn(ttyprocs, nttyprocs + 1);
+          ttyprocs[nttyprocs].pid     = (int)child;
+          ttyprocs[nttyprocs].ppid    = cur;
+          ttyprocs[nttyprocs].winpid  = (int)child;
+          ttyprocs[nttyprocs].cmdline = exe_name[child];
+          nttyprocs++;
+        }
+      }
     }
   }
-  CloseHandle(hSnap);
+  /* Free exe names allocated during snapshot. */
+  for (int i = 0; i < PID_MAP_SIZE; i++) {
+    if (exe_name[i]) { free(exe_name[i]); exe_name[i] = 0; }
+  }
 #else
   DIR * d = opendir("/proc");
   if (!d)
@@ -1615,7 +1664,12 @@ grandchild_process_list(void)
     char * proc = newn(char, 50 + strlen(ttyprocs[i].cmdline));
     sprintf(proc, " %5u %5u %s", ttyprocs[i].winpid, ttyprocs[i].pid, ttyprocs[i].cmdline);
     free(ttyprocs[i].cmdline);
+#ifdef MINGW_NATIVE
+    /* MINGW: cmdline comes from cs__wcstoutf (UTF-8) */
+    wchar * procw = cs__utftowcs(proc);
+#else
     wchar * procw = cs__mbstowcs(proc);
+#endif
     free(proc);
     if (win_version >= 0x0601)
       for (int i = 0; i < 13; i++)

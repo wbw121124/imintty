@@ -49,6 +49,19 @@
 - **附带 bug（保留待修）**：当光标在动画进行中发生移动（如连续 SU），`curs_last` 会滞后到动画结束才更新（因为 `term_cursor_track` 在 scroll band 内被抑制），出现"结束时跳变归位"。修法：`draw_cursor_overlay_to_dc` scroll 分支改用 `curs.y - disptop`（当前逻辑行）而非 `curs_last_*` 作钉格。
 - **处理**：D3 主条目关闭。若修附带 bug 则单独起小 commit（仅改一行 `cy` 取值来源）。
 
+### D4 渲染三缺陷批次（2026-09-28）~~已修复~~
+- 现象：①光标合成竞态（闪烁/动画终帧光标不可见）②平滑滚动动画消失（连续滚动重启时抓到上一帧中间态快照）③平滑滚动鬼畜（叠加层位移符号/带偏移错乱、帧率抖动）。
+- 根因与修法：
+  - ①动画终帧回调只调 `win_update_cursor()`（合成层）不重绘画格，cell path 拿不回光标体 → 各终帧路径改 `win_update_now()`（`term.c` cblink_fade/expand/cblink、`curs_anim_cb` settle 分支）。
+  - ②`term_scroll_anim_begin` 重启时 `had=1` 未先定格终态，`win_scroll_capture` 从窗口抓到中间帧 → 重启前先 `win_update_now()`。
+  - ③`win_scroll_overlay` 位移符号（`total - remaining` → `remaining - total`）与 band y 双重计数（改设备坐标 + 恒等世界变换）；`win_text` band 内 y 偏移方向；HwndRT 路径无 overlay 合成（动画/光标动画期回退 GDI）；`do_update` 活跃帧率钉 16ms；光标短距吸附阈值 `<=`→`<`。
+- e2e 验证（2026-09-28）：
+  - 光标 e2e PASSED（d4）；平滑滚动 e2e PASSED（d5：0→-17→…→-85 单调 ~400ms）。
+  - run6 全帧取证：终态 top = 旧38 + SU5 = 43 ✓ 无 off-by-one；`printf "\033[5S"` 不透传（conhost 翻译成整屏 repaint `42..` 再到我们）；3 次 `term_write` 解释全部 39 次 linefeed 滚动（parse 期同步 `win_update_now()` ~85ms/行，非未记录读）。
+  - 疑案结论：d5 "+17"、run5 混合帧、`term_scroll` ±3×4 均为捕获期间**外部滚轮输入**使 `disptop≠0`（旧构建无 term_scroll 日志故"静默恢复"），视图跨 scrollback/缓冲边界属正常回滚行为，非代码缺陷；run6 disptop 保持 0 → 全帧干净。
+- 插桩：`DBGx(LOG_FULL, …)`（`term_write`/`do_scroll`/`anim_begin`/`term_scroll`/`tty<` 等）默认 `LOG_LEVEL=LOG_SILENT` 编译掉，取证构建 `-DLOG_LEVEL=6`。
+- Commit: `986ea5c`（渲染三缺陷）。
+
 每条：复现脚本（printf 滚动序列/光标闪烁计时）→ 修复 → `make -j4` 零警告 → 冒烟 → 独立 commit → e2e 截图按 PID 取窗验证（禁 `clean.ps1`）。
 
 ## 阶段明细
@@ -78,6 +91,7 @@
   - ~~termios/forkpty 在 conpty 路径整体跳过。~~
   - **实测结论**：`PtyBackend=conpty` 选项已添加，conpty 路径实现完整（create/read/write/resize/close），msys 路径保持不变 ✓。
   - Commit: `22a3b34 feat: P2b ConPTY双后端 + 日志级别宏 + 帧时间测量`
+  - **启动修复（2026-09-28，`1f0bcc2`）**：`CreatePipe` 两端配对颠倒；`conpty_create()` 未传管道句柄（伪控制台空连，`hInput/hOutput` 直达 `CreatePseudoConsole`）；控制台侧句柄去继承位 + 不再设 `STARTF_USESTDHANDLES`（与 `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE` 冲突）+ `bInheritHandles=false`；argv/cmd 改 `cs__mbstowcs`（CRT argv 为 ANSI 页，UTF-8 转换会截断本地化路径）；命令行按 argv 全量 `cmdline_append_arg` quoting 并以 `lpApplicationName` 分离。
 - **P2c 标签 spawn 改 CreateProcess**：新标签不再 `fork()` 自身（`do_child_fork` 主路径退役；仅剩 beep/keyclick/help 等零星 fork 留给 P8）。
 - 验证：bash 交互、vim/clear、Ctrl+C、resize、多行输出吞吐对比、`PtyBackend=msys` 回退回归。
 

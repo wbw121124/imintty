@@ -328,6 +328,10 @@ typedef void (* str_fn)(wchar *);
 
 extern string config_dir;
 extern config cfg, new_cfg, file_cfg;
+// ANSI-16 palette for owner-draw swatch buttons in Options dialog
+typedef struct { colour fg; string name; } ansi16_entry;
+extern const ansi16_entry ansi16_palette[];
+#define ANSI16_N 16
 
 extern void init_config(void);
 extern void list_fonts(bool report);

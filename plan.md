@@ -62,6 +62,38 @@
 - 插桩：`DBGx(LOG_FULL, …)`（`term_write`/`do_scroll`/`anim_begin`/`term_scroll`/`tty<` 等）默认 `LOG_LEVEL=LOG_SILENT` 编译掉，取证构建 `-DLOG_LEVEL=6`。
 - Commit: `986ea5c`（渲染三缺陷）。
 
+### D5 十项 bug 批次（2026-09-28）~~已修复~~
+用户确认的十项 bug，分五批实施：
+
+**P1 ConPTY 启动 + 标题编码（commit `24ab989`）**
+- 根因：CRT argv/env 为 ACP(GBK)，但 `cs__mbstowcs` 按终端 codepage(65001) 解码 → U+FFFD → ERROR_PATH_NOT_FOUND；pwsh 无 SHELL 时 cmd 硬编码 `/bin/sh` 无法执行。
+- charset: 新增 `cs__acptowcs`/`cs__wctoacp`/`cs__crctowcs`（CP_ACP 双向，Cygwin 走 locale）
+- config: 新增 `detect_posix_roots`/`resolve_cmd_path`/`home_derived_shell`（HOME \home\ 推导 + PATH \usr\bin 扫描，均存在性验证）
+- child: cmd/argv 改用 `cs__crctowcs`；CreateProcessW 无扩展名补 .exe 重试
+- winmain: shell 回退链 SHELL→HOME推导msys根→COMSPEC；显式 -e 确定性解析失败时报错；arg0 兼容 `\` 分隔符；标题/option_error 参数 ACP 解码
+
+**P2 配置读取/保存链（commit `585a63c`）**
+- 根因：pwsh 下 home=/home/wbw 不可访问→整段跳过，USERPROFILE/.iminttyrc 永远读不到；保存路径经 codepage(65001) 解码 ACP 字节→ENOENT
+- 七级候选（MINGW）：APPDATA/imintty/config → USERPROFILE/.iminttyrc → MSYS2 root etc/home → Cygwin root etc/home
+- `select_rc_filename()` 选项解析后选最高优先级存在目录为保存目标；load_config/save_config MINGW 路径走 ACP
+
+**P3 Options 对话框（commit `a5adceb`）**
+- DIALOG_HEIGHT 201→216（Looks 面板内容 193 DLU，溢出被裁剪）
+- `update_panel_visibility` 对 COMBOBOX 改用 `GetComboBoxInfo().rcItem`（避免下拉预留区误判隐藏）
+- ANSI-16 色块：`ctrl_pushbutton_ownerdraw()` + `BS_OWNERDRAW` + WM_DRAWITEM 绘制；handler 写入 `new_cfg`（Apply 生效）；索引修正；行标签 Normal 0-7 / Bold 8-15
+
+**P4 关闭提示框进程列表（commit `a1f5ef9`）**
+- 根因：`Process32FirstW` 结果被丢弃（skip first entry）+「简单启发式」收集全部 ppid≠0 进程（含 winlogon/svchost 等系统进程）
+- 修复：单快照建 children[parent] 列表 + exe 名称；从 pid 出发 BFS 向下遍历，visited[] 防环；编码 cs__wcstoutf→cs__utftowcs
+
+**P5 光标动画（commit `ac52963`）**
+- timeBeginPeriod(1) 启动 / timeEndPeriod(1) 退出：SetTimer 精度从 15.6ms 提升至 0.5ms
+- fade_start/fade_advance 改用 `get_tick_count()` 起始 + 固定 16ms 帧（原名义 tick 累加最多 5 帧）
+- cblink/tblink phase/expand 回调移除 `!term.has_focus` 守卫，始终重臂定时器；focus gain 无条件 `term_schedule_tblink()`
+- wintext layers_begin D2D HwndRT 分支 `content_valid=false`；do_update 中 `content_valid=true` 加 `!d2d_hwnd_path` 守卫
+
+- 遗留（排后）：blink e2e、反色 alpha≥200、性能显示配置、HarfBuzz（B3）、SHELL 子进程 POSIX 转 Windows 路径
+
 每条：复现脚本（printf 滚动序列/光标闪烁计时）→ 修复 → `make -j4` 零警告 → 冒烟 → 独立 commit → e2e 截图按 PID 取窗验证（禁 `clean.ps1`）。
 
 ## 阶段明细

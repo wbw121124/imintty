@@ -436,3 +436,11 @@ dlg_stdcolour_handler(control *ctrl, int event)
       *cp = c;
   }
 }
+
+void
+ctrl_pushbutton_ownerdraw(control *btn, bool on)
+{
+  if (!btn || btn->type != CTRL_BUTTON)
+    return;
+  btn->button.ownerdraw = on;
+}

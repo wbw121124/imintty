@@ -215,7 +215,21 @@ update_panel_visibility(HWND wnd)
       if (!item)
         continue;
       RECT r;
-      GetWindowRect(item, &r);
+      /* Combo boxes report their full extent including the dropdown
+       * area via GetWindowRect; use GetComboBoxInfo to get the edit
+       * portion only (rcItem) so they are not hidden prematurely. */
+      char cls[16];
+      GetClassNameA(item, cls, sizeof cls);
+      if (!strcmp(cls, "COMBOBOX")) {
+        COMBOBOXINFO cbi;
+        cbi.cbSize = sizeof(cbi);
+        if (GetComboBoxInfo(item, &cbi))
+          r = cbi.rcItem;
+        else
+          GetWindowRect(item, &r);
+      } else {
+        GetWindowRect(item, &r);
+      }
       MapWindowPoints(null, wnd, (POINT *)&r, 2);
       bool vis = r.top >= clip.top && r.bottom <= clip.bottom &&
                  r.right > clip.left && r.left < clip.right;

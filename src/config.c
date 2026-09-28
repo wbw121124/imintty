@@ -33,10 +33,7 @@
 
 
 /* P6: ANSI-16 palette swatch data */
-static const struct {
-  colour fg;
-  string name;
-} ansi16_palette[] = {
+const ansi16_entry ansi16_palette[] = {
   { RGB(0x00,0x00,0x00),   "Black" },
   { RGB(0xBF,0x00,0x00),   "Red" },
   { RGB(0x00,0xBF,0x00),   "Green" },
@@ -54,7 +51,6 @@ static const struct {
   { RGB(0x40,0xFF,0xFF),   "BoldCyan" },
   { RGB(0xFF,0xFF,0xFF),   "BoldWhite" },
 };
-#define ANSI16_N (sizeof(ansi16_palette)/sizeof(ansi16_palette[0]))
 
 /* P6: JSON theme schema */
 typedef struct {
@@ -203,10 +199,9 @@ static void add_file_resources(control *ctrl, wstring pattern, bool list_dirs);
 static void
 ansi16_swatch_handler(control *ctrl, int event)
 {
-  colour *cp = (colour *)ctrl->context;
-  int col = ctrl->column;
-  if (event == EVENT_ACTION && col >= 0 && col < 16) {
-    *cp = ansi16_palette[col].fg;
+  int idx = (intptr_t)ctrl->context;
+  if (event == EVENT_ACTION && idx >= 0 && idx < ANSI16_N) {
+    new_cfg.ansi_colours[idx].fg = ansi16_palette[idx].fg;
     win_reset_colours();
     term_invalidate(0, 0, 9999, 9999);
   }
@@ -5110,28 +5105,23 @@ setup_config_box(controlbox * b)
      s, _("&Cursor..."), dlg_stdcolour_handler, &new_cfg.cursor_colour
    )->column = 2;
 
-   /* P6: ANSI-16 palette swatch grid */
-   s = ctrl_new_set(b, _("Looks"), null,
-   //__ Options - Looks: section title
-                       _("ANSI 16-colour palette"));
-   ctrl_columns(s, 4, 25, 25, 25, 25);
-   for (int row = 0; row < 4; row++) {
-     for (int col = 0; col < 4; col++) {
-       int idx = row * 4 + col;
-       /* Normal colours: Black, Red, Green, Yellow, Blue, Magenta, Cyan, White */
-       /* Row 0: 0-3, Row 1: 4-7, Row 2: 8-11, Row 3: 12-15 */
-       colour *cp = &cfg.ansi_colours[idx].fg;
-       ctrl_pushbutton(
-         s, NULL, ansi16_swatch_handler, (void *)cp
-       )->column = col;
-     }
-   }
-   ctrl_columns(s, 1, 100);
-   /* Highlight row labels */
-   ctrl_columns(s, 2, 20, 80);
-   ctrl_label(s, _("Normal"))->column = 0;
-   ctrl_label(s, _("0-7  Bold"))->column = 0;
-   ctrl_columns(s, 1, 100);
+    /* P6: ANSI-16 palette swatch grid */
+    s = ctrl_new_set(b, _("Looks"), null,
+    //__ Options - Looks: section title
+                        _("ANSI 16-colour palette"));
+    ctrl_columns(s, 4, 25, 25, 25, 25);
+    for (int idx = 0; idx < 16; idx++) {
+      control *btn = ctrl_pushbutton(s, NULL, ansi16_swatch_handler,
+                                     (void *)(intptr_t)idx);
+      btn->column = idx % 4;
+      ctrl_pushbutton_ownerdraw(btn, true);
+    }
+    ctrl_columns(s, 1, 100);
+    /* Row labels */
+    ctrl_columns(s, 2, 20, 80);
+    ctrl_label(s, _("Normal 0-7"))->column = 0;
+    ctrl_label(s, _("Bold 8-15"))->column = 0;
+    ctrl_columns(s, 1, 100);
 
   if (cfg.config_themes == 1) {
     // initialise configuration selector for dual/switchable theme box

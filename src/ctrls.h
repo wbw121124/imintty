@@ -169,18 +169,23 @@ struct control {
       */
       int * vals;       /* `nbuttons' entries; may be null */
     } radio;
-    struct {
-     /*
-      * At least Windows has the concept of a `default push button',
-      * which gets implicitly pressed when you hit.
-      * Return even if it doesn't have the input focus.
-      */
+     struct {
+      /*
+       * At least Windows has the concept of a `default push button',
+       * which gets implicitly pressed when you hit.
+       * Return even if it doesn't have the input focus.
+       */
       int isdefault;
      /*
       * Also, the reverse of this: a default cancel-type button,
       * which is implicitly pressed when you hit Escape.
       */
       int iscancel;
+     /*
+      * Set to true for owner-draw buttons (e.g. ANSI-16 color swatches).
+      * The WM_DRAWITEM message is used to paint them.
+      */
+      int ownerdraw;
     } button;
     struct {
      /*
@@ -405,5 +410,8 @@ extern int ctrl_find_path(controlbox *, char * path, int index);
 /* Return the number of matching path elements at the starts of p1 and p2,
  * or INT_MAX if the paths are identical. */
 extern int ctrl_path_compare(char * p1, char * p2);
+
+/* Enable/disable owner-draw mode on a push button (used for ANSI-16 swatches). */
+extern void ctrl_pushbutton_ownerdraw(control *btn, bool on);
 
 #endif

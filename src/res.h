@@ -10,10 +10,12 @@
 // value is already needed before it would be available that way - totally insane!
 // Therefore, its setting is taken out to this common include file.
 
-#define DIALOG_HEIGHT 201
-                   // +11 per ctrl_columns row
-                   // +20 per titled single-line set of radio buttons
-                   // +31 per titled double-line set of radio buttons
+#define DIALOG_HEIGHT 216
+                    // +11 per ctrl_columns row
+                    // +20 per titled single-line set of radio buttons
+                    // +31 per titled double-line set of radio buttons
+                    // Increased from 201 to fit the full Looks panel
+                    // (Color Scheme Designer / Transparency / Cursor rows).
 
 //#define DIALOG_WIDTH 256
 #define DIALOG_WIDTH 266

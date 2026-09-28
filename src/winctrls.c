@@ -8,6 +8,7 @@
 
 #include "winpriv.h"
 #include "charset.h"  // wcscpy
+#include "config.h"   // new_cfg, ansi16_palette (for owner-draw swatches)
 
 #include "res.h"  // DIALOG_FONT, DIALOG_FONTSIZE
 
@@ -460,7 +461,8 @@ staticbtn(ctrlpos * cp, char *stext, int sid, char *btext, int bid)
  * A simple push button.
  */
 static void
-button(control * ctrl, ctrlpos * cp, char *btext, int bid, int defbtn)
+button(control * ctrl, ctrlpos * cp, char *btext, int bid, int defbtn,
+       int ownerdraw)
 {
   RECT r;
 
@@ -477,7 +479,8 @@ button(control * ctrl, ctrlpos * cp, char *btext, int bid, int defbtn)
   //HWND but = // if we'd want to send it a message right away
   doctl(ctrl, cp, r, "BUTTON",
           BS_NOTIFY | WS_CHILD | WS_VISIBLE | WS_TABSTOP |
-          (defbtn ? BS_DEFPUSHBUTTON : 0) | BS_PUSHBUTTON, 0, btext, bid);
+          (defbtn ? BS_DEFPUSHBUTTON : 0) |
+          (ownerdraw ? BS_OWNERDRAW : BS_PUSHBUTTON), 0, btext, bid);
 #ifdef need_to_disable_widgets_here
   // disabled prototype hack to disable a widget initially;
   // now achieved by enable_widget() in config.c
@@ -895,7 +898,8 @@ winctrl_layout(winctrls *wc, ctrlpos *cp, controlset *s, int *id)
         if (ctrl->button.iscancel)
           actual_base_id = IDCANCEL;
         num_ids = 1;
-        button(ctrl, &pos, ctrl->label, actual_base_id, ctrl->button.isdefault);
+        button(ctrl, &pos, ctrl->label, actual_base_id, ctrl->button.isdefault,
+               ctrl->button.ownerdraw);
       }
       when CTRL_LISTBOX: {
         num_ids = 2;
@@ -1554,8 +1558,47 @@ fonthook(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
     if (disp->CtlID == 1137 && (disp->itemAction == ODA_SELECT))
       // or any of CtlID=1137 (font style)/itemID=0...
-      // or CtlID=1138 (font size)/itemID=2... will do
+      // or any of CtlID=1138 (font size)/itemID=2... will do
       SetWindowTextW(font_sample, *new_cfg.font_sample ? new_cfg.font_sample : _W("Ferqœm’4€"));
+
+    /* ANSI-16 owner-draw colour swatches */
+    {
+      int swatch_idx = -1;
+      // Search all control trees for an ownerdraw button matching this CtlID
+      for (int t = 0; t < dlg.nctrltrees; t++) {
+        for (winctrl *wc_node = dlg.controltrees[t]->first; wc_node; wc_node = wc_node->next) {
+          control *cc = wc_node->ctrl;
+          if (cc && cc->type == CTRL_BUTTON && cc->button.ownerdraw
+              && wc_node->num_ids == 1 && (int)disp->CtlID == wc_node->base_id) {
+            // Compute swatch index: count how many ownerdraw buttons precede this one
+            int count = 0;
+            for (winctrl *prev = dlg.controltrees[0]->first; prev; prev = prev->next) {
+              if (prev == wc_node) break;
+              if (prev->ctrl && prev->ctrl->type == CTRL_BUTTON
+                  && prev->ctrl->button.ownerdraw && prev->num_ids == 1)
+                count++;
+            }
+            swatch_idx = count;
+            break;
+          }
+        }
+        if (swatch_idx >= 0) break;
+      }
+      if (swatch_idx >= 0 && swatch_idx < 16) {
+        colour c = ansi16_palette[swatch_idx].fg;
+        HDC hdc = disp->hDC;
+        RECT rc = disp->rcItem;
+        HBRUSH hb = CreateSolidBrush(RGB(blue(c), green(c), red(c)));
+        FillRect(hdc, &rc, hb);
+        DeleteObject(hb);
+        HPEN pen = CreatePen(PS_SOLID, 1, RGB(128,128,128));
+        HPEN old_pen = (HPEN)SelectObject(hdc, pen);
+        SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
+        Rectangle(hdc, rc.left, rc.top, rc.right, rc.bottom);
+        SelectObject(hdc, old_pen);
+        DeleteObject(pen);
+      }
+    }
   }
 
   //winctrl * c = (winctrl *)lParam;  // does not work

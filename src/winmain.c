@@ -7282,6 +7282,8 @@ main(int argc, char *argv[])
 
   init_config();
   cs_init();
+  // Detect MSYS2/Cygwin roots early so they're available for config resolution
+  detect_posix_roots();
 
   // Determine home directory.
   home = getenv("HOME");
@@ -7364,33 +7366,86 @@ main(int argc, char *argv[])
     lappdata = getlocalappdata();
 #endif
 
-  // Load config files
-  // try global config file
-  load_config("/etc/iminttyrc", true);
+  // Load config files — ordered by priority (higher first).
+  // On MinGW: APPDATA → USERPROFILE/.iminttyrc, then MSYS2/Cygwin roots if detectable.
+  // On Cygwin: /etc/iminttyrc → $HOME/.config/imintty/config → ~/.iminttyrc (unchanged).
+  {
+    bool any_loaded = false;
+
+#ifdef MINGW_NATIVE
+    // 1. %APPDATA%\imintty\config
+    {
+      char * appdata = getenv("APPDATA");
+      if (appdata && *appdata) {
+        string rc_file = asform("%s\\imintty\\config", appdata);
+        FILE *f = fopen(rc_file, "r");
+        if (f) { fclose(f); load_config(rc_file, true); any_loaded = true; }
+        delete(rc_file);
+      }
+    }
+    // 2. %USERPROFILE%\.iminttyrc  (Windows native user profile)
+    {
+      char up[MAX_PATH];
+      if (GetEnvironmentVariableA("USERPROFILE", up, sizeof(up))) {
+        string rc_file = asform("%s\\.iminttyrc", up);
+        FILE *f = fopen(rc_file, "r");
+        if (f) { fclose(f); load_config(rc_file, true); any_loaded = true; }
+        delete(rc_file);
+      }
+    }
+    // 3–6. MSYS2 / Cygwin roots (if detected via HOME or PATH)
+    if (posix_msys_root) {
+      string rc_file = asform("%s\\etc\\iminttyrc", posix_msys_root);
+      FILE *f = fopen(rc_file, "r");
+      if (f) { fclose(f); load_config(rc_file, true); any_loaded = true; }
+      delete(rc_file);
+      rc_file = asform("%s\\home\\%s\\.iminttyrc", posix_msys_root,
+                       getenv("USERNAME") ?: "user");
+      f = fopen(rc_file, "r");
+      if (f) { fclose(f); load_config(rc_file, true); any_loaded = true; }
+      delete(rc_file);
+    }
+    if (posix_cyg_root) {
+      string rc_file = asform("%s\\etc\\iminttyrc", posix_cyg_root);
+      FILE *f = fopen(rc_file, "r");
+      if (f) { fclose(f); load_config(rc_file, true); any_loaded = true; }
+      delete(rc_file);
+      rc_file = asform("%s\\home\\%s\\.iminttyrc", posix_cyg_root,
+                       getenv("USERNAME") ?: "user");
+      f = fopen(rc_file, "r");
+      if (f) { fclose(f); load_config(rc_file, true); any_loaded = true; }
+      delete(rc_file);
+    }
+#else
+    // Cygwin: /etc/iminttyrc → $HOME/.config/imintty/config → ~/.iminttyrc
+    load_config("/etc/iminttyrc", true);
 #if CYGWIN_VERSION_API_MINOR >= 74
-  // try Windows APPX local config location (wsltty.appx#3)
-  if (wsltty_appx && lappdata && *lappdata) {
-    string rc_file = asform("%s/.iminttyrc", lappdata);
-    load_config(rc_file, 2);
-    delete(rc_file);
-  }
+    // try Windows APPX local config location (wsltty.appx#3)
+    if (wsltty_appx && lappdata && *lappdata) {
+      string rc_file = asform("%s/.iminttyrc", lappdata);
+      load_config(rc_file, 2);
+      delete(rc_file);
+    }
 #endif
-  // try Windows config location (#201)
-  char * appdata = getenv("APPDATA");
-  if (appdata && *appdata) {
-    string rc_file = asform("%s/imintty/config", appdata);
-    load_config(rc_file, true);
-    delete(rc_file);
-  }
-  if (!support_wsl && access(home, X_OK) == 0) {
-    // try XDG config base directory default location (#525)
-    string rc_file = asform("%s/.config/imintty/config", home);
-    load_config(rc_file, true);
-    delete(rc_file);
-    // try home config file
-    rc_file = asform("%s/.iminttyrc", home);
-    load_config(rc_file, 2);
-    delete(rc_file);
+    // try Windows config location (#201)
+    char * appdata = getenv("APPDATA");
+    if (appdata && *appdata) {
+      string rc_file = asform("%s/imintty/config", appdata);
+      load_config(rc_file, true);
+      delete(rc_file);
+    }
+    if (!support_wsl && access(home, X_OK) == 0) {
+      // try XDG config base directory default location (#525)
+      string rc_file = asform("%s/.config/imintty/config", home);
+      load_config(rc_file, true);
+      delete(rc_file);
+      // try home config file
+      rc_file = asform("%s/.iminttyrc", home);
+      load_config(rc_file, 2);
+      delete(rc_file);
+    }
+#endif
+    (void)any_loaded;
   }
 
   if (getenv("IMINTTY_ICON")) {
@@ -7709,6 +7764,9 @@ main(int argc, char *argv[])
         set_arg_option("ConPTY", optarg);
     }
   }
+  // After option parsing: if no -c was used, select the highest-priority
+  // existing directory as the save target (for MINGW: windows~ before msys ~/).
+  select_rc_filename();
   //printf("WSL <%ls>\n", wslname);
 
 #ifdef debug_wslwinpath

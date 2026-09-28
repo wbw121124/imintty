@@ -332,6 +332,7 @@ extern config cfg, new_cfg, file_cfg;
 extern void init_config(void);
 extern void list_fonts(bool report);
 extern void load_config(string filename, int to_save);
+extern void select_rc_filename(void);
 extern void load_theme(wstring theme);
 extern char * get_resource_file(wstring sub, wstring res, bool towrite);
 extern void handle_file_resources(wstring pattern, str_fn fnh);

@@ -2396,7 +2396,14 @@ load_config(string filename, int to_save)
   if (file) {
     if (report_config)
       printf("loading config <%s>\n", filename);
+#ifdef MINGW_NATIVE
+    // On native Windows the filename passed here is already in ACP (CRT narrow);
+    // path_posix_to_win_w would re-encode those bytes through the locale
+    // codepage and corrupt Chinese characters.
+    wchar * wfn = cs__acptowcs(filename);
+#else
     wchar * wfn = path_posix_to_win_w(filename);
+#endif
     //__ Config log: message for loaded file
     log_config(_W("Config file loaded:"), wfn);
     free(wfn);
@@ -2405,7 +2412,11 @@ load_config(string filename, int to_save)
   if (to_save) {
     if (file || (!rc_filename && to_save == 2) || to_save == 3) {
       delete(rc_filename);
+#ifdef MINGW_NATIVE
+      rc_filename = cs__acptowcs(filename);
+#else
       rc_filename = path_posix_to_win_w(filename);
+#endif
 
       if (access(filename, R_OK) == 0 && access(filename, W_OK) < 0) {
         to_save = false;
@@ -2654,7 +2665,11 @@ save_config(void)
 {
   string filename;
 
+#ifdef MINGW_NATIVE
+  filename = cs__wctoacp(rc_filename);
+#else
   filename = path_win_w_to_posix(rc_filename);
+#endif
 
   FILE *file = fopen(filename, "w");
 
@@ -2727,6 +2742,88 @@ save_config(void)
   }
 
   delete(filename);
+}
+
+// Select the highest-priority config directory as the save target.
+// Called after option parsing so that -c (--configdir) overrides everything.
+// MINGW: scans Windows paths in priority order; Cygwin: uses posix roots.
+void
+select_rc_filename(void)
+{
+  // If -c was used (to_save==3 forced a target), honour it.
+  if (rc_filename)
+    return;
+
+#ifdef MINGW_NATIVE
+  // Windows-native priority: APPDATA → USERPROFILE → MSYS2 root → Cygwin root
+  {
+    char * appdata = getenv("APPDATA");
+    if (appdata && *appdata) {
+      string dir = asform("%s\\imintty", appdata);
+      if (access(dir, F_OK) == 0) {
+        rc_filename = cs__acptowcs(dir);
+        delete(dir);
+        return;
+      }
+      delete(dir);
+    }
+    // USERPROFILE/.iminttyrc parent dir
+    {
+      char up[MAX_PATH];
+      if (GetEnvironmentVariableA("USERPROFILE", up, sizeof(up))) {
+        string dir = asform("%s", up);
+        if (access(dir, F_OK) == 0) {
+          rc_filename = cs__acptowcs(dir);
+          delete(dir);
+          return;
+        }
+        delete(dir);
+      }
+    }
+    if (posix_msys_root) {
+      string dir = asform("%s\\home\\%s", posix_msys_root,
+                          getenv("USERNAME") ?: "user");
+      if (access(dir, F_OK) == 0) {
+        rc_filename = cs__acptowcs(dir);
+        delete(dir);
+        return;
+      }
+      delete(dir);
+    }
+    if (posix_cyg_root) {
+      string dir = asform("%s\\home\\%s", posix_cyg_root,
+                          getenv("USERNAME") ?: "user");
+      if (access(dir, F_OK) == 0) {
+        rc_filename = cs__acptowcs(dir);
+        delete(dir);
+        return;
+      }
+      delete(dir);
+    }
+  }
+#else
+  // Cygwin: scan POSIX roots for existing dirs
+  if (posix_msys_root) {
+    string dir = asform("%s\\home\\%s", posix_msys_root,
+                        getenv("USERNAME") ?: "user");
+    if (access(dir, F_OK) == 0) {
+      rc_filename = path_posix_to_win_w(dir);
+      delete(dir);
+      return;
+    }
+    delete(dir);
+  }
+  if (posix_cyg_root) {
+    string dir = asform("%s\\home\\%s", posix_cyg_root,
+                        getenv("USERNAME") ?: "user");
+    if (access(dir, F_OK) == 0) {
+      rc_filename = path_posix_to_win_w(dir);
+      delete(dir);
+      return;
+    }
+    delete(dir);
+  }
+#endif
 }
 
 

@@ -6321,6 +6321,7 @@ exit_imintty(void)
   if (container_is_embed_mode() || container_is_embedded(wnd))
     container_on_tab_close(wnd);
 
+  timeEndPeriod(1);
   exit(0);
 }
 
@@ -7284,6 +7285,9 @@ main(int argc, char *argv[])
   cs_init();
   // Detect MSYS2/Cygwin roots early so they're available for config resolution
   detect_posix_roots();
+  // timeBeginPeriod(1) reduces timer resolution to 0.5ms, making SetTimer
+  // callbacks fire at the desired 16ms cadence instead of the default 15.6ms.
+  timeBeginPeriod(1);
 
   // Determine home directory.
   home = getenv("HOME");

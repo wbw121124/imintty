@@ -2365,6 +2365,10 @@ layers_begin(HDC ref, RECT *crc)
   if (d2d_begin_hwnd()) {
     d2d_hwnd_path = true;
     dc = ref;
+    /* D2D HwndRT draws directly to screen_dc; content_dc is NOT updated.
+     * Mark invalid so win_update_cursor triggers a full repaint rather
+     * than compositing against a stale buffered copy. */
+    content_valid = false;
     return true;
   }
 
@@ -2604,7 +2608,11 @@ do_update(void)
     if (has_xf)
       SetWorldTransform(dc, &xf_save);
   }
-  content_valid = true;
+  /* Only mark content_valid when we drew to the buffered content_dc
+   * (GDI or D2D-to-buffer path); D2D HwndRT draws directly to screen_dc
+   * and leaves content_dc stale. */
+  if (!d2d_hwnd_path)
+    content_valid = true;
 
   /* Restore full clip/transform so the present blit copies every pixel. */
   RestoreDC(dc, draw_clip);

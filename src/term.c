@@ -150,7 +150,8 @@ static void curs_anim_invalidate(void);
 /* Smooth blink fade state (Phase 1): ramp alpha between visible/hidden. */
 struct blink_fade {
   int from, to;
-  int elapsed, duration, tick;
+  int start_tick;   /* tick count when fade started (ms) */
+  int duration;
   bool active;
 };
 static struct blink_fade fade_tblink, fade_tblink2, fade_cblink;
@@ -171,25 +172,24 @@ fade_start(struct blink_fade *f, int from, int to, void (*cb)(void))
 {
   f->from = from;
   f->to = to;
-  f->elapsed = 0;
+  f->start_tick = get_tick_count();
   f->duration = blink_duration();
-  f->tick = max(20, f->duration / 5);
   f->active = true;
-  win_set_timer(cb, f->tick);
+  win_set_timer(cb, 16);
 }
 
 /* Advance one frame; returns true if more frames are pending. */
 static bool
 fade_advance(struct blink_fade *f, int *alpha, void (*cb)(void))
 {
-  f->elapsed += f->tick;
-  if (f->elapsed >= f->duration) {
+  int elapsed = get_tick_count() - f->start_tick;
+  if (elapsed >= f->duration) {
     *alpha = f->to;
     f->active = false;
     return false;
   }
-  *alpha = f->from + (f->to - f->from) * f->elapsed / f->duration;
-  win_set_timer(cb, f->tick);
+  *alpha = f->from + (f->to - f->from) * elapsed / f->duration;
+  win_set_timer(cb, 16);
   return true;
 }
 
@@ -239,7 +239,7 @@ tblink_phase_cb(void)
     win_update(false);
     return;
   }
-  term.tblink_phase += 15;
+  term.tblink_phase += 15;  /* 15° per 16ms frame ≈ 937.5°/s → full cycle ≈ 0.384s */
   if (term.tblink_phase >= 360)
     term.tblink_phase -= 360;
   double rad = term.tblink_phase * 3.14159265358979 / 180.0;
@@ -249,15 +249,17 @@ tblink_phase_cb(void)
   if (imgs_have_blink())
     force_imgs = true;
   win_update(false);
-  win_set_timer(tblink_phase_cb, 30);
+  win_set_timer(tblink_phase_cb, 16);
 }
 
-/* Expand mode for text: cosine ease-in-out alpha, 0..360° cycling. */
+/* Expand mode for text: cosine ease-in-out alpha, 0..360° cycling.
+ * No focus guard: the callback always re-arms so the chain survives
+ * focus loss; actual visual updates are suppressed in the early-return
+ * path via term.tblinker/alpha resets. */
 static void
 tblink_expand_cb(void)
 {
-  if (cfg.smooth_blink_attr != ANIM_EXPAND || !term.blink_is_real
-      || !term.has_focus || term.show_other_screen) {
+  if (cfg.smooth_blink_attr != ANIM_EXPAND || !term.blink_is_real) {
     term.tblinker = 0;
     term.tblink_alpha = 255;
     term.tblink_expand = 0;
@@ -267,9 +269,8 @@ tblink_expand_cb(void)
     win_update(false);
     return;
   }
-  /* VSCode-style expand: hold scaleY(1) for 20%, ease-out to scaleY(0) for
-   * the next 60%, hold at 0 for the final 20%. */
-  term.tblink_phase += 12.0;  /* 360° / 30 ticks = 500ms full cycle at 30ms tick */
+  /* 12° per 16ms frame → full cycle ≈ 0.48s (was 30ms tick: 360°/12° = 30 ticks) */
+  term.tblink_phase += 12.0;
   if (term.tblink_phase >= 360.0)
     term.tblink_phase -= 360.0;
   double p2 = term.tblink_phase;
@@ -290,7 +291,7 @@ tblink_expand_cb(void)
   if (imgs_have_blink())
     force_imgs = true;
   win_update(false);
-  win_set_timer(tblink_expand_cb, 30);
+  win_set_timer(tblink_expand_cb, 16);
 }
 
 static void
@@ -461,20 +462,20 @@ cblink_fade_cb(void)
     win_update_now();
 }
 
-/* Phase mode: sine-wave alpha driven by continuous phase angle. */
+/* Phase mode: sine-wave alpha driven by continuous phase angle.
+ * No focus guard: always re-arm so the chain survives focus loss. */
 static void
 cblink_phase_cb(void)
 {
   if (cfg.smooth_blink_cursor != ANIM_PHASE
-      || !term_cursor_blinks() || !term.has_focus
-      || !term.cursor_on || term.show_other_screen) {
+      || !term_cursor_blinks() || !term.cursor_on || term.show_other_screen) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
     term.cursor_invalid = true;
     win_update(false);
     return;
   }
-  term.cblink_phase += 15;  /* 15° per 20ms tick → full cycle 4.8s */
+  term.cblink_phase += 15;  /* 15° per 16ms frame */
   if (term.cblink_phase >= 360)
     term.cblink_phase -= 360;
   double rad = term.cblink_phase * 3.14159265358979 / 180.0;
@@ -484,19 +485,19 @@ cblink_phase_cb(void)
   if (term.curs_animate)
     curs_anim_invalidate();
   win_update_cursor();
-  win_set_timer(cblink_phase_cb, 20);
+  win_set_timer(cblink_phase_cb, 16);
 }
 
 /* Expand mode: VSCode CSS keyframes with animation-direction:alternate.
  * @keyframes expand { 0%,20% { transform:scaleY(0); } 80%,100% { transform:scaleY(1); } }
  * animation: expand 0.5s ease-in-out infinite alternate;
- * Full alternate period is 1s; scaleY origin is the cell vertical midpoint. */
+ * Full alternate period is 1s; scaleY origin is the cell vertical midpoint.
+ * No focus guard: always re-arm so the chain survives focus loss. */
 static void
 cblink_expand_cb(void)
 {
   if (cfg.smooth_blink_cursor != ANIM_EXPAND
-      || !term_cursor_blinks() || !term.has_focus
-      || !term.cursor_on || term.show_other_screen) {
+      || !term_cursor_blinks() || !term.cursor_on || term.show_other_screen) {
     term.cblinker = 1;
     term.cblink_alpha = 255;
     term.cblink_expand = 255;   /* rest state = full cell (scaleY 1) */
@@ -507,7 +508,7 @@ cblink_expand_cb(void)
     win_update_now();
     return;
   }
-  /* 20ms tick, 50 ticks = 1000ms alternate cycle → 7.2° per tick. */
+  /* 7.2° per 16ms frame; full cycle ≈ 1s */
   term.cblink_phase += 7.2;
   if (term.cblink_phase >= 360.0)
     term.cblink_phase -= 360.0;
@@ -538,7 +539,7 @@ cblink_expand_cb(void)
   if (term.curs_animate)
     curs_anim_invalidate();
   win_update_cursor();
-  win_set_timer(cblink_expand_cb, 20);
+  win_set_timer(cblink_expand_cb, 16);
 }
 
 static void
@@ -6039,6 +6040,12 @@ term_set_focus(bool has_focus, bool may_report)
   if (has_focus != term.has_focus) {
     term.has_focus = has_focus;
     term_schedule_cblink();
+    /* On focus gain, re-arm the text-blink chain too.
+     * Without this, tblink_phase_cb / tblink_expand_cb early-return
+     * on !term.has_focus without re-arming, so the chain dies on
+     * unfocus and never revives on refocus (requires a second click). */
+    if (has_focus)
+      term_schedule_tblink();
   }
 
   if (has_focus != term.focus_reported) {

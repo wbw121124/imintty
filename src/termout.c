@@ -25,6 +25,20 @@
 #include <langinfo.h>  // nl_langinfo, CODESET
 #endif
 
+#ifndef LOG_SILENT
+#define LOG_SILENT 0
+#define LOG_FAIL   1
+#define LOG_ERROR  2
+#define LOG_WARN   3
+#define LOG_INFO   4
+#define LOG_DEBUG  5
+#define LOG_FULL   6
+#endif
+#ifndef LOG_LEVEL
+#define LOG_LEVEL LOG_SILENT
+#endif
+#define DBGx(lvl, ...) do { if (LOG_LEVEL >= (lvl)) fprintf(stderr, __VA_ARGS__); } while(0)
+
 
 #define TERM_CMD_BUF_INC_STEP 128
 //#define TERM_CMD_BUF_MAX_SIZE (1024 * 1024)
@@ -1876,8 +1890,10 @@ do_vt52(uchar c)
     when 'H':  /* Move the cursor to the home position. */
       move(0, 0, 0);
     when 'I':  /* Reverse line feed. */
-      if (curs->y == term.marg_top)
+      if (curs->y == term.marg_top) {
+        DBGx(LOG_FULL, "[t%d] esc VT52-RI\n", get_tick_count());
         term_do_scroll(term.marg_top, term.marg_bot, -1, false);
+      }
       else if (curs->y > top_y)
         curs->y--;
       curs->wrapnext = false;
@@ -2087,8 +2103,10 @@ do_esc(uchar c)
         write_linefeed();
       }
     when 'M':  /* RI: reverse index - backwards LF */
-      if (curs->y == term.marg_top)
+      if (curs->y == term.marg_top) {
+        DBGx(LOG_FULL, "[t%d] esc RI\n", get_tick_count());
         term_do_scroll(term.marg_top, term.marg_bot, -1, false);
+      }
       else if (curs->y > top_y)
         curs->y--;
       curs->wrapnext = false;
@@ -3357,6 +3375,7 @@ do_csi(uchar c)
        && curs->x >= term.marg_left && curs->x <= term.marg_right
          )
       {
+        DBGx(LOG_FULL, "[t%d] esc IL n=%d\n", get_tick_count(), arg0_def1);
         term_do_scroll(curs->y, term.marg_bot, -arg0_def1, false);
         curs->x = term.marg_left;
       }
@@ -3592,15 +3611,18 @@ do_csi(uchar c)
       else
         do_winop();
     when 'S':        /* SU: Scroll up */
+      DBGx(LOG_FULL, "[t%d] esc SU n=%d\n", get_tick_count(), arg0_def1);
       term_do_scroll(term.marg_top, term.marg_bot, arg0_def1, true);
       curs->wrapnext = false;
     when 'T':        /* SD: Scroll down */
       /* Avoid clash with unsupported hilight mouse tracking mode sequence */
       if (term.csi_argc <= 1) {
+        DBGx(LOG_FULL, "[t%d] esc SD n=%d\n", get_tick_count(), arg0_def1);
         term_do_scroll(term.marg_top, term.marg_bot, -arg0_def1, false);
         curs->wrapnext = false;
       }
     when CPAIR('+', 'T'):     /* unscroll (kitty) */
+      DBGx(LOG_FULL, "[t%d] esc unscroll n=%d\n", get_tick_count(), arg0_def1);
       term_do_scroll(term.marg_top, term.marg_bot, -arg0_def1, true);
       curs->wrapnext = false;
     when CPAIR('*', '|'):     /* DECSNLS */
@@ -6455,6 +6477,8 @@ term_flush(void)
 void
 term_write(const char *buf, uint len)
 {
+  DBGx(LOG_FULL, "[t%d] tw len=%u ra=%p %.*s\n", get_tick_count(), len,
+       __builtin_return_address(0), (int)(len < 700 ? len : 700), buf);
  /*
     During drag-selects, some people do not wish to process terminal output,
     because the user may want the screen to hold still to be selected.

@@ -17,6 +17,19 @@
 #include <langinfo.h>
 #endif
 
+#ifndef LOG_SILENT
+#define LOG_SILENT 0
+#define LOG_FAIL   1
+#define LOG_ERROR  2
+#define LOG_WARN   3
+#define LOG_INFO   4
+#define LOG_DEBUG  5
+#define LOG_FULL   6
+#endif
+#ifndef LOG_LEVEL
+#define LOG_LEVEL LOG_SILENT
+#endif
+#define DBGx(lvl, ...) do { if (LOG_LEVEL >= (lvl)) fprintf(stderr, __VA_ARGS__); } while(0)
 
 struct term term;
 
@@ -435,13 +448,17 @@ cblink_fade_cb(void)
     term.cblink_alpha = 255;
     term.cblinker = 1;
     term.cursor_invalid = true;
-    win_update_cursor();
+    win_update_now();
     return;
   }
-  fade_advance(&fade_cblink, &term.cblink_alpha, cblink_fade_cb);
+  bool more = fade_advance(&fade_cblink, &term.cblink_alpha, cblink_fade_cb);
   term.cblinker = term.cblink_alpha > 127;
   term.cursor_invalid = true;
-  win_update_cursor();
+  /* Final frame hands the body back to the cell path — repaint cells. */
+  if (more)
+    win_update_cursor();
+  else
+    win_update_now();
 }
 
 /* Phase mode: sine-wave alpha driven by continuous phase angle. */
@@ -487,7 +504,7 @@ cblink_expand_cb(void)
     int dys = term.curs.y - term.disptop;
     term_invalidate(term.curs.x - 1, dys - 1,
                     term.curs.x + 1, dys + 1);
-    win_update_cursor();
+    win_update_now();
     return;
   }
   /* 20ms tick, 50 ticks = 1000ms alternate cycle → 7.2° per tick. */
@@ -560,7 +577,7 @@ cblink_cb(void)
     term.cblinker = !term.cblinker;
     term.cblink_alpha = term.cblinker ? 255 : 0;
     term.cursor_invalid = true;
-    win_update_cursor();
+    win_update_now();
   }
   term_schedule_cblink();
 }
@@ -578,7 +595,7 @@ term_schedule_cblink(void)
     win_kill_timer(cblink_expand_cb);
     fade_cblink.active = false;
     term.cursor_invalid = true;
-    win_update_cursor();
+    win_schedule_update();
     return;
   }
   else if ((cfg.smooth_blink_cursor == ANIM_PHASE
@@ -596,6 +613,8 @@ term_schedule_cblink(void)
     win_kill_timer(cblink_phase_cb);
     win_kill_timer(cblink_expand_cb);
     fade_cblink.active = false;
+    term.cursor_invalid = true;
+    win_schedule_update();
   }
 }
 
@@ -1078,7 +1097,7 @@ term_cursor_track(int dx, int dy)
    /* Short-distance threshold: snap directly if move is tiny. */
    if (cfg.cursor_short_threshold > 0
        && abs(dx - term.curs_last_x) + abs(dy - term.curs_last_y)
-          <= cfg.cursor_short_threshold
+          < cfg.cursor_short_threshold
        && !term.curs_animate && !cfg.cursor_smear) {
      curs_anim_cancel();
      term.curs_last_x = dx;
@@ -1180,7 +1199,12 @@ curs_anim_cb(void)
     if (term.curs_particle_n > 0 || smear_anim || smear_settled) {
       term.cursor_invalid = true;
       curs_anim_invalidate();
-      win_update_cursor();
+      /* Terminal frame must repaint cells (ACTCURS returns to the text
+         layer); a compose-only refresh keeps the cursor invisible. */
+      if (term.curs_particle_n > 0 || smear_anim)
+        win_update_cursor();
+      else
+        win_update_now();
       if (term.curs_particle_n > 0 || smear_anim)
         win_set_timer(curs_anim_cb, 16);
     }
@@ -1192,7 +1216,7 @@ curs_anim_cb(void)
     term.curs_animate = false;
     term.cursor_invalid = true;
     curs_anim_invalidate();
-    win_update_cursor();
+    win_update_now();
     if (term.curs_particle_n > 0 || smear_anim)
       win_set_timer(curs_anim_cb, 16);
     return;
@@ -1239,6 +1263,7 @@ scroll_anim_stop(void)
   if (!term.scroll_animate)
     return;
   int top = term.scroll_anim_top, bot = term.scroll_anim_bot;
+  DBGx(LOG_FULL, "[t%d] anim_stop band=%d..%d\n", get_tick_count(), top, bot);
   term.scroll_animate = false;
   term.scroll_anim_lines = 0;
   win_scroll_release();
@@ -1270,7 +1295,14 @@ void
 term_scroll_anim_begin(int topline, int botline, int lines)
 {
   bool had = term.scroll_animate;
+  DBGx(LOG_FULL, "[t%d] anim_begin in %d..%d lines=%d had=%d disptop=%d\n",
+       get_tick_count(), topline, botline, lines, had, term.disptop);
   scroll_anim_stop();
+  /* A previous animation leaves displaced cells plus a snapshot composite on
+     screen; win_scroll_capture copies from the window, so repaint to the
+     final state first or the capture inherits the mid-animation frame. */
+  if (had)
+    win_update_now();
 
   bool ok = cfg.smooth_scroll == ANIM_SMOOTH && !tek_mode && lines && cell_height > 0
             && abs(lines) <= cfg.smooth_scroll_lines
@@ -1290,6 +1322,8 @@ term_scroll_anim_begin(int topline, int botline, int lines)
   }
   if (ok)
     ok = win_scroll_capture(top, bot);
+  DBGx(LOG_FULL, "[t%d] anim_begin ok=%d band=%d..%d lines=%d disptop=%d\n",
+       get_tick_count(), ok, top, bot, lines, term.disptop);
   if (!ok) {
     if (had)
       win_update(false);
@@ -3321,6 +3355,9 @@ void
 term_do_scroll(int topline, int botline, int lines, bool sb)
 {
   //printf("term_do_scroll %d..%d %d sb %d\n", topline, botline, lines, sb);
+  DBGx(LOG_FULL, "[t%d] do_scroll %d..%d lines=%d sb=%d ra=%p curs=%d,%d disptop=%d\n",
+       get_tick_count(), topline, botline, lines, sb,
+       __builtin_return_address(0), term.curs.x, term.curs.y, term.disptop);
 
   if (term.hovering) {
     term.hovering = false;
@@ -5943,6 +5980,8 @@ term_invalidate(int left, int top, int right, int bottom)
 void
 term_scroll(int rel, int where)
 {
+  DBGx(LOG_FULL, "[t%d] term_scroll rel=%d where=%d disptop=%d\n",
+       get_tick_count(), rel, where, term.disptop);
   /* User-driven view change invalidates any in-flight smooth-scroll band
    * (snapshot would overlay stale pixels on the new disptop). */
   term_scroll_anim_cancel();

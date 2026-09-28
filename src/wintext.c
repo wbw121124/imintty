@@ -1378,22 +1378,19 @@ win_scroll_overlay(HDC target, int dy, int top, int bot)
   int band_y = OFFSET + PADDING + top * cell_height;
   int phys_x = PADDING - horclip();
 
-  /* Preserve the existing world transform (horizontal scroll dx) and apply
-     only the scroll Y displacement. */
+  /* Draw in device coordinates: neutralise any horizontal-scroll world
+     transform so the snapshot shifts only along Y.  (SetWorldTransform is a
+     no-op under GM_COMPATIBLE, and eDy = band_y + dy double-counts band_y
+     whenever the transform does apply.) */
   int save_dc = SaveDC(target);
+  XFORM saved;
+  if (GetWorldTransform(target, &saved)) {
+    XFORM idt = {1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f};
+    SetWorldTransform(target, &idt);
+  }
   IntersectClipRect(target, phys_x, band_y,
                     phys_x + scroll_snap_w, band_y + scroll_snap_h);
-  {
-    XFORM saved;
-    bool has_tf = GetWorldTransform(target, &saved) != 0;
-    if (has_tf)
-      saved.eDy = 0.f;   // drop any previous Y offset
-    XFORM tx = {1.0f, 0.0f, 0.0f, 1.0f,
-                has_tf ? saved.eDx : (float)phys_x,
-                (float)band_y + (float)dy};
-    SetWorldTransform(target, &tx);
-  }
-  BitBlt(target, phys_x, band_y, scroll_snap_w, scroll_snap_h,
+  BitBlt(target, phys_x, band_y + dy, scroll_snap_w, scroll_snap_h,
          scroll_snap_dc, 0, 0, SRCCOPY);
   RestoreDC(target, save_dc);
 }
@@ -2354,6 +2351,15 @@ layers_begin(HDC ref, RECT *crc)
 
   /* P4: Try HwndRT batch path — draws directly to ref (screen_dc). */
   d2d_hwnd_path = false;
+  /* Overlay composition (cursor motion/blink, scroll snapshot) only exists on
+     the buffered GDI path; fall back while an animation needs it. */
+  if (term_scroll_anim_active() || term.curs_animate
+      || (cfg.cursor_smear && term.curs_smear.moving)
+      || term.curs_particle_n > 0
+      || (term_cursor_blinks() && term.has_focus
+          && ((cfg.smooth_blink_cursor == ANIM_EXPAND && !cfg.cursor_invert)
+              || (term.cblink_alpha > 0 && term.cblink_alpha < 255))))
+    goto gdi_path;
   if (!d2d_available())
     goto gdi_path;
   if (d2d_begin_hwnd()) {
@@ -2471,7 +2477,9 @@ layers_present(HDC screen_dc, const RECT *crc, const RECT *dirty)
   if (!tek_mode && term_scroll_anim_active()) {
     int total = term.scroll_anim_lines * cell_height;
     int remaining = term_scroll_anim_offset();
-    win_scroll_overlay(present_dc, total - remaining,
+    DBGx(LOG_FULL, "[t%d] overlay rem=%d total=%d dy=%d\n",
+         get_tick_count(), remaining, total, remaining - total);
+    win_scroll_overlay(present_dc, remaining - total,
                        term.scroll_anim_top, term.scroll_anim_bot);
   }
   /* Cursor layer onto present (async path may call this alone). */
@@ -2641,7 +2649,7 @@ do_update(void)
   bool idle = !term_scroll_anim_active()
            && !term.curs_animate
            && !(term_cursor_blinks() && term.has_focus);
-  int tick = idle ? 100 : update_timer;
+  int tick = idle ? 100 : 16;
   if (tick != update_timer) {
     update_timer = tick;
     win_set_timer(do_update, update_timer);
@@ -4275,7 +4283,7 @@ win_text(int tx, int ty, wchar *text, int len, cattr attr, cattr *textattr, usho
   if (term_scroll_anim_active() && ty >= term.scroll_anim_top
       && ty < term.scroll_anim_bot)
   {
-    y -= term_scroll_anim_offset();
+    y += term_scroll_anim_offset();
     int by0 = OFFSET + PADDING + term.scroll_anim_top * cell_height;
     int by1 = OFFSET + PADDING + term.scroll_anim_bot * cell_height;
     band_clip = SaveDC(dc);

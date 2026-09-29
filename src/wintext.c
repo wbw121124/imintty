@@ -5867,8 +5867,16 @@ skip_drawing:;
       _cc = ((_cc & 0xFEFEFEFE) >> 1) + ((win_get_colour(BG_COLOUR_I) & 0xFEFEFEFE) >> 1);
     // Smooth cursor blink: fade line/box cursor toward the cell background
     if (term_cursor_blinks() && term.has_focus
-        && (attr.attr & TATTR_ACTCURS) && term.cblink_alpha < 255)
-      _cc = blend_colour(bg, _cc, term.cblink_alpha);
+        && (attr.attr & TATTR_ACTCURS) && term.cblink_alpha < 255) {
+      /* Inverted cursor: cell path handles the colour swap + fade for block
+       * cursors; for line/box cursors the overlay draws with _cc here.
+       * At high alpha (≥200) the blend makes _cc too close to bg, so force
+       * the endpoint (cursor_colour) to preserve readability. */
+      if (cfg.cursor_invert && term.cblink_alpha >= 200)
+        _cc = cursor_colour;
+      else
+        _cc = blend_colour(bg, _cc, term.cblink_alpha);
+    }
 #if defined(debug_cursor) && debug_cursor > 1
     printf("painting cursor_type '%c' cursor_on %d\n", "?b_l"[term_cursor_type()+1], term.cursor_on);
 #endif

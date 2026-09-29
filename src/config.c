@@ -5330,6 +5330,31 @@ setup_config_box(controlbox * b)
     s, _("Scroll lines"), 40, dlg_stdintbox_handler, &new_cfg.smooth_scroll_lines
   )->column = 3;
   ctrl_columns(s, 1, 100);
+  // Performance monitor (FPS display)
+  ctrl_columns(s, 2, 60, 40);
+  ctrl_checkbox(
+    //__ Options - Animation: enable performance monitor
+    s, _("Performance monitor"),
+    dlg_stdcheckbox_handler, &new_cfg.perf_monitor
+  )->column = 0;
+  ctrl_radiobuttons(
+    //__ Options - Animation: performance display position
+    s, _("Perf display"), 3,
+    dlg_stdradiobutton_handler, (char*)&new_cfg.perf_display_mode,
+    _("&Off"), 0,
+    _("&Title bar"), 1,
+    _("T&op left"), 2,
+    _("T&op center"), 3,
+    _("Top &right"), 4,
+    _("&Mid left"), 5,
+    _("Mi&d center"), 6,
+    _("Mid &right"), 7,
+    _("Botto&m left"), 8,
+    _("Bottom &center"), 9,
+    _("Bottom &right"), 10,
+    null
+  )->column = 1;
+  ctrl_columns(s, 1, 100);
   //__ Options - Animation: smear cursor body (smear-cursor.nvim)
   ctrl_checkbox(
     s, _("涂抹动画"), dlg_stdcheckbox_handler, &new_cfg.cursor_smear

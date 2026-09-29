@@ -826,9 +826,21 @@ child_create(char *argv[], struct winsize *winp)
     }
     *pos = '\0';
 
-    // Create process.  bInheritHandles is false: the child gets its std
-    // handles via the pseudo console attribute and must not inherit our
-    // pipe ends.
+    // Create process.  bInheritHandles is false: the child must not inherit
+    // our pipe ends.
+    // Note that Windows still copies our own standard handles (taken from our
+    // PEB, not the handle table) into the child, irrespective of
+    // bInheritHandles.  Those would shadow the handles supplied by the pseudo
+    // console, so the child would write its stdio to imintty's own stdout and
+    // stderr instead of to the pty (and would then not be a tty either).
+    // Temporarily clear them so that the pseudo console handles are used.
+    HANDLE saved_std[3];
+    saved_std[0] = GetStdHandle(STD_INPUT_HANDLE);
+    saved_std[1] = GetStdHandle(STD_OUTPUT_HANDLE);
+    saved_std[2] = GetStdHandle(STD_ERROR_HANDLE);
+    SetStdHandle(STD_INPUT_HANDLE, null);
+    SetStdHandle(STD_OUTPUT_HANDLE, null);
+    SetStdHandle(STD_ERROR_HANDLE, null);
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
     DWORD werr = 0;
@@ -858,6 +870,10 @@ child_create(char *argv[], struct winsize *winp)
         free(cmd_x);
       }
     }
+    // Restore our own standard handles (imintty may still log to stderr).
+    SetStdHandle(STD_INPUT_HANDLE, saved_std[0]);
+    SetStdHandle(STD_OUTPUT_HANDLE, saved_std[1]);
+    SetStdHandle(STD_ERROR_HANDLE, saved_std[2]);
     if (!created) {
       char *cmd8 = cs__wcstoutf(cmd_w);
       char *cl8 = cs__wcstoutf(cmdline);
